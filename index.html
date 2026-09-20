@@ -3,7 +3,7 @@
 
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>MASRO7 LEAGUE - دوري بنو مسروح للنخبة</title>
 <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 <style>
@@ -1331,6 +1331,52 @@ body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
   .mic-slot-vacant-label{display:none;}
   .mic-stage{padding:4px 6px 2px;}
 }
+#room.section.active{background:#0f172a;z-index:50;}
+body.room-active #resetButton{display:none !important;}
+/* ===== شريط الكتابة والأزرار الدائرية + 15 مقعد + مقعد المضيف الذهبي ===== */
+.room-composer{display:flex;align-items:center;gap:6px;flex-shrink:0;width:100%;max-width:420px;margin:0 auto 4px;box-sizing:border-box;}
+.room-composer input{flex:1;min-width:0;padding:9px 12px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:20px;font-size:13px;}
+.room-composer input:focus{outline:none;border-color:#2563eb;}
+.rc-tools{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.rc-btn{margin:0;padding:0;width:36px;height:36px;border-radius:50%;background:#334155;border:1px solid #475569;color:#fff;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+.rc-btn.on{border-color:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.45);}
+.rc-btn.off{border-color:#f87171;background:#450a0a;}
+.rc-btn.slash::after{content:"";position:absolute;width:22px;height:2px;background:#f87171;transform:rotate(-45deg);border-radius:2px;}
+.rc-btn.dim{opacity:.55;}
+.rc-btn.admin{background:#1e3a8a;border-color:#2563eb;}
+.rc-send{display:none;margin:0;padding:0;width:38px;height:38px;border-radius:50%;background:#2563eb;font-size:17px;align-items:center;justify-content:center;flex-shrink:0;}
+.rc-send span{display:inline-block;transform:scaleX(-1);}
+.room-composer.typing .rc-tools{display:none;}
+.room-composer.typing .rc-send{display:flex;}
+body.room-typing .bottom-nav{display:none;}
+body.room-typing #room.section.active{bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom,0px));}
+.mic-grid{align-items:center;}
+.mic-slot.host-seat .mic-slot-avatar-wrap,.mic-slot.host-seat .mic-slot-empty{width:calc(var(--seat) * 1.3);height:calc(var(--seat) * 1.3);}
+.mic-slot.host-seat .mic-slot-avatar{border:3px solid #facc15;box-shadow:0 0 12px rgba(250,204,21,.55);}
+.mic-slot.host-seat .mic-slot-empty{border:2px dashed #facc15;color:#facc15;background:rgba(250,204,21,.07);}
+.mic-slot.host-seat .mic-slot-avatar-wrap.speaking .mic-slot-avatar{animation:micSpeakRingGold 1s infinite;}
+.mic-slot.host-seat .mic-slot-name{color:#facc15;font-weight:bold;}
+.mic-slot.host-seat .mic-slot-vacant-label{display:block;color:#facc15;}
+.tool-row{display:block;width:100%;margin:8px 0;padding:13px;background:#334155;font-size:14px;text-align:right;border-radius:10px;}
+.tool-row.danger{background:#7f1d1d;color:#fecaca;}
+.game-note{text-align:center;font-size:12px;color:#94a3b8;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:8px;margin-bottom:10px;}
+.game-note.live{color:#fca5a5;border-color:#7f1d1d;}
+.game-row{display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:10px;margin-bottom:8px;}
+.game-row-ico{font-size:26px;flex-shrink:0;}
+.game-row-info{flex:1;text-align:right;min-width:0;}
+.game-row-name{font-weight:bold;font-size:14px;color:#fff;}
+.game-row-desc{font-size:11px;color:#94a3b8;margin-top:2px;}
+.game-row-btn{margin:0;padding:7px 16px;font-size:12px;border-radius:10px;flex-shrink:0;}
+@media (max-height:700px){
+  .rc-btn{width:32px;height:32px;font-size:15px;}
+  .rc-tools{gap:4px;}
+  .room-composer input{padding:7px 10px;}
+}
+.mic-slot.host-seat .mic-slot-avatar-wrap,.mic-slot.host-seat .mic-slot-empty{margin-bottom:6px;}
+@media (max-height:560px){
+  body.room-typing .mic-stage{display:none;}
+  body.room-typing .agora-status{display:none !important;}
+}
 </style>
 </head>
 
@@ -1436,6 +1482,16 @@ body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
 <div class="room-wrap">
 <div id="roomContent"></div>
 </div>
+<div id="roomComposer" class="room-composer" style="display:none;">
+<input type="text" id="roomChatInput" placeholder="اكتب رسالة في الشات..." autocomplete="off" onfocus="composerTyping(true)" onblur="composerBlurSoon()" onkeydown="if(event.key==='Enter'){event.preventDefault();sendRoomChat();}">
+<div class="rc-tools">
+<button id="rcMicBtn" class="rc-btn dim" onclick="onMicButton()" title="المايك">🎤</button>
+<button id="rcSpeakerBtn" class="rc-btn" onclick="toggleSpeaker()" title="صوت الغرفة">🔊</button>
+<button id="rcGamesBtn" class="rc-btn" onclick="openRoomGamesModal()" title="الألعاب">🎮</button>
+<button id="rcAdminBtn" class="rc-btn admin" onclick="openAdminToolsModal()" title="أدوات المسؤول" style="display:none;">⚙️</button>
+</div>
+<button id="rcSendBtn" class="rc-send" onpointerdown="event.preventDefault()" onclick="sendRoomChat()" title="إرسال"><span>➤</span></button>
+</div>
 <div id="roomAudioContainer" style="display:none;"></div>
 </div>
 
@@ -1498,6 +1554,28 @@ body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
 <input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن اللاعبين)">
 <button onclick="addQuestionToBank()" style="width:100%;">➕ إضافة سؤال جديد</button>
 </div>
+</div>
+</div>
+
+<!-- مودال أدوات المسؤول -->
+<div id="roomAdminToolsModal" class="modal-overlay">
+<div class="modal-content">
+<div class="modal-header">
+<h3>⚙️ أدوات المسؤول</h3>
+<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+</div>
+<div id="roomAdminToolsBody"></div>
+</div>
+</div>
+
+<!-- مودال الألعاب -->
+<div id="roomGamesModal" class="modal-overlay">
+<div class="modal-content">
+<div class="modal-header">
+<h3>🎮 الألعاب</h3>
+<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+</div>
+<div id="roomGamesBody"></div>
 </div>
 </div>
 
@@ -1578,6 +1656,7 @@ let agoraClient = null;
 let agoraJoined = false;
 let agoraAudioBlocked = false;
 let agoraLastFail = 0;
+let speakerMuted = false;
 
 function setAgoraStatus(text, kind) {
     const el = document.getElementById("agoraStatusBar");
@@ -1603,6 +1682,7 @@ function refreshAgoraStatus() {
     if (localAudioTrack) text += " · 🎙️ " + (localAudioTrack.getVolumeLevel() > 0.02 ? "مايكك يلتقط صوتك" : "مايكك لا يلتقط صوتاً");
     if (talkers > 0) text += " · يتحدث " + talkers + (agoraRemoteLevel > 3 ? " ✅ الصوت يصل" : " ⏳ لا يصل صوت");
     else if (!localAudioTrack) text += " · لا أحد يتحدث";
+    if (speakerMuted) text += " · 🔇 مكتوم عندك";
     setAgoraStatus(text, "ok");
 }
 
@@ -1637,6 +1717,7 @@ async function ensureAgoraJoined() {
             try {
                 await agoraClient.subscribe(user, mediaType);
                 if (mediaType === "audio" && user.audioTrack) {
+                    user.audioTrack.setVolume(speakerMuted ? 0 : 100);
                     user.audioTrack.play();
                 }
             } catch (e) {
@@ -1688,11 +1769,19 @@ async function ensureAgoraJoined() {
 
 /* تفعيل الميكروفون فعليًا (يطلب إذن المايك وينشر الصوت) — يُستخدم فقط عند
    أخذ مقعد مايك، وليس لمجرد فتح الغرفة كمستمع. */
+let publishPromise = null;
 async function publishMyMic() {
     await ensureAgoraJoined();
     if (localAudioTrack) return; // المايك مفعّل مسبقًا
-    localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-    await agoraClient.publish([localAudioTrack]);
+    if (!publishPromise) {
+        publishPromise = (async () => {
+            const track = await AgoraRTC.createMicrophoneAudioTrack();
+            try { await agoraClient.publish([track]); }
+            catch (e) { track.close(); throw e; }
+            localAudioTrack = track;
+        })().finally(() => { publishPromise = null; });
+    }
+    await publishPromise;
 }
 
 async function unpublishMyMic() {
@@ -1730,14 +1819,33 @@ async function leaveVoiceChannel() {
 /* يطبّق حالة المايك (كتم المسؤول / إخراج من المقعد) الآتية من Firestore على
    جهاز صاحب المايك نفسه، لأن أجورا لا يسمح لمستخدم بكتم مايك مستخدم آخر عن
    بُعد — يجب أن يطبّق كل متصفح الحالة على نفسه بناءً على البيانات اللحظية. */
+let micRecovering = false;
+let micRecoverFailedAt = 0;
+
+/* إذا كان اسمك على مقعد (أو أنت المضيف) لكن مايكك غير منشور على هذا الجهاز
+   (مثلاً بعد تحديث الصفحة)، نشغّله من جديد بدل أن يبقى المقعد "محجوزاً" بلا صوت. */
+function recoverMyMic() {
+    if (micRecovering || !roomState.isLive || Date.now() - micRecoverFailedAt < 15000) return;
+    micRecovering = true;
+    publishMyMic().then(() => {
+        const m = myMicIndex !== null ? roomState.mics[myMicIndex] : null;
+        if (localAudioTrack && m) localAudioTrack.setMuted(!!m.muted).catch(() => {});
+        refreshAgoraStatus();
+    }).catch(err => {
+        micRecoverFailedAt = Date.now();
+        console.error("تعذّر تشغيل المايك:", err);
+        agoraErrorUntil = Date.now() + 8000;
+        setAgoraStatus("⚠️ مايكك غير مفعّل: " + (err.message || err.code || err) + " · اضغط على صورتك للمحاولة", "err");
+    }).finally(() => { micRecovering = false; });
+}
+
 function syncMyMicWithState() {
     if (!currentUser || !roomState.mics) return;
     let idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
 
     if (idx === -1) {
-        /* المضيف يتحدث بدون مقعد، فلا نوقف مايكه */
-        const isHost = roomState.isLive && roomState.hostUid === currentUser.uid;
-        if (localAudioTrack && !isHost) unpublishMyMic();
+        /* المايك مرتبط بالمقعد: من ليس على مقعد لا ينشر صوتاً */
+        if (localAudioTrack) unpublishMyMic();
         myMicIndex = null;
         return;
     }
@@ -1746,16 +1854,19 @@ function syncMyMicWithState() {
     if (localAudioTrack) {
         let shouldMute = !!roomState.mics[idx].muted;
         localAudioTrack.setMuted(shouldMute).catch(() => {});
+    } else {
+        recoverMyMic();
     }
 }
 
 function toggleMyMic(index) {
     if (!currentUser || !roomState.mics[index] || roomState.mics[index].uid !== currentUser.uid) return;
-    if (!localAudioTrack) return;
+    if (!localAudioTrack) { micRecoverFailedAt = 0; recoverMyMic(); return; }
     let willMute = !roomState.mics[index].muted;
     localAudioTrack.setMuted(willMute).catch(() => {});
     roomState.mics[index].muted = willMute;
     saveRoomState();
+    updateComposerState();
 }
 
 function releaseMicSlot(index) {
@@ -3207,7 +3318,8 @@ firebaseDB.collection("videos").doc(docId).delete()
 .catch(err => alert("خطأ أثناء الحذف: " + err.message));
 }
 
-const MIC_SLOTS = 10;
+const MIC_SLOTS = 15;
+const HOST_SEAT = 2; // مقعد المضيف المميز (الأوسط في الصف الأول)
 function normalizeRoomMics() {
     const old = Array.isArray(roomState.mics) ? roomState.mics : [];
     roomState.mics = Array.from({ length: MIC_SLOTS }, (_, i) => old[i] || null);
@@ -3283,6 +3395,7 @@ container.innerHTML = `
 <p style="font-size:12px; color:#94a3b8; margin-top:6px;">ستفتح الغرفة عند بدء البث المباشر والمسابقات من قبل المسؤول.</p>
 </div>
 `;
+updateComposerState();
 return;
 }
 
@@ -3298,20 +3411,14 @@ html += `
 `;
 }
 
-let canManage = isHostOrAdmin && roomState.isLive;
-let noGameNow = !roomState.game || !roomState.game.active;
+let seatedCount = (roomState.mics || []).filter(m => m).length;
 html += `
 <div class="room-toolbar">
 <div class="room-live-badge ${roomState.isLive ? 'is-live' : ''}">
 <div class="room-live-dot"></div>
 <span>${roomState.isLive ? 'مباشر' : 'مغلق'}</span>
 </div>
-<div class="room-toolbar-btns">
-${canManage && noGameNow ? `<button class="rt-btn" style="background:#2563eb;" onclick="openGameStartModal()">🎮 مسابقة</button>` : ''}
-${canManage ? `<button class="rt-btn" style="background:#475569;" onclick="openQBankModal()">📚 الأسئلة</button>` : ''}
-${isAdmin && roomState.isLive ? `<button class="rt-btn" style="background:#475569;" onclick="clearAllMics()">🧹 تفريغ</button>` : ''}
-${isAdmin && roomState.isLive ? `<button class="rt-btn" style="background:#dc2626;" onclick="endRoomBroadcast()">🛑 إنهاء</button>` : ''}
-</div>
+<div class="room-status-pill">🎙️ على المايك: ${seatedCount} / ${MIC_SLOTS}</div>
 </div>
 `;
 
@@ -3321,15 +3428,6 @@ html += renderGameWidgetHTML();
 
 html += `
 <div class="mic-stage">
-<div class="mic-host-row">
-<div class="mic-host">
-<div class="mic-host-avatar-wrap ${roomState.hostName ? 'speaking' : ''}">
-<img src="${roomState.hostAvatar || 'https://ui-avatars.com/api/?name=H&background=facc15&color=0f172a'}" class="mic-host-avatar" alt="">
-</div>
-<span class="mic-host-label">المضيف 🎙️</span>
-<div class="mic-host-name">${roomState.hostName ? escapeHTML(roomState.hostName) : 'فارغ'}</div>
-</div>
-</div>
 <div class="mic-grid">
 `;
 
@@ -3341,7 +3439,7 @@ let avatarUrl = m.avatar || av.url;
 let isMine = currentUser && m.uid === currentUser.uid;
 let clickAttr = isMine ? `onclick="toggleMyMic(${i})"` : (isAdmin ? `onclick="adminKickMic(${i})"` : '');
 html += `
-<div class="mic-slot">
+<div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
 <div class="mic-slot-avatar-wrap ${m.muted ? '' : 'speaking'}" ${clickAttr} style="cursor:${isMine || isAdmin ? 'pointer' : 'default'};">
 <img src="${avatarUrl}" class="mic-slot-avatar" alt="">
 ${m.muted ? '<div class="mic-slot-muted-icon">🔇</div>' : ''}
@@ -3353,9 +3451,9 @@ ${isMine ? `<div style="font-size:9px;color:#f87171;cursor:pointer;margin-top:2p
 } else {
 let canTakeMic = currentUser && roomState.isLive;
 html += `
-<div class="mic-slot">
+<div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
 <div class="mic-slot-empty" ${canTakeMic ? `onclick="takeMicSlot(${i})"` : ''} title="مقياس مايك فارغ">➕</div>
-<div class="mic-slot-vacant-label">مايك ${i+1}</div>
+<div class="mic-slot-vacant-label">${i === HOST_SEAT ? '👑 المضيف' : 'مايك ' + (i+1)}</div>
 </div>
 `;
 }
@@ -3411,17 +3509,174 @@ html += `<div style="text-align:center; color:#475569; padding:20px; font-size:1
 
 html += `
 </div>
-<div class="room-chat-input-row">
-<input type="text" id="roomChatInput" placeholder="اكتب رسالة في الشات..." onkeydown="if(event.key==='Enter') sendRoomChat()">
-<button onclick="sendRoomChat()">💬</button>
-</div>
 </div>
 `;
 
 container.innerHTML = html;
+updateComposerState();
 
 let chatBox = document.getElementById("roomChatMessagesBox");
 if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ====== شريط الكتابة والأزرار الدائرية (مايك / سبيكر / ألعاب / أدوات المسؤول) ====== */
+function roomToast(msg) {
+    const old = document.getElementById("roomToastEl");
+    if (old) old.remove();
+    const el = document.createElement("div");
+    el.id = "roomToastEl";
+    el.className = "room-toast";
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 2200);
+}
+
+function canManageRoom() {
+    return !!(isAdmin || (currentUser && roomState.hostUid === currentUser.uid));
+}
+
+function updateComposerState() {
+    const bar = document.getElementById("roomComposer");
+    if (!bar) return;
+    bar.style.display = roomState.isLive ? "flex" : "none";
+    if (!roomState.isLive) composerTyping(false);
+
+    const admin = document.getElementById("rcAdminBtn");
+    if (admin) admin.style.display = isAdmin ? "flex" : "none";
+
+    const games = document.getElementById("rcGamesBtn");
+    if (games) games.className = "rc-btn" + (roomState.game && roomState.game.active ? " on" : "");
+
+    const sp = document.getElementById("rcSpeakerBtn");
+    if (sp) {
+        sp.textContent = speakerMuted ? "🔇" : "🔊";
+        sp.className = "rc-btn" + (speakerMuted ? " off" : "");
+    }
+
+    const mic = document.getElementById("rcMicBtn");
+    if (mic) {
+        const seat = (currentUser && roomState.mics) ? roomState.mics.findIndex(m => m && m.uid === currentUser.uid) : -1;
+        if (seat === -1) mic.className = "rc-btn dim";
+        else if (roomState.mics[seat].muted) mic.className = "rc-btn off slash";
+        else mic.className = "rc-btn on";
+    }
+}
+
+/* عند الكتابة: تختفي الأزرار ويظهر سهم الإرسال، وترجع عند الإرسال أو إغلاق الكيبورد */
+function composerTyping(on) {
+    const bar = document.getElementById("roomComposer");
+    if (bar) bar.classList.toggle("typing", !!on);
+    document.body.classList.toggle("room-typing", !!on);
+}
+function composerBlurSoon() {
+    setTimeout(() => {
+        const input = document.getElementById("roomChatInput");
+        if (!input || document.activeElement !== input) composerTyping(false);
+    }, 120);
+}
+let kbWasOpen = false;
+let roomBaseH = window.innerHeight;
+function roomViewportSync() {
+    const vv = window.visualViewport;
+    const typing = document.body.classList.contains("room-typing");
+    const curH = vv ? Math.min(window.innerHeight, vv.height) : window.innerHeight;
+    if (!typing) {
+        /* بدون كتابة لا يوجد كيبورد: هذا هو الارتفاع الكامل */
+        if (!vv || vv.height >= window.innerHeight - 5) roomBaseH = window.innerHeight;
+        document.documentElement.style.removeProperty("--kb");
+        kbWasOpen = false;
+        return;
+    }
+    /* ارتفاع الكيبورد (يعمل سواء تقلّصت نافذة العرض أو تقلّصت العرض المرئي فقط) */
+    const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    document.documentElement.style.setProperty("--kb", kb + "px");
+    if (curH < roomBaseH - 120) { kbWasOpen = true; return; }
+    if (kbWasOpen) {
+        /* أُغلق الكيبورد بينما المربع ما زال مفعّلاً: نُرجع الأزرار */
+        kbWasOpen = false;
+        const input = document.getElementById("roomChatInput");
+        if (input) input.blur();
+        composerTyping(false);
+    }
+}
+if (window.visualViewport) window.visualViewport.addEventListener("resize", roomViewportSync);
+window.addEventListener("resize", roomViewportSync);
+window.addEventListener("orientationchange", () => { roomBaseH = 0; setTimeout(() => { roomBaseH = window.innerHeight; }, 400); });
+
+function onMicButton() {
+    if (!currentUser) return roomToast("سجّل دخولك من تبويب الحساب أولاً");
+    const idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
+    if (idx === -1) return roomToast("اجلس على أحد المقاعد ➕ لتتحدث 🎙️");
+    toggleMyMic(idx);
+    updateComposerState();
+}
+
+function applySpeakerState() {
+    try {
+        if (agoraClient) agoraClient.remoteUsers.forEach(u => { if (u.audioTrack) u.audioTrack.setVolume(speakerMuted ? 0 : 100); });
+    } catch (e) { console.error(e); }
+}
+function toggleSpeaker() {
+    speakerMuted = !speakerMuted;
+    applySpeakerState();
+    if (!speakerMuted) enableRoomAudio();
+    updateComposerState();
+    refreshAgoraStatus();
+    roomToast(speakerMuted ? "🔇 كتمت صوت الغرفة عندك" : "🔊 شغّلت صوت الغرفة");
+}
+
+function openAdminToolsModal() {
+    if (!isAdmin) return;
+    const body = document.getElementById("roomAdminToolsBody");
+    if (!body) return;
+    body.innerHTML = `
+<button class="tool-row" onclick="adminToolsAction('qbank')">📚 إدارة قاعدة الأسئلة</button>
+<button class="tool-row" onclick="adminToolsAction('clear')">🧹 تفريغ كل المايكات</button>
+<button class="tool-row danger" onclick="adminToolsAction('end')">🛑 إنهاء البث وإغلاق الغرفة</button>
+`;
+    openModal("roomAdminToolsModal");
+}
+function adminToolsAction(action) {
+    if (!isAdmin) return;
+    closeAllModalsDirectly();
+    if (action === "qbank") openQBankModal();
+    else if (action === "clear") clearAllMics();
+    else if (action === "end") { if (confirm("إنهاء البث وإغلاق الغرفة للجميع؟")) endRoomBroadcast(); }
+}
+
+/* قائمة الألعاب: لإضافة لعبة جديدة مستقبلاً أضف عنصراً هنا بنفس الشكل { id, icon, name, desc, start } */
+const ROOM_GAMES = [
+    { id: "quiz", icon: "🎮", name: "مسابقة الأسئلة", desc: "تحدٍّ بين لاعبين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
+];
+
+function openRoomGamesModal() {
+    const body = document.getElementById("roomGamesBody");
+    if (!body) return;
+    const active = !!(roomState.game && roomState.game.active);
+    const manage = canManageRoom() && roomState.isLive;
+    let html = "";
+    if (active) html += `<div class="game-note live">🔴 توجد لعبة جارية الآن</div>`;
+    else if (!manage) html += `<div class="game-note">يختار المضيف اللعبة ويبدأها</div>`;
+    ROOM_GAMES.forEach((g, i) => {
+        html += `
+<div class="game-row">
+<div class="game-row-ico">${g.icon}</div>
+<div class="game-row-info">
+<div class="game-row-name">${escapeHTML(g.name)}</div>
+<div class="game-row-desc">${escapeHTML(g.desc)}</div>
+</div>
+<button class="game-row-btn" ${(manage && !active) ? `onclick="startRoomGame(${i})"` : "disabled"}>ابدأ</button>
+</div>
+`;
+    });
+    body.innerHTML = html;
+    openModal("roomGamesModal");
+}
+function startRoomGame(i) {
+    const g = ROOM_GAMES[i];
+    if (!g || !canManageRoom()) return;
+    closeAllModalsDirectly();
+    g.start();
 }
 
 function startRoomBroadcast() {
@@ -3431,7 +3686,17 @@ roomState.hostName = currentUser.displayName || currentUser.email.split('@')[0] 
 roomState.hostUid = currentUser.uid;
 roomState.hostAvatar = (currentUserDocData && currentUserDocData.photoURL) ? currentUserDocData.photoURL : "";
 
-joinVoiceChannel("masro7_main_room", currentUser.uid);
+/* بداية جلسة جديدة: نفرّغ المقاعد ونجلس المسؤول على مقعد المضيف الذهبي */
+roomState.mics = Array(MIC_SLOTS).fill(null);
+roomState.mics[HOST_SEAT] = { uid: currentUser.uid, name: roomState.hostName, avatar: roomState.hostAvatar, muted: false };
+
+joinVoiceChannel("masro7_main_room", currentUser.uid).catch(() => {
+    /* فشل تشغيل المايك: نحرر مقعد المضيف حتى لا يبقى محجوزاً بدون صوت */
+    if (roomState.mics[HOST_SEAT] && roomState.mics[HOST_SEAT].uid === currentUser.uid) {
+        roomState.mics[HOST_SEAT] = null;
+        saveRoomState();
+    }
+});
 saveRoomState();
 alert("تم بدء البث الصوتي المباشر بنجاح! 🎙️");
 }
@@ -3445,7 +3710,7 @@ roomState.hostUid = "";
 roomState.mics = Array(MIC_SLOTS).fill(null);
 roomState.game.active = false;
 saveRoomState();
-alert("تم إهاء البث المباشر وإغلاق الغرفة.");
+alert("تم إنهاء البث المباشر وإغلاق الغرفة.");
 }
 
 async function takeMicSlot(index) {
@@ -3513,6 +3778,8 @@ time: timeNow
 if(roomState.chat.length > 50) roomState.chat.shift();
 input.value = "";
 saveRoomState();
+input.blur();
+composerTyping(false);
 }
 
 function pinMessage(index) {
