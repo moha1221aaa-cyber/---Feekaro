@@ -1259,6 +1259,78 @@ flex-wrap: wrap;
 .room-chat-box .room-chat-messages{flex:1; min-height:0; max-height:none;}
 .room-chat-box .room-pinned-msg,
 .room-chat-box .room-chat-input-row{flex-shrink:0;}
+.agora-status{display:none;flex-shrink:0;width:100%;max-width:420px;margin:0 auto 6px;box-sizing:border-box;text-align:center;font-size:12px;font-weight:bold;padding:7px 10px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#94a3b8;}
+.agora-status.ok{background:#052e16;border-color:#166534;color:#4ade80;}
+.agora-status.warn{background:#422006;border-color:#a16207;color:#facc15;cursor:pointer;}
+.agora-status.err{background:#450a0a;border-color:#991b1b;color:#fca5a5;}
+/* ===== ضغط الغرفة لتظهر كاملة في الشاشة بدون سكرول ===== */
+body.room-active #mainHeader{padding:8px 10px;}
+body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
+#room.section.active{padding:4px 8px 0;--seat:clamp(30px,5.3vh,42px);}
+#roomContent{overflow:hidden;}
+.room-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;max-width:420px;margin:0 auto 4px;}
+.room-toolbar-btns{display:flex;gap:4px;flex-wrap:nowrap;}
+.rt-btn{margin:0;display:inline-block;padding:5px 8px;font-size:11px;border-radius:8px;white-space:nowrap;}
+.agora-status{margin-bottom:3px;padding:3px 8px;font-size:11px;}
+.mic-stage{padding:6px 6px 4px;margin:0 auto 4px;border-radius:12px;}
+.mic-host-row{margin-bottom:5px;}
+.mic-host{width:auto;display:flex;align-items:center;justify-content:center;gap:8px;}
+.mic-host-avatar-wrap{width:36px;height:36px;margin:0;}
+.mic-host-avatar{border-width:2px;}
+.mic-host-empty{width:36px;height:36px;margin:0;font-size:14px;}
+.mic-host-label{margin:0;font-size:9px;padding:1px 6px;}
+.mic-host-name{margin:0;font-size:11px;}
+.mic-grid{gap:4px 6px;}
+.mic-slot-avatar-wrap,.mic-slot-empty{width:var(--seat);height:var(--seat);margin:0 auto 2px;}
+.mic-slot-empty{font-size:13px;}
+.mic-slot-name{font-size:9px;}
+.mic-slot-vacant-label{font-size:8px;}
+.mic-slot-muted-icon{width:13px;height:13px;font-size:8px;}
+#roomContent > .room-chat-box{flex:1 1 0;min-height:110px;margin-bottom:4px;border-radius:12px;}
+.room-chat-messages{padding:6px;gap:5px;min-height:0;}
+.room-chat-input-row{padding:5px;}
+.room-chat-input-row input{padding:6px 10px;font-size:12px;}
+.room-chat-input-row button{width:32px;height:32px;}
+.game-widget{background:#1e293b;border:1.5px solid #2563eb;border-radius:12px;padding:5px 8px;margin:0 auto 4px;max-width:420px;}
+.game-widget .game-status-badge{margin:0 auto 2px;font-size:10px;padding:1px 10px;}
+.game-widget .game-header-title{display:none;}
+.game-widget .vs-box{margin:2px auto;gap:8px;}
+.game-widget .player-circle,.game-widget .player-circle-empty{width:36px;height:36px;margin:0 auto 2px;}
+.game-widget .player-circle-name{font-size:11px;}
+.game-widget .score-box{font-size:18px;min-width:50px;}
+.game-widget .question-card{padding:5px;margin:3px auto;}
+.game-widget .question-card-label{display:none;}
+.game-widget .question-card-text{font-size:13px;line-height:1.4;}
+.game-widget .timer-wrap{margin:3px 0;}
+.game-widget .timer-circle-num{width:32px;height:32px;font-size:15px;border-width:2px;}
+.game-widget .answer-boxes{margin:3px auto;gap:6px;}
+.game-widget .answer-box-col{padding:4px;}
+.game-widget .answer-box-col input{padding:5px;font-size:12px;}
+.game-widget .admin-game-dock{margin:4px auto;padding:4px;}
+.game-widget .admin-game-dock h4{display:none;}
+.game-widget .admin-game-dock .admin-btn-group button{padding:4px 6px;font-size:10px;margin:2px;}
+/* ===== ودجت المسابقة أصغر، والمؤقت في الزاوية، وأزرار المسؤول في صف واحد ===== */
+.game-widget{position:relative;}
+.game-widget .game-status-badge{display:none;}
+.game-widget .timer-wrap{position:absolute;top:6px;left:8px;margin:0;z-index:2;}
+.game-widget .timer-circle-num{width:28px;height:28px;font-size:13px;}
+.game-widget .player-circle,.game-widget .player-circle-empty{width:30px;height:30px;}
+.game-widget .question-card{padding:4px 6px;margin:2px auto;}
+.game-widget .question-card-text{font-size:12px;}
+.game-widget .answer-box-col-label{display:none;}
+.game-widget .answer-box-col{padding:3px;}
+.game-widget .answer-box-col input{padding:4px;}
+.game-widget .answer-reveal-text{font-size:12px;padding:2px 0;}
+.game-widget .admin-game-dock{margin:3px auto;padding:3px;}
+.game-widget .admin-game-dock .admin-btn-group{gap:0;}
+.game-widget .admin-game-dock .admin-btn-group button{flex:1 1 22%;margin:1px;padding:4px 2px;font-size:10px;white-space:nowrap;}
+.game-widget .admin-game-dock .admin-btn-group button:last-child{flex:1 1 100%;width:auto;}
+#roomContent > .room-chat-box{min-height:84px;}
+@media (max-height:700px){
+  #room.section.active{--seat:28px;}
+  .mic-slot-vacant-label{display:none;}
+  .mic-stage{padding:4px 6px 2px;}
+}
 </style>
 </head>
 
@@ -1360,6 +1432,7 @@ flex-wrap: wrap;
 </div>
 
 <div id="room" class="section">
+<div id="agoraStatusBar" class="agora-status" onclick="enableRoomAudio()"></div>
 <div class="room-wrap">
 <div id="roomContent"></div>
 </div>
@@ -1503,6 +1576,45 @@ async function fetchAgoraToken() {
 
 let agoraClient = null;
 let agoraJoined = false;
+let agoraAudioBlocked = false;
+let agoraLastFail = 0;
+
+function setAgoraStatus(text, kind) {
+    const el = document.getElementById("agoraStatusBar");
+    if (!el) return;
+    if (!text) { el.style.display = "none"; return; }
+    el.textContent = text;
+    el.className = "agora-status " + (kind || "");
+    el.style.display = "block";
+}
+
+let agoraRemoteLevel = 0;
+let agoraStatusTimer = null;
+let agoraErrorUntil = 0;
+
+/* شريط الحالة: يوضح للمستخدم هل هو متصل، وهل مايكه يلتقط صوتاً، وهل يصله صوت من غيره */
+function refreshAgoraStatus() {
+    if (!agoraJoined) { setAgoraStatus(""); return; }
+    if (Date.now() < agoraErrorUntil) return;
+    if (agoraAudioBlocked) { setAgoraStatus("🔇 اضغط هنا لتفعيل الصوت", "warn"); return; }
+    const remote = agoraClient ? agoraClient.remoteUsers : [];
+    const talkers = remote.filter(u => u.hasAudio).length;
+    let text = "🔊 متصل";
+    if (localAudioTrack) text += " · 🎙️ " + (localAudioTrack.getVolumeLevel() > 0.02 ? "مايكك يلتقط صوتك" : "مايكك لا يلتقط صوتاً");
+    if (talkers > 0) text += " · يتحدث " + talkers + (agoraRemoteLevel > 3 ? " ✅ الصوت يصل" : " ⏳ لا يصل صوت");
+    else if (!localAudioTrack) text += " · لا أحد يتحدث";
+    setAgoraStatus(text, "ok");
+}
+
+function enableRoomAudio() {
+    try {
+        if (agoraClient) agoraClient.remoteUsers.forEach(u => { if (u.audioTrack) u.audioTrack.play(); });
+    } catch (e) { console.error(e); }
+    agoraAudioBlocked = false;
+    refreshAgoraStatus();
+}
+/* أي ضغطة على الصفحة تحاول تشغيل الصوت إذا كان محجوباً */
+document.addEventListener("click", () => { if (agoraAudioBlocked) enableRoomAudio(); }, true);
 let localAudioTrack = null;
 let myMicIndex = null;
 
@@ -1515,14 +1627,30 @@ async function ensureAgoraJoined() {
     if (!agoraClient) {
         agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
+        /* المتصفح قد يمنع تشغيل الصوت قبل أي ضغطة من المستخدم؛ نعرض شريط تنبيه ويكفي ضغطة واحدة */
+        AgoraRTC.onAudioAutoplayFailed = () => {
+            agoraAudioBlocked = true;
+            refreshAgoraStatus();
+        };
+
         agoraClient.on("user-published", async (user, mediaType) => {
-            await agoraClient.subscribe(user, mediaType);
-            if (mediaType === "audio") {
-                if (AgoraRTC.getAudioContext().state === "suspended") {
-                    await AgoraRTC.getAudioContext().resume();
+            try {
+                await agoraClient.subscribe(user, mediaType);
+                if (mediaType === "audio" && user.audioTrack) {
+                    user.audioTrack.play();
                 }
-                user.audioTrack.play();
+            } catch (e) {
+                console.error("تعذر استقبال الصوت:", e);
+                agoraErrorUntil = Date.now() + 8000;
+                setAgoraStatus("⚠️ تعذّر استقبال الصوت: " + (e.message || e.code || e), "err");
             }
+        });
+
+        agoraClient.enableAudioVolumeIndicator();
+        agoraClient.on("volume-indicator", (vols) => {
+            let max = 0;
+            vols.forEach(v => { if (v.uid !== agoraClient.uid && v.uid !== 0 && v.level > max) max = v.level; });
+            agoraRemoteLevel = max;
         });
 
         agoraClient.on("user-unpublished", (user, mediaType) => {
@@ -1542,9 +1670,16 @@ async function ensureAgoraJoined() {
     if (!agoraJoined) {
         if (!agoraJoinPromise) {
             agoraJoinPromise = (async () => {
-                const token = await fetchAgoraToken();
-                await agoraClient.join(AGORA_APP_ID, AGORA_CHANNEL, token, null);
-                agoraJoined = true;
+                try {
+                    const token = await fetchAgoraToken();
+                    await agoraClient.join(AGORA_APP_ID, AGORA_CHANNEL, token, null);
+                    agoraJoined = true;
+                    refreshAgoraStatus();
+                    if (!agoraStatusTimer) agoraStatusTimer = setInterval(refreshAgoraStatus, 1000);
+                } catch (e) {
+                    setAgoraStatus("⚠️ تعذّر الاتصال بالصوت: " + (e.message || e.code || e), "err");
+                    throw e;
+                }
             })().finally(() => { agoraJoinPromise = null; });
         }
         await agoraJoinPromise;
@@ -1586,6 +1721,9 @@ async function leaveVoiceChannel() {
     if (agoraClient && agoraJoined) {
         await agoraClient.leave();
         agoraJoined = false;
+        agoraAudioBlocked = false;
+        if (agoraStatusTimer) { clearInterval(agoraStatusTimer); agoraStatusTimer = null; }
+        setAgoraStatus("");
     }
 }
 
@@ -1597,7 +1735,9 @@ function syncMyMicWithState() {
     let idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
 
     if (idx === -1) {
-        if (localAudioTrack) unpublishMyMic();
+        /* المضيف يتحدث بدون مقعد، فلا نوقف مايكه */
+        const isHost = roomState.isLive && roomState.hostUid === currentUser.uid;
+        if (localAudioTrack && !isHost) unpublishMyMic();
         myMicIndex = null;
         return;
     }
@@ -2696,6 +2836,7 @@ if(sectionId === 'room') {
     joinRoomPresence();
 }
 
+document.body.classList.toggle('room-active', sectionId === 'room');
 document.documentElement.style.setProperty('--hdr-h', document.getElementById('mainHeader').offsetHeight + 'px');
 window.scrollTo(0, 0);
 }
@@ -3066,12 +3207,18 @@ firebaseDB.collection("videos").doc(docId).delete()
 .catch(err => alert("خطأ أثناء الحذف: " + err.message));
 }
 
+const MIC_SLOTS = 10;
+function normalizeRoomMics() {
+    const old = Array.isArray(roomState.mics) ? roomState.mics : [];
+    roomState.mics = Array.from({ length: MIC_SLOTS }, (_, i) => old[i] || null);
+}
+
 let roomState = {
 isLive: false,
 hostName: "",
 hostUid: "",
 hostAvatar: "",
-mics: Array(5).fill(null),
+mics: Array(MIC_SLOTS).fill(null),
 pinnedMsg: null,
 chat: [],
 game: { active: false, status: "idle", qText: "", ans1: "", ans2: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null },
@@ -3089,18 +3236,19 @@ roomState = doc.data();
 } else {
 roomState = {
 isLive: false, hostName: "", hostUid: "", hostAvatar: "",
-mics: Array(5).fill(null), pinnedMsg: null, chat: [],
+mics: Array(MIC_SLOTS).fill(null), pinnedMsg: null, chat: [],
 game: { active: false, status: "idle", qText: "", ans1: "", ans2: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null },
 qbank: []
 };
 }
 
+normalizeRoomMics();
 syncMyMicWithState();
 
 /* أي شخص يفتح الغرفة وهي مباشرة ينضم تلقائيًا كمستمع في أجورا (بدون طلب
    إذن المايك)، حتى يسمع المتحدثين فعليًا لا كواجهة شكلية فقط. */
-if(roomState.isLive && currentUser && !agoraJoined) {
-ensureAgoraJoined().catch(err => console.error("تعذر الانضمام كمستمع لقناة أجورا:", err));
+if(roomState.isLive && !agoraJoined && Date.now() - agoraLastFail > 10000) {
+ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
 }
 if(!roomState.isLive && agoraJoined) {
 leaveVoiceChannel();
@@ -3148,21 +3296,22 @@ html += `
 <button onclick="startRoomBroadcast()" style="background:#059669; font-size:15px; padding:12px 24px;">🎙️ بدء البث الصوتي المباشر</button>
 </div>
 `;
-} else if(roomState.isLive && isAdmin) {
-html += `
-<div style="text-align:center; margin-bottom:12px;">
-<button onclick="endRoomBroadcast()" style="background:#dc2626; font-size:13px; padding:8px 16px;">🛑 إنهاء البث المباشر وإغلاق الغرفة</button>
-</div>
-`;
 }
 
+let canManage = isHostOrAdmin && roomState.isLive;
+let noGameNow = !roomState.game || !roomState.game.active;
 html += `
-<div class="room-top-bar">
+<div class="room-toolbar">
 <div class="room-live-badge ${roomState.isLive ? 'is-live' : ''}">
 <div class="room-live-dot"></div>
-<span>${roomState.isLive ? 'مباشر الآن' : 'مغلق'}</span>
+<span>${roomState.isLive ? 'مباشر' : 'مغلق'}</span>
 </div>
-<div class="room-status-pill">المتكونون: الغرفة الصوتية للمسابقات</div>
+<div class="room-toolbar-btns">
+${canManage && noGameNow ? `<button class="rt-btn" style="background:#2563eb;" onclick="openGameStartModal()">🎮 مسابقة</button>` : ''}
+${canManage ? `<button class="rt-btn" style="background:#475569;" onclick="openQBankModal()">📚 الأسئلة</button>` : ''}
+${isAdmin && roomState.isLive ? `<button class="rt-btn" style="background:#475569;" onclick="clearAllMics()">🧹 تفريغ</button>` : ''}
+${isAdmin && roomState.isLive ? `<button class="rt-btn" style="background:#dc2626;" onclick="endRoomBroadcast()">🛑 إنهاء</button>` : ''}
+</div>
 </div>
 `;
 
@@ -3184,7 +3333,7 @@ html += `
 <div class="mic-grid">
 `;
 
-for(let i=0; i<5; i++) {
+for(let i=0; i<MIC_SLOTS; i++) {
 let m = roomState.mics[i];
 if(m) {
 let av = getPlayerAvatar(m.name);
@@ -3216,10 +3365,6 @@ html += `
 </div>
 </div>
 `;
-
-if(isHostOrAdmin && roomState.isLive && (!roomState.game || !roomState.game.active)) {
-html += `<button class="room-start-game-btn" onclick="openGameStartModal()">🎮 بدء مسابقة جديدة</button>`;
-}
 
 let pinnedHTML = "";
 if(roomState.pinnedMsg) {
@@ -3273,14 +3418,6 @@ html += `
 </div>
 `;
 
-if(isHostOrAdmin && roomState.isLive) {
-html += `
-<div style="text-align:center; margin-top:10px;">
-<button onclick="openQBankModal()" style="background:#475569; font-size:12px; padding:8px 14px;">📚 إدارة قاعدة الأسئلة</button>
-</div>
-`;
-}
-
 container.innerHTML = html;
 
 let chatBox = document.getElementById("roomChatMessagesBox");
@@ -3305,14 +3442,18 @@ leaveVoiceChannel();
 roomState.isLive = false;
 roomState.hostName = "";
 roomState.hostUid = "";
-roomState.mics = Array(5).fill(null);
+roomState.mics = Array(MIC_SLOTS).fill(null);
 roomState.game.active = false;
 saveRoomState();
 alert("تم إهاء البث المباشر وإغلاق الغرفة.");
 }
 
-function takeMicSlot(index) {
+async function takeMicSlot(index) {
 if(!currentUser || !roomState.isLive) return;
+if(roomState.mics[index]) return;
+if(roomState.mics.some(m => m && m.uid === currentUser.uid)) {
+    return alert('أنت على مايك بالفعل، اضغط "مغادرة المايك" أولاً.');
+}
 let myName = currentUserDocData && currentUserDocData.name ? currentUserDocData.name : (currentUser.displayName || "مستخدم");
 let myPhoto = currentUserDocData && currentUserDocData.photoURL ? currentUserDocData.photoURL : "";
 
@@ -3322,9 +3463,35 @@ name: myName,
 avatar: myPhoto,
 muted: false
 };
-joinVoiceChannel("masro7_main_room", currentUser.uid);
+saveRoomState();
+
+try {
+    await joinVoiceChannel("masro7_main_room", currentUser.uid);
+} catch (e) {
+    // فشل تشغيل المايك: نحرر المقعد حتى لا يبقى محجوزاً بدون صوت
+    if(roomState.mics[index] && roomState.mics[index].uid === currentUser.uid) {
+        roomState.mics[index] = null;
+        saveRoomState();
+    }
+}
+}
+
+// تفريغ كل مقاعد المايك (للمسؤول)
+function clearAllMics() {
+if(!isAdmin) return;
+if(!confirm("هل تريد تفريغ كل مقاعد المايك؟")) return;
+roomState.mics = Array(MIC_SLOTS).fill(null);
 saveRoomState();
 }
+
+// تحرير مقعد المايك عند إغلاق الصفحة (قدر الإمكان)
+window.addEventListener("pagehide", () => {
+try {
+    if(!currentUser || !roomState || !roomState.mics) return;
+    let idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
+    if(idx !== -1) { roomState.mics[idx] = null; saveRoomState(); }
+} catch (e) {}
+});
 
 function sendRoomChat() {
 let input = document.getElementById("roomChatInput");
@@ -3442,7 +3609,7 @@ let statusClass = g.status === 'running' ? 'running' : 'ended';
 let statusText = g.status === 'running' ? 'تحدي قائم الآن' : 'انتهت المواجهة';
 
 return `
-<div style="background:#1e293b; border:1.5px solid #2563eb; border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 6px 18px rgba(0,0,0,0.4);">
+<div class="game-widget">
 <span class="game-status-badge ${statusClass}">${statusText}</span>
 <div class="game-header-title">⚡ منافسة مباشرة في الغرفة</div>
 
