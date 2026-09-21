@@ -4,6 +4,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MASRO7">
+<meta name="mobile-web-app-capable" content="yes">
 <title>MASRO7 LEAGUE - دوري بنو مسروح للنخبة</title>
 <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 <style>
@@ -1391,12 +1399,49 @@ body.room-typing #room.section.active{bottom:calc(var(--kb,0px) + env(safe-area-
 .fx-toggle.on{background:#16a34a;}
 .fx-toggle.on::after{transform:translateX(-20px);}
 </style>
+<script>
+/* تسجيل الـ Service Worker لدعم PWA. أي خطأ هنا لا يوقف الموقع، فقط يعطل ميزة "إضافة للشاشة الرئيسية". */
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((err) => console.error("تعذّر تسجيل Service Worker:", err));
+    });
+}
+
+/* زر "تثبيت التطبيق": يظهر فقط عندما يقترحه المتصفح فعلياً (Android/Chrome). iOS لا يدعم هذا الحدث، فنعرض تعليمات بديلة. */
+let deferredPwaPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    const btn = document.getElementById("pwaInstallBtn");
+    if (btn) btn.style.display = "inline-flex";
+});
+window.addEventListener("appinstalled", () => {
+    deferredPwaPrompt = null;
+    const btn = document.getElementById("pwaInstallBtn");
+    if (btn) btn.style.display = "none";
+});
+async function installPwa() {
+    if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        await deferredPwaPrompt.userChoice;
+        deferredPwaPrompt = null;
+        const btn = document.getElementById("pwaInstallBtn");
+        if (btn) btn.style.display = "none";
+        return;
+    }
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    alert(isIOS
+        ? "لإضافة التطبيق على آيفون: اضغط زر المشاركة ⬆️ في متصفح Safari، ثم اختر \"إضافة إلى الشاشة الرئيسية\"."
+        : "افتح قائمة المتصفح (⋮) واختر \"إضافة إلى الشاشة الرئيسية\" أو \"تثبيت التطبيق\".");
+}
+</script>
 </head>
 
 <body>
 
 <header id="mainHeader">
 <button class="notif-bell-btn" onclick="enableNotifications()" title="تفعيل الإشعارات">🔔</button>
+<button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:15px; right:auto;">⬇️</button>
 <div class="header-branding" id="headerBranding">
 <div class="logo-box">
 <img src="logo.png" alt="MASRO7 LEAGUE Logo" class="logo">
