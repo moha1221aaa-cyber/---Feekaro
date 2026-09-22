@@ -64,22 +64,15 @@ background: #1e293b;
 width: 110px;
 height: 110px;
 margin: 0 auto 12px;
-border-radius: 22px;
-background: #0f172a;
-border: 2px solid #2563eb;
 display: flex;
 align-items: center;
 justify-content: center;
-box-shadow: 0 0 18px rgba(37,99,235,.35), inset 0 0 15px rgba(37,99,235,.12);
-overflow: hidden;
 }
 
 .logo {
 width: 100%;
 height: 100%;
 object-fit: contain;
-padding: 8px;
-box-sizing: border-box;
 }
 
 .league-name {
@@ -1153,6 +1146,8 @@ flex-wrap: wrap;
 
 .room-top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;margin-bottom:6px;gap:6px;flex-wrap:wrap;max-width:420px;margin-left:auto;margin-right:auto;}
 .room-status-pill{font-size:11px;color:#94a3b8;}
+.room-presence-btn{margin:0;display:inline-flex;align-items:center;background:transparent;border:none;padding:0;font-weight:normal;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
+.room-presence-btn:active{opacity:.7;}
 
 .mic-stage{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:16px 10px 12px;margin:6px auto 10px;max-width:420px;}
 .mic-host-row{display:flex;justify-content:center;margin-bottom:14px;}
@@ -3446,7 +3441,93 @@ if(!firebaseDB) return;
 firebaseDB.collection("room").doc("main").set(roomState, { merge: true }).catch(err => console.log(err));
 }
 
+let presenceListener = null;
+let cachedPresence = {};
+let presenceInterval = null;
+
+function getGuestId() {
+    let id = null;
+    try { id = localStorage.getItem("guestId"); } catch (e) {}
+    if (!id) {
+        id = "g" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        try { localStorage.setItem("guestId", id); } catch (e) {}
+    }
+    return id;
+}
+
+function myPresenceId() { return currentUser ? currentUser.uid : "guest_" + getGuestId(); }
+
+function sendPresenceHeartbeat() {
+    if (!firebaseDB) return;
+    let name = (currentUserDocData && currentUserDocData.name) ? currentUserDocData.name
+        : (currentUser ? (currentUser.displayName || (currentUser.email || "مستخدم").split("@")[0]) : "ضيف");
+    let photoURL = (currentUserDocData && currentUserDocData.photoURL) ? currentUserDocData.photoURL : "";
+    firebaseDB.collection("room").doc("main").collection("presence").doc(myPresenceId()).set({
+        name: name, photoURL: photoURL, isAdmin: !!isAdmin,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(() => {});
+}
+
+function startPresenceListener() {
+    if (!firebaseDB || presenceListener) return;
+    presenceListener = firebaseDB.collection("room").doc("main").collection("presence").onSnapshot(snap => {
+        cachedPresence = {};
+        snap.forEach(d => { cachedPresence[d.id] = d.data(); });
+        renderRoomUI();
+        renderParticipantsModalIfOpen();
+    });
+}
+
+function presentCount() {
+    const now = Date.now();
+    return Object.values(cachedPresence).filter(p => {
+        const t = p.lastSeen && p.lastSeen.toMillis ? p.lastSeen.toMillis() : 0;
+        return now - t < 45000;
+    }).length;
+}
+
 function joinRoomPresence() {
+    sendPresenceHeartbeat();
+    startPresenceListener();
+    if (!presenceInterval) presenceInterval = setInterval(sendPresenceHeartbeat, 20000);
+}
+
+function renderParticipantsModalIfOpen() {
+    if (activeModalId === "roomParticipantsModal") renderParticipantsModal();
+}
+
+function renderParticipantsModal() {
+    const body = document.getElementById("roomParticipantsModalBody");
+    if (!body) return;
+    const now = Date.now();
+    const list = Object.entries(cachedPresence)
+        .filter(([id, p]) => now - ((p.lastSeen && p.lastSeen.toMillis) ? p.lastSeen.toMillis() : 0) < 45000)
+        .sort((a, b) => (b[1].isAdmin ? 1 : 0) - (a[1].isAdmin ? 1 : 0));
+    if (list.length === 0) {
+        body.innerHTML = `<div class="empty-ranking">لا يوجد أحد في الغرفة حالياً</div>`;
+        return;
+    }
+    let html = `<div class="ranking-cards-container">`;
+    list.forEach(([id, p]) => {
+        let isMe = id === myPresenceId();
+        let avatar = p.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent((p.name || "ض").charAt(0))}&background=2563eb&color=fff&bold=true`;
+        html += `
+<div class="user-card ${isMe ? "is-me" : ""}">
+<div class="user-card-profile">
+<div class="user-card-avatar"><img src="${avatar}" alt=""></div>
+<div class="user-card-info">
+<div class="user-card-name">${escapeHTML(p.name || "ضيف")} ${isMe ? '<span class="user-me-badge">أنت</span>' : ""} ${p.isAdmin ? "👑" : ""}</div>
+</div>
+</div>
+</div>`;
+    });
+    html += `</div>`;
+    body.innerHTML = html;
+}
+
+function openParticipantsModal() {
+    renderParticipantsModal();
+    openModal("roomParticipantsModal");
 }
 
 function renderRoomUI() {
@@ -3490,6 +3571,7 @@ html += `
 <span>${roomState.isLive ? 'مباشر' : 'مغلق'}</span>
 </div>
 <div class="room-status-pill">🎙️ على المايك: ${seatedCount} / ${MIC_SLOTS}</div>
+<button class="room-status-pill room-presence-btn" onclick="openParticipantsModal()">👥 الحاضرون: ${presentCount()}</button>
 </div>
 `;
 
