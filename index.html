@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="MASRO7">
 <meta name="mobile-web-app-capable" content="yes">
 <title>MASRO7 LEAGUE - دوري بنو مسروح للنخبة</title>
+<script>
+function ic(n, c) { return '<svg class="ic' + (c ? " " + c : "") + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }
+</script>
 <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 <style>
 body {
@@ -1393,6 +1396,29 @@ body.room-typing #room.section.active{bottom:calc(var(--kb,0px) + env(safe-area-
 .fx-toggle::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;}
 .fx-toggle.on{background:#16a34a;}
 .fx-toggle.on::after{transform:translateX(-20px);}
+
+/* ===== أيقونات SVG حقيقية بدل الإيموجي ===== */
+.ic{display:inline-block;width:1.2em;height:1.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.22em;flex-shrink:0;overflow:visible;}
+.ic.gold{color:#facc15;}
+.ic.m1{color:#facc15;}.ic.m2{color:#cbd5e1;}.ic.m3{color:#fb923c;}
+.bottom-nav .tab-icon .ic{width:23px;height:23px;vertical-align:top;}
+.notif-bell-btn .ic{width:19px;height:19px;vertical-align:middle;}
+.settings-gear-btn .ic{width:19px;height:19px;vertical-align:middle;}
+.upload-photo-btn .ic{width:16px;height:16px;vertical-align:middle;}
+.edit-name-btn .ic{width:14px;height:14px;vertical-align:middle;}
+.modal-back-btn .ic{width:15px;height:15px;vertical-align:middle;}
+.verified-badge .ic{width:15px;height:15px;vertical-align:-3px;}
+.user-card-rank .ic{width:22px;height:22px;vertical-align:middle;}
+.rc-btn .ic{width:19px;height:19px;vertical-align:middle;}
+.rc-send .ic{width:18px;height:18px;vertical-align:middle;}
+.fx-ico .ic,.game-row-ico .ic{width:26px;height:26px;color:#60a5fa;vertical-align:middle;}
+.room-offline-icon .ic{width:46px;height:46px;color:#64748b;}
+.mic-slot-empty .ic{width:20px;height:20px;vertical-align:middle;}
+.mic-slot-muted-icon .ic{width:9px;height:9px;stroke-width:2.6;vertical-align:0;}
+.game-note.live .ic{color:#f87171;width:.7em;height:.7em;}
+.agora-status .ic{width:15px;height:15px;vertical-align:-3px;}
+.room-toast .ic{width:16px;height:16px;vertical-align:-3px;}
+#matchSearchInput{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
 </style>
 <script>
 /* تسجيل الـ Service Worker لدعم PWA. أي خطأ هنا لا يوقف الموقع، فقط يعطل ميزة "إضافة للشاشة الرئيسية". */
@@ -1426,17 +1452,72 @@ async function installPwa() {
     }
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     alert(isIOS
-        ? "لإضافة التطبيق على آيفون: اضغط زر المشاركة ⬆️ في متصفح Safari، ثم اختر \"إضافة إلى الشاشة الرئيسية\"."
+        ? "لإضافة التطبيق على آيفون: اضغط زر المشاركة في متصفح Safari، ثم اختر \"إضافة إلى الشاشة الرئيسية\"."
         : "افتح قائمة المتصفح (⋮) واختر \"إضافة إلى الشاشة الرئيسية\" أو \"تثبيت التطبيق\".");
 }
 </script>
 </head>
 
 <body>
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
+<symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m12 7 4.5 3.3-1.7 5.2H9.2L7.5 10.3z"/><path d="M12 7V2.2M16.5 10.3l4.8-1.5M14.8 15.5l3 4M9.2 15.5l-3 4M7.5 10.3 2.7 8.8"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+<symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M2 2l20 20"/><path d="M18.9 13.2A7.1 7.1 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.3V5a3 3 0 0 0-5.7-1.3"/><path d="M9 9v3a3 3 0 0 0 5.1 2.1"/><path d="M12 19v3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></symbol>
+<symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-verified" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="m7.8 12.4 3 3 5.6-6" stroke="#ffffff" stroke-width="2.6"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.2a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.2a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.2a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.2a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 11h4"/><path d="M8 9v4"/><path d="M15 12h.01"/><path d="M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6C2.6 9.4 2 14.5 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.4-1.4a2 2 0 0 1 1.4-.6h4.4a2 2 0 0 1 1.4.6L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.5-.6-6.6-.7-7.3A4 4 0 0 0 17.3 5z"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+<symbol id="i-volume-2" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
+<symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1z"/><path d="m12 15-3-3a22 22 0 0 1 2-4A13 13 0 0 1 22 2c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0"/><path d="M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.7V17c0 .6-.5 1-1 1.2C7.8 18.8 7 20.2 7 22"/><path d="M14 14.7V17c0 .6.5 1 1 1.2 1.2.6 2 2 2 3.8"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+<symbol id="i-crown" viewBox="0 0 24 24"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7z"/><path d="M5 20h14"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+<symbol id="i-dice" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="3"/><path d="M16 8h.01M8 8h.01M8 16h.01M16 16h.01M12 12h.01"/></symbol>
+<symbol id="i-clapper" viewBox="0 0 24 24"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></symbol>
+<symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6" fill="currentColor" fill-opacity=".22"/><path d="m15.5 12.9 1.5 9.1-5-3-5 3 1.5-9.1"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/><path d="m15 5 4 4"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2z"/></symbol>
+<symbol id="i-square" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+<symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22"/><path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4A2 2 0 0 0 17 6.2V2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+<symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+<symbol id="i-drum" viewBox="0 0 24 24"><path d="m2 2 8 8"/><path d="m22 2-8 8"/><ellipse cx="12" cy="9" rx="10" ry="5"/><path d="M7 13.4v7.9"/><path d="M12 14v8"/><path d="M17 13.4v7.9"/><path d="M2 9v8a10 5 0 0 0 20 0V9"/></symbol>
+<symbol id="i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+<symbol id="i-frown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></symbol>
+<symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/><path d="M6.4 18.7 4 21"/><path d="M17.6 18.7 20 21"/></symbol>
+</defs></svg>
+
 
 <header id="mainHeader">
-<button class="notif-bell-btn" onclick="enableNotifications()" title="تفعيل الإشعارات">🔔</button>
-<button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:15px; right:auto;">⬇️</button>
+<button class="notif-bell-btn" onclick="enableNotifications()" title="تفعيل الإشعارات"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
+<button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:15px; right:auto;"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
 <div class="header-branding" id="headerBranding">
 <div class="logo-box">
 <img src="logo.png" alt="MASRO7 LEAGUE Logo" class="logo">
@@ -1456,30 +1537,30 @@ async function installPwa() {
 <div id="home" class="section active">
 <div id="leagueSummaryBox" class="league-quick-summary"></div>
 <div id="adminControls" class="admin-controls-box" style="display:none;">
-<h4>⚙️ أدوات التحكم بالدوري (خاص بالمسؤول)</h4>
+<h4><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> أدوات التحكم بالدوري (خاص بالمسؤول)</h4>
 <div class="admin-btn-group">
-<button onclick="addNewPlayerPrompt()" style="background:#059669; margin:3px;">➕ إضافة لاعب جديد</button>
-<button onclick="reDrawMatches()" style="background:#d97706; margin:3px;">🎲 إعادة القرعة</button>
+<button onclick="addNewPlayerPrompt()" style="background:#059669; margin:3px;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة لاعب جديد</button>
+<button onclick="reDrawMatches()" style="background:#d97706; margin:3px;"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg> إعادة القرعة</button>
 </div>
 </div>
 <div id="homeUpcoming"></div>
 <div id="videosSection" class="videos-container">
 <div class="video-section-header">
-<h3>🎬 التغطيات وملخصات المباريات</h3>
-<button id="addVideoBtn" class="add-video-btn" onclick="toggleVideoUploadForm()" style="display:none;">➕ إضافة فيديو</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-clapper"/></svg> التغطيات وملخصات المباريات</h3>
+<button id="addVideoBtn" class="add-video-btn" onclick="toggleVideoUploadForm()" style="display:none;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة فيديو</button>
 </div>
 <div id="videoUploadForm" class="video-upload-form" style="display:none;">
 <input type="text" id="videoTitleInput" placeholder="عنوان الفيديو / التغطية (مثال: ملخص مباراة أحمد وعبدالملك)">
 <input type="file" id="videoFileInput" accept="video/mp4,video/webm">
 <div id="uploadProgressBar" class="upload-progress" style="display:none;">جاري الرفع...</div>
-<button onclick="uploadVideoHandler()" style="width:100%; font-weight:bold;">رفع الفيديو 🚀</button>
+<button onclick="uploadVideoHandler()" style="width:100%; font-weight:bold;">رفع الفيديو <svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></button>
 </div>
 <div id="videosList"></div>
 </div>
 </div>
 
 <div id="table" class="section">
-<button class="share-btn-wa" onclick="shareStandingsToWhatsApp()">📲 مشاركة الترتيب عبر واتساب</button>
+<button class="share-btn-wa" onclick="shareStandingsToWhatsApp()"><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg> مشاركة الترتيب عبر واتساب</button>
 <table>
 <thead>
 <tr>
@@ -1504,7 +1585,7 @@ async function installPwa() {
 </div>
 
 <div class="match-filter-box">
-<input type="text" id="matchSearchInput" placeholder="🔍 بحث باسم اللاعب..." oninput="renderMatches()">
+<input type="text" id="matchSearchInput" placeholder="بحث باسم اللاعب..." oninput="renderMatches()">
 </div>
 
 <div id="upcoming"></div>
@@ -1513,8 +1594,8 @@ async function installPwa() {
 
 <div id="predictions" class="section">
 <div class="prediction-tabs">
-<div class="prediction-tab active" onclick="switchPredictionTab('predict')">🎯 توقع المباريات</div>
-<div class="prediction-tab" onclick="switchPredictionTab('ranking')">🏆 جدول الترتيب</div>
+<div class="prediction-tab active" onclick="switchPredictionTab('predict')"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> توقع المباريات</div>
+<div class="prediction-tab" onclick="switchPredictionTab('ranking')"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg> جدول الترتيب</div>
 </div>
 
 <div id="predictPage" class="prediction-page active">
@@ -1538,25 +1619,25 @@ async function installPwa() {
 <div id="roomComposer" class="room-composer" style="display:none;">
 <input type="text" id="roomChatInput" placeholder="اكتب رسالة في الشات..." autocomplete="off" onfocus="composerTyping(true)" onblur="composerBlurSoon()" onkeydown="if(event.key==='Enter'){event.preventDefault();sendRoomChat();}">
 <div class="rc-tools">
-<button id="rcMicBtn" class="rc-btn dim" onclick="onMicButton()" title="المايك">🎤</button>
-<button id="rcSpeakerBtn" class="rc-btn" onclick="toggleSpeaker()" title="صوت الغرفة">🔊</button>
-<button id="rcFxBtn" class="rc-btn" onclick="openFxModal()" title="المؤثرات الصوتية" style="display:none;">🎵</button>
-<button id="rcGamesBtn" class="rc-btn" onclick="openRoomGamesModal()" title="الألعاب">🎮</button>
-<button id="rcAdminBtn" class="rc-btn admin" onclick="openAdminToolsModal()" title="أدوات المسؤول" style="display:none;">⚙️</button>
+<button id="rcMicBtn" class="rc-btn dim" onclick="onMicButton()" title="المايك"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
+<button id="rcSpeakerBtn" class="rc-btn" onclick="toggleSpeaker()" title="صوت الغرفة"><svg class="ic" aria-hidden="true"><use href="#i-volume-2"/></svg></button>
+<button id="rcFxBtn" class="rc-btn" onclick="openFxModal()" title="المؤثرات الصوتية" style="display:none;"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
+<button id="rcGamesBtn" class="rc-btn" onclick="openRoomGamesModal()" title="الألعاب"><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg></button>
+<button id="rcAdminBtn" class="rc-btn admin" onclick="openAdminToolsModal()" title="أدوات المسؤول" style="display:none;"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
 </div>
-<button id="rcSendBtn" class="rc-send" onpointerdown="event.preventDefault()" onclick="sendRoomChat()" title="إرسال"><span>➤</span></button>
+<button id="rcSendBtn" class="rc-send" onpointerdown="event.preventDefault()" onclick="sendRoomChat()" title="إرسال"><span><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></span></button>
 </div>
 <div id="roomAudioContainer" style="display:none;"></div>
 </div>
 
-<button onclick="resetLeague()" id="resetButton" style="display:none; background:#dc2626; margin:15px auto;">⚠️ إعادة ضبط الدوري</button>
+<button onclick="resetLeague()" id="resetButton" style="display:none; background:#dc2626; margin:15px auto;"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> إعادة ضبط الدوري</button>
 
 <!-- مودال الملف الشخصي للالاعب/المستخدم -->
 <div id="viewProfileModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>👤 الملف الشخصي</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> الملف الشخصي</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="viewProfileModalBody"></div>
 </div>
@@ -1566,8 +1647,8 @@ async function installPwa() {
 <div id="settingsModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>⚙️ الإعدادات والحساب</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> الإعدادات والحساب</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="settingsModalBody"></div>
 </div>
@@ -1577,8 +1658,8 @@ async function installPwa() {
 <div id="linkPlayerModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>⚽ توثيق لاعب بالحساب</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق لاعب بالحساب</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="linkPlayerModalBody"></div>
 </div>
@@ -1588,8 +1669,8 @@ async function installPwa() {
 <div id="roomPlayerPickerModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>🎮 اختيار اللاعب</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> اختيار اللاعب</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomPlayerPickerModalBody"></div>
 </div>
@@ -1599,14 +1680,14 @@ async function installPwa() {
 <div id="roomQBankModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>📚 قاعدة الأسئلة</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> قاعدة الأسئلة</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="qbankListBox"></div>
 <div class="qbank-add-form" style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
 <input type="text" id="qbankNewText" placeholder="نص السؤال">
 <input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن اللاعبين)">
-<button onclick="addQuestionToBank()" style="width:100%;">➕ إضافة سؤال جديد</button>
+<button onclick="addQuestionToBank()" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة سؤال جديد</button>
 </div>
 </div>
 </div>
@@ -1615,8 +1696,8 @@ async function installPwa() {
 <div id="roomAdminToolsModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>⚙️ أدوات المسؤول</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> أدوات المسؤول</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomAdminToolsBody"></div>
 </div>
@@ -1626,8 +1707,8 @@ async function installPwa() {
 <div id="roomFxModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>🎵 المؤثرات الصوتية</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg> المؤثرات الصوتية</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomFxBody"></div>
 </div>
@@ -1637,8 +1718,8 @@ async function installPwa() {
 <div id="roomGamesModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>🎮 الألعاب</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> الألعاب</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomGamesBody"></div>
 </div>
@@ -1648,8 +1729,8 @@ async function installPwa() {
 <div id="roomParticipantsModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3>👥 إدارة الحضور</h3>
-<button class="modal-back-btn" onclick="goBackModal()">⬅️ رجوع</button>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> إدارة الحضور</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomParticipantsModalBody"></div>
 </div>
@@ -1659,27 +1740,27 @@ async function installPwa() {
 
 <div class="bottom-nav">
 <div class="tab active" onclick="showTab(event,'home')">
-<div class="tab-icon">🏠</div>
+<div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></div>
 <div>الرئيسية</div>
 </div>
 <div class="tab" onclick="showTab(event,'table')">
-<div class="tab-icon">📊</div>
+<div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg></div>
 <div>الترتيب</div>
 </div>
 <div class="tab" onclick="showTab(event,'matches')">
-<div class="tab-icon">⚽</div>
+<div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg></div>
 <div>المباريات</div>
 </div>
 <div class="tab" onclick="showTab(event,'predictions')">
-<div class="tab-icon">🎯</div>
+<div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg></div>
 <div>التوقعات</div>
 </div>
 <div class="tab" onclick="showTab(event,'accountTab')">
-<div class="tab-icon">👤</div>
+<div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg></div>
 <div>الحساب</div>
 </div>
 <div class="tab" onclick="showTab(event,'room')">
-<div class="tab-icon" id="roomTabIcon">🎙️</div>
+<div class="tab-icon" id="roomTabIcon"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></div>
 <div>الغرفة</div>
 </div>
 </div>
@@ -1727,7 +1808,7 @@ function setAgoraStatus(text, kind) {
     const el = document.getElementById("agoraStatusBar");
     if (!el) return;
     if (!text) { el.style.display = "none"; return; }
-    el.textContent = text;
+    el.innerHTML = text;
     el.className = "agora-status " + (kind || "");
     el.style.display = "block";
 }
@@ -1740,14 +1821,14 @@ let agoraErrorUntil = 0;
 function refreshAgoraStatus() {
     if (!agoraJoined) { setAgoraStatus(""); return; }
     if (Date.now() < agoraErrorUntil) return;
-    if (agoraAudioBlocked) { setAgoraStatus("🔇 اضغط هنا لتفعيل الصوت", "warn"); return; }
+    if (agoraAudioBlocked) { setAgoraStatus(ic("volume-x") + " اضغط هنا لتفعيل الصوت", "warn"); return; }
     const remote = agoraClient ? agoraClient.remoteUsers : [];
     const talkers = remote.filter(u => u.hasAudio).length;
-    let text = "🔊 متصل";
-    if (localAudioTrack) text += " · 🎙️ " + (localAudioTrack.getVolumeLevel() > 0.02 ? "مايكك يلتقط صوتك" : "مايكك لا يلتقط صوتاً");
-    if (talkers > 0) text += " · يتحدث " + talkers + (agoraRemoteLevel > 3 ? " ✅ الصوت يصل" : " ⏳ لا يصل صوت");
+    let text = ic("volume-2") + " متصل";
+    if (localAudioTrack) text += " · " + ic("mic") + " " + (localAudioTrack.getVolumeLevel() > 0.02 ? "مايكك يلتقط صوتك" : "مايكك لا يلتقط صوتاً");
+    if (talkers > 0) text += " · يتحدث " + talkers + (agoraRemoteLevel > 3 ? " " + ic("check-circle") + " الصوت يصل" : " " + ic("hourglass") + " لا يصل صوت");
     else if (!localAudioTrack) text += " · لا أحد يتحدث";
-    if (speakerMuted) text += " · 🔇 مكتوم عندك";
+    if (speakerMuted) text += " · " + ic("volume-x") + " مكتوم عندك";
     setAgoraStatus(text, "ok");
 }
 
@@ -1788,7 +1869,7 @@ async function ensureAgoraJoined() {
             } catch (e) {
                 console.error("تعذر استقبال الصوت:", e);
                 agoraErrorUntil = Date.now() + 8000;
-                setAgoraStatus("⚠️ تعذّر استقبال الصوت: " + (e.message || e.code || e), "err");
+                setAgoraStatus(ic("alert") + " تعذّر استقبال الصوت: " + escapeHTML(e.message || e.code || e), "err");
             }
         });
 
@@ -1823,7 +1904,7 @@ async function ensureAgoraJoined() {
                     refreshAgoraStatus();
                     if (!agoraStatusTimer) agoraStatusTimer = setInterval(refreshAgoraStatus, 1000);
                 } catch (e) {
-                    setAgoraStatus("⚠️ تعذّر الاتصال بالصوت: " + (e.message || e.code || e), "err");
+                    setAgoraStatus(ic("alert") + " تعذّر الاتصال بالصوت: " + escapeHTML(e.message || e.code || e), "err");
                     throw e;
                 }
             })().finally(() => { agoraJoinPromise = null; });
@@ -1901,7 +1982,7 @@ function recoverMyMic() {
         micRecoverFailedAt = Date.now();
         console.error("تعذّر تشغيل المايك:", err);
         agoraErrorUntil = Date.now() + 8000;
-        setAgoraStatus("⚠️ مايكك غير مفعّل: " + (err.message || err.code || err) + " · اضغط على صورتك للمحاولة", "err");
+        setAgoraStatus(ic("alert") + " مايكك غير مفعّل: " + escapeHTML(err.message || err.code || err) + " · اضغط على صورتك للمحاولة", "err");
     }).finally(() => { micRecovering = false; });
 }
 
@@ -2253,7 +2334,7 @@ generateMatches();
 table();
 renderMatches();
 save();
-alert("تمت إعادة القرعة بنجاح! 🎲");
+alert("تمت إعادة القرعة بنجاح!");
 }
 
 function serializeMatches() {
@@ -2271,7 +2352,7 @@ firebaseDB.collection("league").doc("current").onSnapshot(doc => {
 if(doc.exists) {
 let data = doc.data();
 if(!isInitialLoad) {
-showNotification("⚽ تم تحديث نتائج المباريات في الدوري!");
+showNotification("تم تحديث نتائج المباريات في الدوري!");
 }
 isInitialLoad = false;
 
@@ -2328,7 +2409,7 @@ if(!("Notification" in window)) return alert("المتصفح لا يدعم ال�
 Notification.requestPermission().then(permission => {
 if(permission === "granted") {
 notifyEnabled = true;
-alert("تم تفعيل الإشعارات بنجاح 🔔");
+alert("تم تفعيل الإشعارات بنجاح");
 } else {
 alert("لم يتم تفعيل الإشعارات");
 }
@@ -2391,7 +2472,7 @@ s2: Number(s2Val),
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 }, { merge: true })
 .then(() => {
-alert("تم حفظ التوقع بنجاح 🎯");
+alert("تم حفظ التوقع بنجاح");
 })
 .catch(err => alert("خطأ أثناء حفظ التوقع: " + err.message));
 }
@@ -2403,9 +2484,9 @@ if(!container) return;
 if(!currentUser) {
 container.innerHTML = `
 <div class="account-box">
-<h3>🔒 توقع نتائج المباريات</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> توقع نتائج المباريات</h3>
 <p class="login-message">يرجى تسجيل الدخول من تبويب "الحساب" لتشترك في التوقعات وتكسب النقاط!</p>
-<button onclick="showTab(null, 'accountTab')">🚀 الذهاب لتسجيل الدخول</button>
+<button onclick="showTab(null, 'accountTab')"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> الذهاب لتسجيل الدخول</button>
 </div>
 `;
 return;
@@ -2417,7 +2498,7 @@ let completedMatches = matches.filter(m => m.s1 !== "" && m.s2 !== "");
 let html = "";
 
 if(upcomingMatches.length > 0) {
-html += `<h3 style="text-align:center; color:#60a5fa; margin:10px 0;">⚽ المباريات القادمة للتوقع</h3>`;
+html += `<h3 style="text-align:center; color:#60a5fa; margin:10px 0;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> المباريات القادمة للتوقع</h3>`;
 upcomingMatches.forEach(m => {
 let matchId = getMatchId(m);
 let pred = predictions[matchId] || { s1: "", s2: "" };
@@ -2444,7 +2525,7 @@ html += `
 <div class="prediction-player-name">${escapeHTML(m.p2.name)}</div>
 </div>
 </div>
-<button class="prediction-save" onclick="savePrediction('${matchId}', '${p1InputId}', '${p2InputId}')">💾 حفظ التوقع</button>
+<button class="prediction-save" onclick="savePrediction('${matchId}', '${p1InputId}', '${p2InputId}')"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ التوقع</button>
 </div>
 `;
 });
@@ -2453,7 +2534,7 @@ html += `<div style="text-align:center; padding:20px; color:#94a3b8;">لا تو�
 }
 
 if(completedMatches.length > 0) {
-html += `<h3 style="text-align:center; color:#facc15; margin:20px 0 10px;">📋 نتائج توقعاتك السابقة</h3>`;
+html += `<h3 style="text-align:center; color:#facc15; margin:20px 0 10px;"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg> نتائج توقعاتك السابقة</h3>`;
 completedMatches.forEach(m => {
 let matchId = getMatchId(m);
 let pred = predictions[matchId];
@@ -2587,7 +2668,7 @@ list.forEach((item, index) => {
 let isMe = (currentUser && item.uid === currentUser.uid);
 let rank = index + 1;
 let rankClass = rank === 1 ? "rank-1" : (rank === 2 ? "rank-2" : (rank === 3 ? "rank-3" : ""));
-let rankBadge = rank === 1 ? "🥇" : (rank === 2 ? "🥈" : (rank === 3 ? "🥉" : rank));
+let rankBadge = rank === 1 ? ic("medal","m1") : (rank === 2 ? ic("medal","m2") : (rank === 3 ? ic("medal","m3") : rank));
 
 let avatarSrc = item.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=2563eb&color=fff&bold=true`;
 
@@ -2674,7 +2755,7 @@ let statsHTML = "";
 if(pStat) {
 statsHTML = `
 <div style="margin-top:15px; text-align:right;">
-<div style="font-size:13px; font-weight:bold; color:#60a5fa; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;">📊 إحصائيات الدوري (كالاعب)</div>
+<div style="font-size:13px; font-weight:bold; color:#60a5fa; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> إحصائيات الدوري (كالاعب)</div>
 <div class="stats-grid-box">
 <div class="stat-box-item"><div class="stat-box-value">#${pRank}</div><div class="stat-box-label">الترتيب في الدوري</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#60a5fa;">${pStat.pts}</div><div class="stat-box-label">النقاط</div></div>
@@ -2689,7 +2770,7 @@ statsHTML = `
 
 let predStatsHTML = `
 <div style="margin-top:15px; text-align:right;">
-<div style="font-size:13px; font-weight:bold; color:#facc15; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;">🎯 إحصائيات التوقعات</div>
+<div style="font-size:13px; font-weight:bold; color:#facc15; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> إحصائيات التوقعات</div>
 <div class="stats-grid-box">
 <div class="stat-box-item"><div class="stat-box-value" style="color:#facc15;">#${predStats.rank}</div><div class="stat-box-label">ترتيب التوقعات</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#38bdf8;">${predStats.points}</div><div class="stat-box-label">نقاط التوقعات</div></div>
@@ -2704,7 +2785,7 @@ if(displayName) {
 let pMatches = matches.filter(m => m.p1.name === displayName || m.p2.name === displayName);
 if(pMatches.length > 0) {
 playerMatchesHTML = `<div style="margin-top:18px; text-align:right;">
-<div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;">⚽ مباريات اللاعب (${pMatches.length})</div>`;
+<div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> مباريات اللاعب (${pMatches.length})</div>`;
 pMatches.forEach(m => {
 let isP1 = (m.p1.name === displayName);
 let oppName = isP1 ? m.p2.name : m.p1.name;
@@ -2733,7 +2814,7 @@ playerMatchesHTML += `</div>`;
 }
 }
 
-let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal('${escapeHTML(displayName)}')" style="margin-top:12px; background:#0284c7; width:100%;">⚽ توثيق اللاعب بالحساب</button>` : '';
+let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal('${escapeHTML(displayName)}')" style="margin-top:12px; background:#0284c7; width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق اللاعب بالحساب</button>` : '';
 
 body.innerHTML = `
 <div style="text-align:center;">
@@ -2741,7 +2822,7 @@ body.innerHTML = `
 <img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;" alt="">
 </div>
 <div style="font-size:18px; font-weight:bold; color:white; display:flex; align-items:center; justify-content:center; gap:5px;">
-${escapeHTML(displayName)} ${av.isVerified ? '<span class="verified-badge" title="حساب موثوق">✔️</span>' : ''}
+${escapeHTML(displayName)} ${av.isVerified ? '<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>' : ''}
 </div>
 ${userData && userData.email ? `<div style="font-size:12px; color:#94a3b8; direction:ltr; margin-top:3px;">${escapeHTML(userData.email)}</div>` : ''}
 ${statsHTML}
@@ -2780,7 +2861,7 @@ tbody.innerHTML = "";
 players.forEach((p,i) => {
 let row = document.createElement("tr");
 let avatarData = getPlayerAvatar(p.name);
-let verifiedBadge = avatarData.isVerified ? `<span class="verified-badge" title="حساب موثوق">✔️</span>` : '';
+let verifiedBadge = avatarData.isVerified ? `<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>` : '';
 
 let playerCellHTML = `
 <div class="table-player-cell clickable-profile" onclick="openUserProfile('${playerLinks[p.name] || ''}', '${escapeHTML(p.name)}')">
@@ -2811,11 +2892,11 @@ container.innerHTML = `
 <div class="summary-card-lbl">المباريات المكتملة</div>
 </div>
 <div class="summary-card">
-<div class="summary-card-val" style="color:#facc15;">⚽ ${totalGoals}</div>
+<div class="summary-card-val" style="color:#facc15;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> ${totalGoals}</div>
 <div class="summary-card-lbl">إجمالي الأهداف</div>
 </div>
 <div class="summary-card">
-<div class="summary-card-val" style="color:#4ade80;">👑 ${escapeHTML(leader)}</div>
+<div class="summary-card-val" style="color:#4ade80;"><svg class="ic" aria-hidden="true"><use href="#i-crown"/></svg> ${escapeHTML(leader)}</div>
 <div class="summary-card-lbl">متصدر الدوري</div>
 </div>
 `;
@@ -2963,7 +3044,7 @@ if(homeUpDiv && upRounds.length > 0) {
 let nextRound = upRounds[0];
 let rHeader = document.createElement("h3");
 rHeader.style.cssText = "text-align:center; color:#60a5fa; margin:15px 0 10px; font-size:16px;";
-rHeader.textContent = `⚽ المباريات القادمة (الجولة ${nextRound})`;
+rHeader.innerHTML = ic("ball") + ` المباريات القادمة (الجولة ${nextRound})`;
 homeUpDiv.appendChild(rHeader);
 
 upcomingGroup[nextRound].forEach(m => {
@@ -3039,7 +3120,7 @@ if(!container) return;
 if(!currentUser) {
 container.innerHTML = `
 <div class="account-box">
-<h3>🔐 تسجيل الدخول / إنشاء حساب</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> تسجيل الدخول / إنشاء حساب</h3>
 <input type="email" id="loginEmail" placeholder="البريد الإلكتروني">
 <input type="password" id="loginPassword" placeholder="كلمة المرور">
 <input type="text" id="registerName" placeholder="الاسم الكامل (عند التسجيل لأول مرة)">
@@ -3062,16 +3143,16 @@ let predStats = getUserPredictionStats(currentUser.uid, email);
 container.innerHTML = `
 <div class="profile-full-page">
 <div class="profile-header-card">
-<button class="settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات">⚙️</button>
+<button class="settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
 <div class="profile-avatar-wrapper" onclick="triggerProfilePhotoUpload()">
 <div class="profile-avatar-large">
 <img src="${avatarSrc}" alt="">
 </div>
-<button class="upload-photo-btn" title="تغيير الصورة">📷</button>
+<button class="upload-photo-btn" title="تغيير الصورة"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></button>
 </div>
 <div class="profile-name-container">
 <div class="profile-name-text">${escapeHTML(name)}</div>
-<button class="edit-name-btn" onclick="promptChangeName()" title="تعديل الاسم">✏️</button>
+<button class="edit-name-btn" onclick="promptChangeName()" title="تعديل الاسم"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg></button>
 </div>
 <div class="profile-email-text">${escapeHTML(email)}</div>
 </div>
@@ -3107,11 +3188,11 @@ let photoURL = (currentUserDocData && currentUserDocData.photoURL) ? currentUser
 body.innerHTML = `
 <div style="text-align:right;">
 <h4 style="color:#60a5fa; margin-top:0;">إعدادات الحساب الشخصي</h4>
-<button onclick="promptChangeName()" style="width:100%; margin:8px 0; background:#334155;">✏️ تعديل الاسم الشخصي</button>
-<button onclick="triggerProfilePhotoUpload()" style="width:100%; margin:8px 0; background:#334155;">📷 تغيير الصورة الشخصية</button>
-${photoURL ? `<button onclick="removeProfilePhoto()" style="width:100%; margin:8px 0; background:#7f1d1d; color:#fca5a5;">🗑️ حذف الصورة الشخصية</button>` : ''}
+<button onclick="promptChangeName()" style="width:100%; margin:8px 0; background:#334155;"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg> تعديل الاسم الشخصي</button>
+<button onclick="triggerProfilePhotoUpload()" style="width:100%; margin:8px 0; background:#334155;"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg> تغيير الصورة الشخصية</button>
+${photoURL ? `<button onclick="removeProfilePhoto()" style="width:100%; margin:8px 0; background:#7f1d1d; color:#fca5a5;"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> حذف الصورة الشخصية</button>` : ''}
 <hr style="border-color:#334155; margin:15px 0;">
-<button onclick="handleLogout()" class="logout-button" style="width:100%;">🚪 تسجيل الخروج</button>
+<button onclick="handleLogout()" class="logout-button" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg> تسجيل الخروج</button>
 </div>
 `;
 
@@ -3130,7 +3211,7 @@ name: newName,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 }, { merge: true })
 .then(() => {
-alert("تم تحديث الاسم بنجاح ✨");
+alert("تم تحديث الاسم بنجاح");
 closeAllModalsDirectly();
 })
 .catch(err => alert("حدث خطأ أثناء تعديل الاسم: " + err.message));
@@ -3170,7 +3251,7 @@ throw new Error("فشل رفع الصورة إلى Cloudinary");
 }
 })
 .then(() => {
-alert("تم رفع وتغيير الصورة الشخصية بنجاح 📸");
+alert("تم رفع وتغيير الصورة الشخصية بنجاح");
 closeAllModalsDirectly();
 })
 .catch(err => {
@@ -3219,7 +3300,7 @@ email: email,
 createdAt: firebase.firestore.FieldValue.serverTimestamp()
 });
 })
-.then(() => alert("تم إنشاء الحساب بنجاح! 🎉"))
+.then(() => alert("تم إنشاء الحساب بنجاح!"))
 .catch(err => alert("خطأ في إنشاء الحساب: " + err.message));
 }
 
@@ -3254,7 +3335,7 @@ body.innerHTML = `
 <select id="linkUserSelect" style="width:100%; padding:10px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px;">
 ${optionsHTML}
 </select>
-<button onclick="savePlayerLink('${escapeHTML(playerName)}')" style="width:100%;">💾 حفظ الربط</button>
+<button onclick="savePlayerLink('${escapeHTML(playerName)}')" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الربط</button>
 </div>
 `;
 
@@ -3275,7 +3356,7 @@ delete playerLinks[playerName];
 save();
 table();
 renderMatches();
-alert("تم تحديث ربط اللاعب بنجاح! ✔️");
+alert("تم تحديث ربط اللاعب بنجاح!");
 closeAllModalsDirectly();
 }
 
@@ -3328,7 +3409,7 @@ if(progressDiv) progressDiv.style.display = "none";
 titleInput.value = "";
 fileInput.value = "";
 toggleVideoUploadForm();
-alert("تم رفع الفيديو بنجاح! 🎬");
+alert("تم رفع الفيديو بنجاح!");
 })
 .catch(err => {
 if(progressDiv) progressDiv.style.display = "none";
@@ -3516,7 +3597,7 @@ function renderParticipantsModal() {
 <div class="user-card-profile">
 <div class="user-card-avatar"><img src="${avatar}" alt=""></div>
 <div class="user-card-info">
-<div class="user-card-name">${escapeHTML(p.name || "ضيف")} ${isMe ? '<span class="user-me-badge">أنت</span>' : ""} ${p.isAdmin ? "👑" : ""}</div>
+<div class="user-card-name">${escapeHTML(p.name || "ضيف")} ${isMe ? '<span class="user-me-badge">أنت</span>' : ""} ${p.isAdmin ? ic("crown","gold") : ""}</div>
 </div>
 </div>
 </div>`;
@@ -3542,7 +3623,7 @@ tabIcon.style.color = roomState.isLive ? "#4ade80" : "#94a3b8";
 if(!roomState.isLive && !isAdmin) {
 container.innerHTML = `
 <div class="room-offline-box">
-<div class="room-offline-icon">🎙️</div>
+<div class="room-offline-icon"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></div>
 <h3>غرفة البث الصوتي مغلقة حالياً</h3>
 <p style="font-size:12px; color:#94a3b8; margin-top:6px;">ستفتح الغرفة عند بدء البث المباشر والمسابقات من قبل المسؤول.</p>
 </div>
@@ -3558,7 +3639,7 @@ let html = "";
 if(isAdmin && !roomState.isLive) {
 html += `
 <div style="text-align:center; margin-bottom:12px;">
-<button onclick="startRoomBroadcast()" style="background:#059669; font-size:15px; padding:12px 24px;">🎙️ بدء البث الصوتي المباشر</button>
+<button onclick="startRoomBroadcast()" style="background:#059669; font-size:15px; padding:12px 24px;"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> بدء البث الصوتي المباشر</button>
 </div>
 `;
 }
@@ -3570,8 +3651,8 @@ html += `
 <div class="room-live-dot"></div>
 <span>${roomState.isLive ? 'مباشر' : 'مغلق'}</span>
 </div>
-<div class="room-status-pill">🎙️ على المايك: ${seatedCount} / ${MIC_SLOTS}</div>
-<button class="room-status-pill room-presence-btn" onclick="openParticipantsModal()">👥 الحاضرون: ${presentCount()}</button>
+<div class="room-status-pill"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> على المايك: ${seatedCount} / ${MIC_SLOTS}</div>
+<button class="room-status-pill room-presence-btn" onclick="openParticipantsModal()"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg> الحاضرون: ${presentCount()}</button>
 </div>
 `;
 
@@ -3595,18 +3676,18 @@ html += `
 <div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
 <div class="mic-slot-avatar-wrap ${m.muted ? '' : 'speaking'}" ${clickAttr} style="cursor:${isMine || isAdmin ? 'pointer' : 'default'};">
 <img src="${avatarUrl}" class="mic-slot-avatar" alt="">
-${m.muted ? '<div class="mic-slot-muted-icon">🔇</div>' : ''}
+${m.muted ? '<div class="mic-slot-muted-icon">' + ic('mic-off') + '</div>' : ''}
 </div>
 <div class="mic-slot-name">${escapeHTML(m.name)}</div>
-${isMine ? `<div style="font-size:9px;color:#f87171;cursor:pointer;margin-top:2px;" onclick="releaseMicSlot(${i})">✖ مغادرة المايك</div>` : ''}
+${isMine ? `<div style="font-size:9px;color:#f87171;cursor:pointer;margin-top:2px;" onclick="releaseMicSlot(${i})"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> مغادرة المايك</div>` : ''}
 </div>
 `;
 } else {
 let canTakeMic = currentUser && roomState.isLive;
 html += `
 <div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
-<div class="mic-slot-empty" ${canTakeMic ? `onclick="takeMicSlot(${i})"` : ''} title="مقياس مايك فارغ">➕</div>
-<div class="mic-slot-vacant-label">${i === HOST_SEAT ? '👑 المضيف' : 'مايك ' + (i+1)}</div>
+<div class="mic-slot-empty" ${canTakeMic ? `onclick="takeMicSlot(${i})"` : ''} title="مقياس مايك فارغ"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></div>
+<div class="mic-slot-vacant-label">${i === HOST_SEAT ? ic('crown','gold') + ' المضيف' : 'مايك ' + (i+1)}</div>
 </div>
 `;
 }
@@ -3621,7 +3702,7 @@ let pinnedHTML = "";
 if(roomState.pinnedMsg) {
 pinnedHTML = `
 <div class="room-pinned-msg">
-<div>📌 <strong>تثبيت:</strong> ${escapeHTML(roomState.pinnedMsg)}</div>
+<div><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> <strong>تثبيت:</strong> ${escapeHTML(roomState.pinnedMsg)}</div>
 ${isHostOrAdmin ? `<button onclick="unpinMessage()" style="margin:0; padding:2px 6px; font-size:10px; background:#dc2626;">إلغاء</button>` : ''}
 </div>
 `;
@@ -3648,7 +3729,7 @@ html += `
 <div style="color:white; word-break:break-word;">${escapeHTML(msg.text)}</div>
 ${isHostOrAdmin ? `
 <div class="room-chat-msg-actions">
-<button onclick="pinMessage(${idx})">📌 تثبيت</button>
+<button onclick="pinMessage(${idx})"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> تثبيت</button>
 <button onclick="deleteChatMessage(${idx})" style="background:#dc2626;">حذف</button>
 </div>
 ` : ''}
@@ -3758,22 +3839,22 @@ function fxNoiseHit(c, out, t, dur, peak, ftype, freq, q) {
 }
 
 const ROOM_FX = [
-    { id: "applause", icon: "👏", name: "تصفيق", play(c, o, t) {
+    { id: "applause", icon: ic("hand"), name: "تصفيق", play(c, o, t) {
         for (let i = 0; i < 110; i++) {
             const tt = t + Math.pow(Math.random(), 0.85) * 2.6;
             fxNoiseHit(c, o, tt, 0.06, 0.1 + Math.random() * 0.12, "bandpass", 1200 + Math.random() * 1800, 0.9);
         }
     } },
-    { id: "correct", icon: "✅", name: "إجابة صحيحة", play(c, o, t) {
+    { id: "correct", icon: ic("check-circle"), name: "إجابة صحيحة", play(c, o, t) {
         fxTone(c, o, "sine", 784, t, 0.35, 0.5);
         fxTone(c, o, "sine", 1175, t + 0.12, 0.6, 0.45);
         fxTone(c, o, "triangle", 1568, t + 0.12, 0.5, 0.15);
     } },
-    { id: "wrong", icon: "❌", name: "إجابة خاطئة", play(c, o, t) {
+    { id: "wrong", icon: ic("x-circle"), name: "إجابة خاطئة", play(c, o, t) {
         fxTone(c, o, "sawtooth", 165, t, 0.28, 0.35, null, 1600);
         fxTone(c, o, "sawtooth", 123, t + 0.32, 0.55, 0.4, null, 1400);
     } },
-    { id: "drum", icon: "🥁", name: "طبول", play(c, o, t) {
+    { id: "drum", icon: ic("drum"), name: "طبول", play(c, o, t) {
         let tt = t;
         while (tt < t + 1.8) {
             const k = (tt - t) / 1.8;
@@ -3784,7 +3865,7 @@ const ROOM_FX = [
         fxNoiseHit(c, o, t + 1.85, 1.2, 0.5, "highpass", 4000, 0.5);
         fxTone(c, o, "sine", 140, t + 1.85, 0.3, 0.7, 45);
     } },
-    { id: "fanfare", icon: "🎺", name: "فوز", play(c, o, t) {
+    { id: "fanfare", icon: ic("megaphone"), name: "فوز", play(c, o, t) {
         [[523, 0], [659, 0.16], [784, 0.32]].forEach(([f, d]) => {
             fxTone(c, o, "sawtooth", f, t + d, 0.2, 0.2, null, 3000);
             fxTone(c, o, "square", f, t + d, 0.2, 0.07, null, 2500);
@@ -3794,16 +3875,16 @@ const ROOM_FX = [
             fxTone(c, o, "triangle", f * 2, t + 0.5, 0.9, 0.05);
         });
     } },
-    { id: "sad", icon: "😢", name: "خسارة", play(c, o, t) {
+    { id: "sad", icon: ic("frown"), name: "خسارة", play(c, o, t) {
         [[196, 0, 0.3], [185, 0.34, 0.3], [175, 0.68, 0.3], [165, 1.02, 0.9]].forEach(([f, d, dur]) =>
             fxTone(c, o, "sawtooth", f, t + d, dur, 0.3, f * 0.94, 1200));
     } },
-    { id: "bell", icon: "🔔", name: "جرس", play(c, o, t) {
+    { id: "bell", icon: ic("bell"), name: "جرس", play(c, o, t) {
         fxTone(c, o, "sine", 880, t, 1.6, 0.4);
         fxTone(c, o, "sine", 2217, t, 1.0, 0.18);
         fxTone(c, o, "sine", 3520, t, 0.6, 0.08);
     } },
-    { id: "alarm", icon: "⏰", name: "انتهى الوقت", play(c, o, t) {
+    { id: "alarm", icon: ic("alarm"), name: "انتهى الوقت", play(c, o, t) {
         for (let i = 0; i < 4; i++) fxTone(c, o, "square", 880, t + i * 0.22, 0.12, 0.2, null, 4000);
         fxTone(c, o, "square", 1175, t + 0.95, 0.5, 0.22, null, 4000);
     } }
@@ -3842,7 +3923,7 @@ async function fxPlay(id) {
         try { await fxEnsurePublished(); }
         catch (e) {
             console.error("تعذّر إرسال المؤثر للغرفة:", e);
-            roomToast("⚠️ المؤثر يعمل عندك فقط: " + (e.message || e.code || e));
+            roomToast("المؤثر يعمل عندك فقط: " + (e.message || e.code || e), "alert");
         }
     }
     fxSyncLocal();
@@ -3854,7 +3935,7 @@ function fxPlayQuiet(id) { try { fxPlay(id).catch(() => {}); } catch (e) {} }
 function fxStopAll() {
     if (!fxCtx) return;
     fxBuildGraph();
-    roomToast("⏹️ أوقفت المؤثرات");
+    roomToast("أوقفت المؤثرات", "square");
 }
 
 function canUseFx() {
@@ -3871,10 +3952,10 @@ function renderFxModal() {
         html += `<button class="fx-btn" onclick="fxPlay('${fx.id}')"><span class="fx-ico">${fx.icon}</span><span>${escapeHTML(fx.name)}</span></button>`;
     });
     html += `</div>
-<button class="tool-row" onclick="fxStopAll()">⏹️ إيقاف كل المؤثرات</button>
+<button class="tool-row" onclick="fxStopAll()"><svg class="ic" aria-hidden="true"><use href="#i-square"/></svg> إيقاف كل المؤثرات</button>
 <div class="fx-switch">
 <div class="fx-switch-txt">
-<div class="fx-sw-title">🎚️ مايك بدون معالجة المتصفح</div>
+<div class="fx-sw-title"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg> مايك بدون معالجة المتصفح</div>
 <div class="fx-sw-desc">يوقف إلغاء الصدى وتقليل الضوضاء والتحكم التلقائي بمستوى الصوت لتحصل على صوت أنقى. استخدم سماعات حتى لا يرجع الصدى.</div>
 </div>
 <button class="fx-toggle ${rawMic ? "on" : ""}" onclick="setRawMic(!rawMic)" aria-label="مايك بدون معالجة"></button>
@@ -3883,7 +3964,7 @@ function renderFxModal() {
 }
 
 function openFxModal() {
-    if (!canUseFx()) { roomToast("اجلس على مقعد لتستخدم المؤثرات 🎵"); return; }
+    if (!canUseFx()) { roomToast("اجلس على مقعد لتستخدم المؤثرات", "music"); return; }
     renderFxModal();
     openModal("roomFxModal");
 }
@@ -3900,20 +3981,20 @@ async function setRawMic(on) {
             syncMyMicWithState();
         } catch (e) {
             console.error(e);
-            roomToast("⚠️ تعذّر إعادة تشغيل المايك: " + (e.message || e.code || e));
+            roomToast("تعذّر إعادة تشغيل المايك: " + (e.message || e.code || e), "alert");
             return;
         }
     }
-    roomToast(rawMic ? "🎚️ المايك الآن بدون معالجة المتصفح" : "🎚️ رجع المايك للمعالجة العادية");
+    roomToast(rawMic ? "المايك الآن بدون معالجة المتصفح" : "رجع المايك للمعالجة العادية", "sliders");
 }
 
-function roomToast(msg) {
+function roomToast(msg, icon) {
     const old = document.getElementById("roomToastEl");
     if (old) old.remove();
     const el = document.createElement("div");
     el.id = "roomToastEl";
     el.className = "room-toast";
-    el.textContent = msg;
+    el.innerHTML = (icon ? ic(icon) + " " : "") + escapeHTML(msg);
     document.body.appendChild(el);
     setTimeout(() => { if (el.parentNode) el.remove(); }, 2200);
 }
@@ -3939,7 +4020,7 @@ function updateComposerState() {
 
     const sp = document.getElementById("rcSpeakerBtn");
     if (sp) {
-        sp.textContent = speakerMuted ? "🔇" : "🔊";
+        sp.innerHTML = speakerMuted ? ic("volume-x") : ic("volume-2");
         sp.className = "rc-btn" + (speakerMuted ? " off" : "");
     }
 
@@ -3996,7 +4077,7 @@ window.addEventListener("orientationchange", () => { roomBaseH = 0; setTimeout((
 function onMicButton() {
     if (!currentUser) return roomToast("سجّل دخولك من تبويب الحساب أولاً");
     const idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
-    if (idx === -1) return roomToast("اجلس على أحد المقاعد ➕ لتتحدث 🎙️");
+    if (idx === -1) return roomToast("اجلس على أحد المقاعد لتتحدث", "mic");
     toggleMyMic(idx);
     updateComposerState();
 }
@@ -4013,7 +4094,7 @@ function toggleSpeaker() {
     if (!speakerMuted) enableRoomAudio();
     updateComposerState();
     refreshAgoraStatus();
-    roomToast(speakerMuted ? "🔇 كتمت صوت الغرفة عندك" : "🔊 شغّلت صوت الغرفة");
+    roomToast(speakerMuted ? "كتمت صوت الغرفة عندك" : "شغّلت صوت الغرفة", speakerMuted ? "volume-x" : "volume-2");
 }
 
 function openAdminToolsModal() {
@@ -4021,9 +4102,9 @@ function openAdminToolsModal() {
     const body = document.getElementById("roomAdminToolsBody");
     if (!body) return;
     body.innerHTML = `
-<button class="tool-row" onclick="adminToolsAction('qbank')">📚 إدارة قاعدة الأسئلة</button>
-<button class="tool-row" onclick="adminToolsAction('clear')">🧹 تفريغ كل المايكات</button>
-<button class="tool-row danger" onclick="adminToolsAction('end')">🛑 إنهاء البث وإغلاق الغرفة</button>
+<button class="tool-row" onclick="adminToolsAction('qbank')"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> إدارة قاعدة الأسئلة</button>
+<button class="tool-row" onclick="adminToolsAction('clear')"><svg class="ic" aria-hidden="true"><use href="#i-mic-off"/></svg> تفريغ كل المايكات</button>
+<button class="tool-row danger" onclick="adminToolsAction('end')"><svg class="ic" aria-hidden="true"><use href="#i-power"/></svg> إنهاء البث وإغلاق الغرفة</button>
 `;
     openModal("roomAdminToolsModal");
 }
@@ -4037,7 +4118,7 @@ function adminToolsAction(action) {
 
 /* قائمة الألعاب: لإضافة لعبة جديدة مستقبلاً أضف عنصراً هنا بنفس الشكل { id, icon, name, desc, start } */
 const ROOM_GAMES = [
-    { id: "quiz", icon: "🎮", name: "مسابقة الأسئلة", desc: "تحدٍّ بين لاعبين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
+    { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين لاعبين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
 ];
 
 function openRoomGamesModal() {
@@ -4046,7 +4127,7 @@ function openRoomGamesModal() {
     const active = !!(roomState.game && roomState.game.active);
     const manage = canManageRoom() && roomState.isLive;
     let html = "";
-    if (active) html += `<div class="game-note live">🔴 توجد لعبة جارية الآن</div>`;
+    if (active) html += `<div class="game-note live"><svg class="ic" aria-hidden="true"><use href="#i-dot"/></svg> توجد لعبة جارية الآن</div>`;
     else if (!manage) html += `<div class="game-note">يختار المضيف اللعبة ويبدأها</div>`;
     ROOM_GAMES.forEach((g, i) => {
         html += `
@@ -4089,7 +4170,7 @@ joinVoiceChannel("masro7_main_room", currentUser.uid).catch(() => {
     }
 });
 saveRoomState();
-alert("تم بدء البث الصوتي المباشر بنجاح! 🎙️");
+alert("تم بدء البث الصوتي المباشر بنجاح!");
 }
 
 function endRoomBroadcast() {
@@ -4216,7 +4297,7 @@ ${qOptions}
 <h4 style="color:#60a5fa;">اختر اللاعب الثاني</h4>
 <input type="text" id="gameP2NameInput" placeholder="اسم اللاعب الثاني (مثال: سعود)" style="width:100%; padding:9px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
 
-<button onclick="launchGameFromModal()" style="width:100%; background:#059669;">🚀 بدء التحدي الآن</button>
+<button onclick="launchGameFromModal()" style="width:100%; background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> بدء التحدي الآن</button>
 </div>
 `;
 
@@ -4258,7 +4339,7 @@ reveal2: null
 
 saveRoomState();
 closeAllModalsDirectly();
-alert("بدأت المسابقة في الغرفة! 🎮");
+alert("بدأت المسابقة في الغرفة!");
 }
 
 function renderGameWidgetHTML() {
@@ -4269,7 +4350,7 @@ let statusText = g.status === 'running' ? 'تحدي قائم الآن' : 'انت
 return `
 <div class="game-widget">
 <span class="game-status-badge ${statusClass}">${statusText}</span>
-<div class="game-header-title">⚡ منافسة مباشرة في الغرفة</div>
+<div class="game-header-title"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> منافسة مباشرة في الغرفة</div>
 
 <div class="vs-box">
 <div class="player-circle-wrap">
@@ -4296,25 +4377,25 @@ return `
 <div class="answer-box-col ${g.reveal1 !== null ? (g.reveal1 ? 'revealed correct' : 'revealed wrong') : ''}">
 <div class="answer-box-col-label">إجابة ${escapeHTML(g.p1Name)}</div>
 ${g.status === 'running' ? `<input type="text" id="gameInputP1" placeholder="اكتب الإجابة..." onkeydown="if(event.key==='Enter') submitGameAnswer(1)">` : `<div class="answer-reveal-text">${escapeHTML(g.revealText1 || 'تمت الإجابة')}</div>`}
-${g.reveal1 !== null ? `<div class="answer-reveal-tag ${g.reveal1 ? 'correct' : 'wrong'}">${g.reveal1 ? '✔️ صحيحة (+1)' : '❌ خاطئة'}</div>` : ''}
+${g.reveal1 !== null ? `<div class="answer-reveal-tag ${g.reveal1 ? 'correct' : 'wrong'}">${g.reveal1 ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صحيحة (+1)' : '<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خاطئة'}</div>` : ''}
 </div>
 
 <div class="answer-box-col ${g.reveal2 !== null ? (g.reveal2 ? 'revealed correct' : 'revealed wrong') : ''}">
 <div class="answer-box-col-label">إجابة ${escapeHTML(g.p2Name)}</div>
 ${g.status === 'running' ? `<input type="text" id="gameInputP2" placeholder="اكتب الإجابة..." onkeydown="if(event.key==='Enter') submitGameAnswer(2)">` : `<div class="answer-reveal-text">${escapeHTML(g.revealText2 || 'تمت الإجابة')}</div>`}
-${g.reveal2 !== null ? `<div class="answer-reveal-tag ${g.reveal2 ? 'correct' : 'wrong'}">${g.reveal2 ? '✔️ صحيحة (+1)' : '❌ خاطئة'}</div>` : ''}
+${g.reveal2 !== null ? `<div class="answer-reveal-tag ${g.reveal2 ? 'correct' : 'wrong'}">${g.reveal2 ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صحيحة (+1)' : '<svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خاطئة'}</div>` : ''}
 </div>
 </div>
 
 ${isAdmin ? `
 <div class="admin-game-dock">
-<h4>⚙️ تحكم المسؤول باللعبة</h4>
+<h4><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> تحكم المسؤول باللعبة</h4>
 <div class="admin-btn-group">
-<button onclick="judgeGameAnswer(1, true)" style="background:#059669;">✔️ صح للاعب 1</button>
-<button onclick="judgeGameAnswer(1, false)" style="background:#dc2626;">❌ خطأ للاعب 1</button>
-<button onclick="judgeGameAnswer(2, true)" style="background:#059669;">✔️ صح للاعب 2</button>
-<button onclick="judgeGameAnswer(2, false)" style="background:#dc2626;">❌ خطأ للاعب 2</button>
-<button onclick="endActiveGame()" style="background:#7f1d1d; width:100%; margin-top:6px;">🛑 إنهاء المسابقة وإعلان النتيجة</button>
+<button onclick="judgeGameAnswer(1, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للاعب 1</button>
+<button onclick="judgeGameAnswer(1, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للاعب 1</button>
+<button onclick="judgeGameAnswer(2, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للاعب 2</button>
+<button onclick="judgeGameAnswer(2, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للاعب 2</button>
+<button onclick="endActiveGame()" style="background:#7f1d1d; width:100%; margin-top:6px;"><svg class="ic" aria-hidden="true"><use href="#i-power"/></svg> إنهاء المسابقة وإعلان النتيجة</button>
 </div>
 </div>
 ` : ''}
@@ -4410,7 +4491,7 @@ textInput.value = "";
 answerInput.value = "";
 saveRoomState();
 renderQBankList();
-alert("تمت إضافة السؤال إلى القاعدة بنجاح! 📚");
+alert("تمت إضافة السؤال إلى القاعدة بنجاح!");
 }
 
 function deleteQuestionFromBank(index) {
