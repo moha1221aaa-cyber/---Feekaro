@@ -1245,17 +1245,17 @@ flex-wrap: wrap;
 .score-box{font-size:20px;}
 }
 /* ===== واجهة الغرفة الثابتة (الشات فقط يسكرول) ===== */
-#room.section.active{
+#roomScreen.open{
   position:fixed;
-  top:var(--hdr-h,70px);
-  bottom:calc(60px + env(safe-area-inset-bottom,0px));
+  top:0;
+  bottom:env(safe-area-inset-bottom,0px);
   left:0; right:0;
   display:flex; flex-direction:column;
   padding:8px 10px 0;
   overflow:hidden;
   box-sizing:border-box;
 }
-#room .room-wrap{flex:1; min-height:0; width:100%; display:flex; flex-direction:column; padding-bottom:0;}
+#roomScreen .room-wrap{flex:1; min-height:0; width:100%; display:flex; flex-direction:column; padding-bottom:0;}
 #roomContent{flex:1; min-height:0; display:flex; flex-direction:column; overflow-y:auto;}
 #roomContent > *{flex-shrink:0; width:100%; box-sizing:border-box;}
 #roomContent > .room-chat-box{
@@ -1272,7 +1272,7 @@ flex-wrap: wrap;
 /* ===== ضغط الغرفة لتظهر كاملة في الشاشة بدون سكرول ===== */
 body.room-active #mainHeader{padding:8px 10px;}
 body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
-#room.section.active{padding:4px 8px 0;--seat:clamp(30px,5.3vh,42px);}
+#roomScreen.open{padding:calc(6px + env(safe-area-inset-top,0px)) 8px 0;--seat:clamp(30px,5.3vh,42px);}
 #roomContent{overflow:hidden;}
 .room-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;max-width:420px;margin:0 auto 4px;}
 .room-toolbar-btns{display:flex;gap:4px;flex-wrap:nowrap;}
@@ -1333,12 +1333,12 @@ body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
 .game-widget .admin-game-dock .admin-btn-group button:last-child{flex:1 1 100%;width:auto;}
 #roomContent > .room-chat-box{min-height:84px;}
 @media (max-height:700px){
-  #room.section.active{--seat:28px;}
+  #roomScreen.open{--seat:28px;}
   .mic-slot-vacant-label{display:none;}
   .mic-stage{padding:4px 6px 2px;}
 }
-#room.section.active{background:#0f172a;z-index:50;}
-body.room-active #resetButton{display:none !important;}
+#roomScreen.open{background:#0f172a;z-index:1000000;}
+body.room-tab #resetButton{display:none !important;}
 /* ===== شريط الكتابة والأزرار الدائرية + 15 مقعد + مقعد المضيف الذهبي ===== */
 .room-composer{display:flex;align-items:center;gap:6px;flex-shrink:0;width:100%;max-width:420px;margin:0 auto 4px;box-sizing:border-box;}
 .room-composer input{flex:1;min-width:0;padding:9px 12px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:20px;font-size:13px;}
@@ -1355,7 +1355,7 @@ body.room-active #resetButton{display:none !important;}
 .room-composer.typing .rc-tools{display:none;}
 .room-composer.typing .rc-send{display:flex;}
 body.room-typing .bottom-nav{display:none;}
-body.room-typing #room.section.active{bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom,0px));}
+body.room-typing #roomScreen.open{bottom:calc(var(--kb,0px) + env(safe-area-inset-bottom,0px));}
 .mic-grid{align-items:center;}
 .mic-slot.host-seat .mic-slot-avatar-wrap,.mic-slot.host-seat .mic-slot-empty{width:calc(var(--seat) * 1.3);height:calc(var(--seat) * 1.3);}
 .mic-slot.host-seat .mic-slot-avatar{border:3px solid #facc15;box-shadow:0 0 12px rgba(250,204,21,.55);}
@@ -1419,6 +1419,140 @@ body.room-typing #room.section.active{bottom:calc(var(--kb,0px) + env(safe-area-
 .agora-status .ic{width:15px;height:15px;vertical-align:-3px;}
 .room-toast .ic{width:16px;height:16px;vertical-align:-3px;}
 #matchSearchInput{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+/* ===================== بطاقة الغرفة + شاشة الغرفة الكاملة ===================== */
+.room-screen{display:none;}
+body.room-open, body.live-open{overflow:hidden;}
+body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
+.room-screen-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;max-width:480px;margin:0 auto 6px;flex-shrink:0;}
+.rs-back{margin:0;display:inline-flex;align-items:center;gap:4px;padding:7px 12px;font-size:13px;background:#1e293b;border:1px solid #334155;border-radius:20px;}
+.rs-title{font-size:14px;font-weight:bold;color:#e2e8f0;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rs-id{font-size:11px;color:#94a3b8;background:#1e293b;border:1px solid #334155;border-radius:20px;padding:5px 10px;white-space:nowrap;}
+
+.room-card-wrap{max-width:440px;margin:18px auto 0;padding:0 14px;}
+.room-card{position:relative;background:linear-gradient(160deg,#1e293b 0%,#172554 100%);border:1px solid #334155;border-radius:18px;padding:16px;cursor:pointer;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.35);transition:transform .15s ease;}
+.room-card:active{transform:scale(.985);}
+.room-card.live{border-color:#16a34a;box-shadow:0 0 0 1px rgba(74,222,128,.25),0 10px 26px rgba(0,0,0,.35);}
+.room-card.closed{cursor:default;opacity:.85;}
+.room-card::after{content:"";position:absolute;left:-40px;top:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(250,204,21,.16),transparent 70%);pointer-events:none;}
+.rcd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.rcd-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:20px;background:#334155;color:#cbd5e1;}
+.rcd-badge .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;}
+.room-card.live .rcd-badge{background:#052e16;color:#4ade80;}
+.room-card.live .rcd-badge .dot{background:#4ade80;animation:lvPulse 1.2s infinite;}
+.rcd-lock{font-size:11px;color:#94a3b8;display:inline-flex;align-items:center;gap:4px;}
+.rcd-lock.ok{color:#4ade80;}
+.rcd-main{display:flex;align-items:center;gap:12px;}
+.rcd-icon{width:54px;height:54px;border-radius:16px;background:#0f172a;border:1.5px solid #facc15;color:#facc15;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.rcd-title{font-size:17px;font-weight:bold;color:#fff;}
+.rcd-sub{font-size:12px;color:#94a3b8;margin-top:3px;}
+.rcd-avatars{display:flex;align-items:center;margin:14px 0 4px;min-height:34px;}
+.rcd-avatars img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #0f172a;margin-left:-8px;background:#0f172a;}
+.rcd-avatars img:first-child{margin-left:0;}
+.rcd-avatars .more{font-size:12px;color:#94a3b8;margin-right:10px;}
+.rcd-avatars .empty{font-size:12px;color:#64748b;}
+.rcd-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.rcd-stats span{font-size:11px;color:#cbd5e1;background:rgba(15,23,42,.6);border:1px solid #334155;border-radius:20px;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;}
+.rcd-cta{margin-top:14px;text-align:center;font-size:14px;font-weight:bold;color:#0f172a;background:#facc15;border-radius:12px;padding:10px;}
+.room-card.closed .rcd-cta{background:#334155;color:#94a3b8;}
+.rcd-admin{margin-top:12px;background:#1e293b;border:1px dashed #475569;border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#cbd5e1;}
+.rcd-admin b{color:#facc15;font-size:15px;letter-spacing:1px;}
+.rcd-admin button{margin:0;padding:6px 10px;font-size:12px;}
+
+.rid-box{text-align:center;padding:6px 4px 4px;}
+.rid-box p{font-size:13px;color:#94a3b8;margin:0 0 12px;line-height:1.7;}
+.rid-box input{width:100%;box-sizing:border-box;text-align:center;font-size:20px;letter-spacing:3px;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:12px;color:#fff;}
+.rid-box input:focus{outline:none;border-color:#facc15;}
+.rid-box .rid-err{color:#f87171;font-size:12px;min-height:18px;margin-top:6px;}
+.rid-box button{width:100%;margin-top:6px;padding:12px;font-size:15px;}
+.shake{animation:ridShake .35s;}
+@keyframes ridShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* ===================== البث المباشر للمباريات ===================== */
+@keyframes lvPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+.live-bar{display:flex;align-items:center;gap:8px;max-width:420px;margin:10px auto;padding:10px 12px;background:linear-gradient(90deg,#450a0a,#1e293b);border:1px solid #dc2626;border-radius:12px;cursor:pointer;font-size:13px;box-sizing:border-box;}
+.live-bar .dot,.lv-badge .dot,.live-watch-btn .dot{width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:lvPulse 1.2s infinite;display:inline-block;}
+.live-bar .lb-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.live-bar .lb-txt b{color:#fff;}
+.live-bar .lb-sc{color:#facc15;font-weight:bold;margin:0 4px;}
+.live-bar .lb-go{color:#fca5a5;font-weight:bold;font-size:12px;white-space:nowrap;}
+.match-live-row{grid-column:1 / -1;display:flex;justify-content:center;}
+.match-live-row button{margin:0;width:100%;padding:8px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.live-start-btn{background:#7f1d1d;border:1px solid #dc2626;}
+.live-watch-btn{background:#dc2626;}
+.live-pending-note{font-size:12px;color:#facc15;text-align:center;padding:4px;}
+
+.live-screen{display:none;position:fixed;inset:0;z-index:1000001;background:radial-gradient(ellipse at top,#172554 0%,#0f172a 55%);flex-direction:column;padding:calc(8px + env(safe-area-inset-top,0px)) 12px calc(10px + env(safe-area-inset-bottom,0px));box-sizing:border-box;overflow:hidden;}
+.live-screen.open{display:flex;}
+#liveScreenBody{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;}
+.lv-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+.lv-badge{display:inline-flex;align-items:center;gap:6px;background:#450a0a;border:1px solid #dc2626;color:#fca5a5;font-weight:bold;font-size:12px;padding:5px 11px;border-radius:20px;}
+.lv-badge.off{background:#1e293b;border-color:#334155;color:#94a3b8;}
+.lv-badge.off .dot{background:#64748b;animation:none;}
+.lv-round{font-size:12px;color:#94a3b8;}
+.lv-score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:14px 0 8px;flex-shrink:0;}
+.lv-pl{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0;transition:transform .2s;}
+.lv-pl img{width:58px;height:58px;border-radius:50%;object-fit:cover;border:3px solid #334155;background:#0f172a;transition:border-color .2s,box-shadow .2s;}
+.lv-pl .nm{font-size:14px;font-weight:bold;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-pl.turn img{border-color:#facc15;box-shadow:0 0 18px rgba(250,204,21,.6);}
+.lv-pl.turn{transform:scale(1.06);}
+.lv-pl.me .nm::after{content:" (أنت)";font-size:10px;color:#60a5fa;font-weight:normal;}
+.lv-sc{display:flex;align-items:center;gap:10px;font-size:38px;font-weight:bold;color:#fff;font-variant-numeric:tabular-nums;}
+.lv-sc i{font-style:normal;color:#475569;font-size:26px;}
+.lv-stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;overflow-y:auto;padding:4px 0;}
+.lv-h{font-size:22px;font-weight:bold;color:#facc15;}
+.lv-muted{font-size:13px;color:#94a3b8;line-height:1.7;}
+.lv-ready-grid{display:flex;gap:12px;width:100%;justify-content:center;}
+.lv-rcard{flex:1;max-width:170px;background:#1e293b;border:1.5px solid #334155;border-radius:16px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.lv-rcard img{width:62px;height:62px;border-radius:50%;object-fit:cover;border:3px solid #334155;}
+.lv-rcard.ok{border-color:#16a34a;background:#052e16;}
+.lv-rcard.ok img{border-color:#4ade80;}
+.lv-rcard .nm{font-weight:bold;font-size:15px;}
+.lv-pill{font-size:12px;padding:4px 10px;border-radius:20px;background:#334155;color:#cbd5e1;display:inline-flex;align-items:center;gap:4px;}
+.lv-pill.ok{background:#16a34a;color:#fff;}
+.lv-ready-btn{margin:6px auto 0;width:min(320px,100%);padding:16px;font-size:20px;border-radius:16px;background:#16a34a;box-shadow:0 8px 22px rgba(22,163,74,.4);}
+.lv-link{background:none;color:#f87171;font-size:12px;padding:4px;margin:0 auto;text-decoration:underline;}
+.lv-rules{font-size:12px;color:#64748b;line-height:1.8;}
+.lv-count{font-size:110px;font-weight:bold;color:#facc15;line-height:1;text-shadow:0 0 40px rgba(250,204,21,.5);animation:lvPop .9s ease infinite;}
+@keyframes lvPop{0%{transform:scale(1.25);opacity:.4}30%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:1}}
+.lv-dots{display:flex;gap:7px;justify-content:center;flex-shrink:0;}
+.lv-dots span{width:30px;height:6px;border-radius:4px;background:#334155;}
+.lv-dots span.cur{background:#60a5fa;}
+.lv-dots span.w1{background:#facc15;}
+.lv-dots span.w2{background:#38bdf8;}
+.lv-dots span.w0{background:#64748b;}
+.lv-qcard{width:100%;box-sizing:border-box;background:#1e293b;border:1.5px solid #2563eb;border-radius:16px;padding:14px;}
+.lv-qnum{font-size:12px;color:#60a5fa;margin-bottom:6px;font-weight:bold;}
+.lv-qtext{font-size:19px;font-weight:bold;line-height:1.6;color:#fff;}
+.lv-timer{width:100%;height:8px;background:#1e293b;border-radius:6px;overflow:hidden;position:relative;flex-shrink:0;}
+.lv-timer-bar{height:100%;width:100%;background:#4ade80;border-radius:6px;transition:width .25s linear,background .3s;}
+.lv-tnum{font-size:13px;color:#cbd5e1;font-variant-numeric:tabular-nums;}
+.lv-bell{margin:4px auto;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fde68a,#f59e0b 55%,#b45309);border:5px solid #fef3c7;color:#451a03;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:16px;font-weight:bold;box-shadow:0 10px 0 #92400e,0 18px 34px rgba(245,158,11,.45);transition:transform .08s,box-shadow .08s;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;padding:0;}
+.lv-bell .ic{width:62px;height:62px;stroke-width:2.2;}
+.lv-bell:active{transform:translateY(8px);box-shadow:0 2px 0 #92400e,0 8px 18px rgba(245,158,11,.35);}
+.lv-bell.idle{filter:grayscale(.75);opacity:.55;box-shadow:0 6px 0 #334155;cursor:default;}
+.lv-bell.rung{animation:lvRing .5s ease 2;}
+@keyframes lvRing{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+.lv-turn{font-size:16px;font-weight:bold;color:#facc15;}
+.lv-ans-row{display:flex;gap:8px;width:100%;}
+.lv-ans-row input{flex:1;min-width:0;padding:13px;font-size:17px;background:#0f172a;border:2px solid #facc15;border-radius:12px;color:#fff;}
+.lv-ans-row input:focus{outline:none;}
+.lv-ans-row button{margin:0;padding:0 18px;font-size:16px;border-radius:12px;background:#16a34a;}
+.lv-last{font-size:13px;padding:7px 12px;border-radius:10px;background:#450a0a;color:#fca5a5;}
+.lv-last.ok{background:#052e16;color:#4ade80;}
+.lv-reveal{width:100%;box-sizing:border-box;border-radius:16px;padding:14px;background:#052e16;border:1.5px solid #16a34a;}
+.lv-reveal.none{background:#1e293b;border-color:#475569;}
+.lv-reveal .t{font-size:16px;font-weight:bold;margin-bottom:8px;}
+.lv-reveal .a{font-size:20px;font-weight:bold;color:#facc15;}
+.lv-final .tro{font-size:70px;color:#facc15;}
+.lv-final .tro .ic{width:80px;height:80px;}
+.lv-final .w{font-size:24px;font-weight:bold;color:#facc15;}
+.lv-sum{width:100%;display:flex;flex-direction:column;gap:6px;}
+.lv-sum div{display:flex;justify-content:space-between;gap:8px;font-size:12px;background:#1e293b;border-radius:10px;padding:7px 10px;text-align:right;}
+.lv-sum div span:first-child{color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-sum div span:last-child{white-space:nowrap;font-weight:bold;}
+.lv-applied{font-size:13px;color:#4ade80;}
+.lv-applied.wait{color:#facc15;}
+
 </style>
 <script>
 /* تسجيل الـ Service Worker لدعم PWA. أي خطأ هنا لا يوقف الموقع، فقط يعطل ميزة "إضافة للشاشة الرئيسية". */
@@ -1536,6 +1670,7 @@ async function installPwa() {
 
 <div id="home" class="section active">
 <div id="leagueSummaryBox" class="league-quick-summary"></div>
+<div id="liveMatchesBarHome"></div>
 <div id="adminControls" class="admin-controls-box" style="display:none;">
 <h4><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> أدوات التحكم بالدوري (خاص بالمسؤول)</h4>
 <div class="admin-btn-group">
@@ -1579,6 +1714,7 @@ async function installPwa() {
 </div>
 
 <div id="matches" class="section">
+<div id="liveMatchesBar"></div>
 <div class="mini-tabs">
 <div class="mini-tab active" onclick="showMiniTab(event,'upcoming')">القادمة</div>
 <div class="mini-tab" onclick="showMiniTab(event,'past')">السابقة</div>
@@ -1612,6 +1748,15 @@ async function installPwa() {
 </div>
 
 <div id="room" class="section">
+<div id="roomCardBox"></div>
+</div>
+
+<div id="roomScreen" class="room-screen">
+<div class="room-screen-bar">
+<button class="rs-back" onclick="closeRoomScreen()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> خروج</button>
+<div class="rs-title">الغرفة الصوتية</div>
+<div class="rs-id" id="roomScreenId"></div>
+</div>
 <div id="agoraStatusBar" class="agora-status" onclick="enableRoomAudio()"></div>
 <div class="room-wrap">
 <div id="roomContent"></div>
@@ -1628,6 +1773,10 @@ async function installPwa() {
 <button id="rcSendBtn" class="rc-send" onpointerdown="event.preventDefault()" onclick="sendRoomChat()" title="إرسال"><span><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></span></button>
 </div>
 <div id="roomAudioContainer" style="display:none;"></div>
+</div>
+
+<div id="liveScreen" class="live-screen">
+<div id="liveScreenBody"></div>
 </div>
 
 <button onclick="resetLeague()" id="resetButton" style="display:none; background:#dc2626; margin:15px auto;"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> إعادة ضبط الدوري</button>
@@ -2103,11 +2252,14 @@ window.addEventListener('DOMContentLoaded', () => {
             renderFullAccountPage();
             renderLeagueSummary();
             renderRoomUI();
+            renderLiveBars();
+            if (openLiveId) { liveLastSig = ""; renderLiveScreen(); }
         });
 
         loadFromFirebase();
         startPredictionRanking();
         initRoomFeature();
+        initLiveMatches();
     } catch (err) {
         console.error(err);
         document.getElementById("debugText").textContent = "خطأ في الاتصال بقواعد البيانات";
@@ -2116,6 +2268,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('popstate', function(e) {
     closeAllModalsDirectly();
+    const st = e.state || {};
+    if (!st.liveOpen && typeof closeLiveScreen === "function") closeLiveScreen(true);
+    if (!st.roomOpen && !st.liveOpen && typeof closeRoomScreen === "function") closeRoomScreen(true);
 });
 
 function openModal(modalId) {
@@ -2973,6 +3128,9 @@ div.appendChild(player1Div);
 div.appendChild(scoreDiv);
 div.appendChild(player2Div);
 
+let liveRow = buildMatchLiveRow(m);
+if (liveRow) div.appendChild(liveRow);
+
 return div;
 }
 
@@ -3091,10 +3249,10 @@ else if(sectionId === 'room') navTabs[5].classList.add("active");
 }
 
 if(sectionId === 'room') {
-    joinRoomPresence();
+    startPresenceListener();
+    renderRoomCard();
 }
-
-document.body.classList.toggle('room-active', sectionId === 'room');
+document.body.classList.toggle('room-tab', sectionId === 'room');
 document.documentElement.style.setProperty('--hdr-h', document.getElementById('mainHeader').offsetHeight + 'px');
 window.scrollTo(0, 0);
 }
@@ -3501,6 +3659,7 @@ qbank: []
 };
 }
 
+roomStateLoaded = true;
 normalizeRoomMics();
 syncMyMicWithState();
 
@@ -3519,7 +3678,10 @@ renderRoomUI();
 
 function saveRoomState() {
 if(!firebaseDB) return;
-firebaseDB.collection("room").doc("main").set(roomState, { merge: true }).catch(err => console.log(err));
+/* الـ ID ما يُحفظ من هنا (يتغير فقط من زر المسؤول) عشان نسخة قديمة ما ترجعه */
+let roomData = Object.assign({}, roomState);
+delete roomData.accessId;
+firebaseDB.collection("room").doc("main").set(roomData, { merge: true }).catch(err => console.log(err));
 }
 
 let presenceListener = null;
@@ -3614,6 +3776,7 @@ function openParticipantsModal() {
 function renderRoomUI() {
 let container = document.getElementById("roomContent");
 let tabIcon = document.getElementById("roomTabIcon");
+renderRoomCard();
 if(!container) return;
 
 if(tabIcon) {
@@ -4500,6 +4663,848 @@ roomState.qbank.splice(index, 1);
 saveRoomState();
 renderQBankList();
 }
+
+/* =====================================================================
+   بطاقة الغرفة + ID الدخول + شاشة الغرفة الكاملة
+   ===================================================================== */
+let roomStateLoaded = false;
+let roomScreenOpen = false;
+let roomAccessIdCreating = false;
+
+function getSavedRoomAccess() {
+    try { return localStorage.getItem("masro7RoomAccess") || ""; } catch (e) { return ""; }
+}
+function setSavedRoomAccess(v) {
+    try { localStorage.setItem("masro7RoomAccess", v); } catch (e) {}
+}
+function hasRoomAccess() {
+    if (isAdmin) return true;
+    const id = roomState.accessId ? String(roomState.accessId) : "";
+    return !!id && getSavedRoomAccess() === id;
+}
+
+/* المسؤول: ينشأ ID تلقائي للغرفة إذا ما كان موجود */
+function ensureRoomAccessId() {
+    if (!isAdmin || !firebaseDB || !roomStateLoaded || roomState.accessId || roomAccessIdCreating) return;
+    roomAccessIdCreating = true;
+    const newId = String(Math.floor(100000 + Math.random() * 900000));
+    firebaseDB.collection("room").doc("main").set({ accessId: newId }, { merge: true })
+        .catch(err => console.log(err))
+        .finally(() => { roomAccessIdCreating = false; });
+}
+
+function adminChangeRoomId(ev) {
+    if (ev) ev.stopPropagation();
+    if (!isAdmin) return;
+    let v = prompt("اكتب ID جديد للغرفة (أرقام أو حروف).\nملاحظة: الكل بيحتاج يدخل الـ ID الجديد مرة ثانية.", roomState.accessId || "");
+    if (v === null) return;
+    v = v.trim();
+    if (v.length < 3) return alert("الـ ID لازم يكون 3 خانات على الأقل");
+    roomState.accessId = v;
+    firebaseDB.collection("room").doc("main").set({ accessId: v }, { merge: true })
+        .then(() => roomToast("تم تغيير ID الغرفة", "check"))
+        .catch(err => alert("تعذّر تغيير الـ ID: " + err.message));
+}
+
+function adminCopyRoomId(ev) {
+    if (ev) ev.stopPropagation();
+    const v = roomState.accessId || "";
+    if (!v) return;
+    if (navigator.clipboard) navigator.clipboard.writeText(v).then(() => roomToast("تم نسخ ID الغرفة", "check")).catch(() => {});
+}
+
+function renderRoomCard() {
+    const box = document.getElementById("roomCardBox");
+    if (!box) return;
+    ensureRoomAccessId();
+
+    const live = !!roomState.isLive;
+    const canEnter = live || isAdmin;
+    const access = hasRoomAccess();
+    const seated = (roomState.mics || []).filter(m => m);
+    let avatars = "";
+    seated.slice(0, 7).forEach(m => {
+        const url = m.avatar || getPlayerAvatar(m.name).url;
+        avatars += `<img src="${escapeHTML(url)}" alt="">`;
+    });
+    if (seated.length > 7) avatars += `<span class="more">+${seated.length - 7}</span>`;
+    if (!avatars) avatars = `<span class="empty">${live ? "ما أحد على المايك حالياً" : "الغرفة فاضية"}</span>`;
+
+    let lockHTML = "";
+    if (isAdmin) lockHTML = `<span class="rcd-lock ok">${ic("crown")} المسؤول</span>`;
+    else if (access) lockHTML = `<span class="rcd-lock ok">${ic("check-circle")} مسموح لك</span>`;
+    else lockHTML = `<span class="rcd-lock">${ic("lock")} تحتاج ID</span>`;
+
+    let cta;
+    if (!canEnter) cta = `${ic("lock")} الغرفة مغلقة حالياً`;
+    else if (!access) cta = `${ic("lock")} اضغط وأدخل ID الغرفة`;
+    else cta = `دخول الغرفة ${ic("chevron-right")}`;
+
+    let html = `
+<div class="room-card ${live ? "live" : ""} ${canEnter ? "" : "closed"}" onclick="onRoomCardClick()">
+<div class="rcd-top">
+<span class="rcd-badge"><span class="dot"></span>${live ? "مباشر الآن" : "مغلقة"}</span>
+${lockHTML}
+</div>
+<div class="rcd-main">
+<div class="rcd-icon">${ic("mic")}</div>
+<div>
+<div class="rcd-title">الغرفة الصوتية</div>
+<div class="rcd-sub">${live && roomState.hostName ? "المضيف: " + escapeHTML(roomState.hostName) : "دوري بنو مسروح للنخبة"}</div>
+</div>
+</div>
+<div class="rcd-avatars">${avatars}</div>
+<div class="rcd-stats">
+<span>${ic("users")} الحاضرون: ${presentCount()}</span>
+<span>${ic("mic")} على المايك: ${seated.length} / ${MIC_SLOTS}</span>
+${roomState.game && roomState.game.active ? `<span>${ic("gamepad")} لعبة جارية</span>` : ""}
+</div>
+<div class="rcd-cta">${cta}</div>
+</div>`;
+
+    if (isAdmin) {
+        html += `
+<div class="rcd-admin">
+<div>ID الغرفة: <b>${escapeHTML(roomState.accessId || "...")}</b></div>
+<div style="display:flex;gap:6px;">
+<button onclick="adminCopyRoomId(event)" style="background:#334155;">نسخ</button>
+<button onclick="adminChangeRoomId(event)">تغيير</button>
+</div>
+</div>`;
+    }
+    box.innerHTML = `<div class="room-card-wrap">${html}</div>`;
+
+    const idEl = document.getElementById("roomScreenId");
+    if (idEl) idEl.textContent = isAdmin && roomState.accessId ? "ID: " + roomState.accessId : (live ? "● مباشر" : "مغلقة");
+}
+
+function onRoomCardClick() {
+    if (!roomState.isLive && !isAdmin) {
+        return roomToast("الغرفة مغلقة حالياً، تفتح مع بداية البث", "lock");
+    }
+    if (hasRoomAccess()) return openRoomScreen();
+    if (!roomState.accessId) return roomToast("المسؤول ما حدد ID للغرفة بعد", "lock");
+    openRoomIdModal();
+}
+
+function openRoomIdModal() {
+    let modal = document.getElementById("roomIdModal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "roomIdModal";
+        modal.className = "modal-overlay";
+        modal.innerHTML = `
+<div class="modal-content">
+<div class="modal-header">
+<h3>${ic("lock")} دخول الغرفة</h3>
+<button class="modal-back-btn" onclick="goBackModal()">${ic("chevron-right")} رجوع</button>
+</div>
+<div class="rid-box">
+<p>أول مرة تدخل الغرفة؟ اكتب الـ ID اللي أعطاك إياه المسؤول.<br>بعدها تدخل على طول بدون ما تكتبه مرة ثانية.</p>
+<input type="text" id="roomIdInput" placeholder="ID الغرفة" autocomplete="off" inputmode="text" onkeydown="if(event.key==='Enter'){event.preventDefault();submitRoomId();}">
+<div class="rid-err" id="roomIdErr"></div>
+<button onclick="submitRoomId()">دخول ${ic("chevron-right")}</button>
+</div>
+</div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById("roomIdErr").textContent = "";
+    const inp = document.getElementById("roomIdInput");
+    inp.value = "";
+    openModal("roomIdModal");
+    setTimeout(() => inp.focus(), 150);
+}
+
+function submitRoomId() {
+    const inp = document.getElementById("roomIdInput");
+    const err = document.getElementById("roomIdErr");
+    const val = (inp.value || "").trim();
+    const real = String(roomState.accessId || "");
+    if (!val) { err.textContent = "اكتب الـ ID أول"; return; }
+    if (val !== real) {
+        err.textContent = "الـ ID غلط، تأكد منه وجرب مرة ثانية";
+        inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake");
+        return;
+    }
+    setSavedRoomAccess(real);
+    closeAllModalsDirectly();
+    /* نستبدل حالة المودال في السجل بحالة الغرفة */
+    try { window.history.replaceState({ roomOpen: true }, ""); } catch (e) {}
+    openRoomScreen(true);
+    renderRoomCard();
+}
+
+function openRoomScreen(skipPush) {
+    const scr = document.getElementById("roomScreen");
+    if (!scr) return;
+    if (!roomScreenOpen && !skipPush) {
+        try { window.history.pushState({ roomOpen: true }, ""); } catch (e) {}
+    }
+    roomScreenOpen = true;
+    scr.classList.add("open");
+    document.body.classList.add("room-open");
+    joinRoomPresence();
+    enableRoomAudio();
+    renderRoomUI();
+    roomViewportSync();
+}
+
+function closeRoomScreen(fromPop) {
+    if (!roomScreenOpen) return;
+    if (currentUser && roomState.mics) {
+        const idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
+        if (idx !== -1) {
+            if (!fromPop && !confirm("أنت على المايك، إذا طلعت بتنزل من المايك. تبي تطلع؟")) return;
+            releaseMicSlot(idx);
+        }
+    }
+    if (!fromPop && window.history.state && window.history.state.roomOpen) {
+        window.history.back(); /* popstate بيكمل الإغلاق */
+        return;
+    }
+    roomScreenOpen = false;
+    const scr = document.getElementById("roomScreen");
+    if (scr) scr.classList.remove("open");
+    document.body.classList.remove("room-open");
+    const input = document.getElementById("roomChatInput");
+    if (input) input.blur();
+    composerTyping(false);
+    leaveRoomPresence();
+    renderRoomCard();
+}
+
+function leaveRoomPresence() {
+    if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
+    if (firebaseDB) {
+        firebaseDB.collection("room").doc("main").collection("presence").doc(myPresenceId()).delete().catch(() => {});
+    }
+}
+
+/* =====================================================================
+   البث المباشر للمباريات — نظام الجرس (5 أسئلة)
+   ===================================================================== */
+const LIVE_Q_COUNT = 5;
+const LIVE_COUNT_MS = 3500;   /* العد التنازلي قبل البداية */
+const LIVE_BUZZ_MS = 15000;   /* وقت ضغط الجرس */
+const LIVE_ANSWER_MS = 15000; /* وقت كتابة الإجابة */
+const LIVE_REVEAL_MS = 4500;  /* عرض الإجابة قبل السؤال التالي */
+const LIVE_ACTIVE = ["ready", "countdown", "playing"];
+
+/* أسئلة احتياطية تُستخدم فقط إذا قاعدة الأسئلة فيها أقل من 5 */
+const LIVE_FALLBACK_QUESTIONS = [
+    { text: "ما عاصمة اليابان؟", answer: "طوكيو" },
+    { text: "كم عدد قارات العالم؟", answer: "7|سبع|سبعة" },
+    { text: "ما أكبر كوكب في المجموعة الشمسية؟", answer: "المشتري" },
+    { text: "كم عدد سور القرآن الكريم؟", answer: "114|مئة واربعة عشر|مائة واربعة عشر" },
+    { text: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة" },
+    { text: "من أول الخلفاء الراشدين؟", answer: "أبو بكر الصديق|ابو بكر|ابوبكر" },
+    { text: "كم عدد أركان الإسلام؟", answer: "5|خمس|خمسة" },
+    { text: "ما أول سورة في ترتيب المصحف؟", answer: "الفاتحة|سورة الفاتحة" },
+    { text: "ما النبي الذي التقمه الحوت؟", answer: "يونس|يونس عليه السلام" },
+    { text: "ما عاصمة أستراليا؟", answer: "كانبرا" },
+    { text: "ما عاصمة كندا؟", answer: "أوتاوا|اوتاوا" },
+    { text: "ما عاصمة تركيا؟", answer: "أنقرة|انقره" },
+    { text: "ما أكبر محيط في العالم؟", answer: "الهادي|المحيط الهادي|الهادئ|المحيط الهادئ" },
+    { text: "ما أعلى جبل في العالم؟", answer: "إيفرست|ايفرست|افرست" },
+    { text: "ما أسرع حيوان بري؟", answer: "الفهد" },
+    { text: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206" },
+    { text: "ما الرمز الكيميائي للذهب؟", answer: "Au" },
+    { text: "ما الغاز الذي تمتصه النباتات لصنع غذائها؟", answer: "ثاني أكسيد الكربون|ثاني اكسيد الكربون|co2" },
+    { text: "كم عدد لاعبي فريق كرة القدم داخل الملعب؟", answer: "11|احدى عشر|احد عشر" },
+    { text: "ما عملة اليابان؟", answer: "الين|ين" },
+    { text: "كم عدد أيام السنة الكبيسة؟", answer: "366" },
+    { text: "كم عدد كواكب المجموعة الشمسية؟", answer: "8|ثمانية|ثمان" },
+    { text: "ما أصغر دولة في العالم مساحة؟", answer: "الفاتيكان" },
+    { text: "من فاز بكأس العالم لكرة القدم 2022؟", answer: "الأرجنتين|الارجنتين" },
+    { text: "في أي عام أُعلن توحيد المملكة العربية السعودية ميلادياً؟", answer: "1932" }
+];
+
+let liveMatchesCache = {};
+let liveListener = null;
+let openLiveId = null;
+let liveTickTimer = null;
+let liveAdvanceBusy = false;
+let liveLastAdvanceTry = 0;
+let liveLastSig = "";
+let liveMatchesSig = "";
+let liveApplyTried = {};
+let livePrevView = null;
+
+function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
+function liveRef(id) { return liveCol().doc(id); }
+function isLiveActive(lm) { return !!lm && LIVE_ACTIVE.indexOf(lm.status) !== -1; }
+
+function myLiveNum(lm) {
+    if (!currentUser || !lm) return 0;
+    if (lm.uid1 && lm.uid1 === currentUser.uid) return 1;
+    if (lm.uid2 && lm.uid2 === currentUser.uid) return 2;
+    return 0;
+}
+
+function initLiveMatches() {
+    if (!firebaseDB || liveListener) return;
+    liveListener = liveCol().onSnapshot(snap => {
+        const next = {};
+        snap.forEach(d => { next[d.id] = d.data(); });
+        liveMatchesCache = next;
+
+        /* نعيد رسم المباريات فقط إذا تغيرت حالة البث أو النتيجة */
+        const sig = Object.keys(next).sort().map(k => {
+            const x = next[k];
+            return k + ":" + x.status + ":" + (x.s1 || 0) + ":" + (x.s2 || 0) + ":" + (x.resultApplied ? 1 : 0);
+        }).join("|");
+        if (sig !== liveMatchesSig) {
+            liveMatchesSig = sig;
+            renderMatches();
+            renderLiveBars();
+        }
+        if (openLiveId) renderLiveScreen();
+
+        Object.keys(next).forEach(id => {
+            const lm = next[id];
+            if (lm.status === "finished" && !lm.resultApplied) liveApplyResult(id);
+        });
+    }, err => {
+        console.log("liveMatches listener:", err);
+    });
+}
+
+function renderLiveBars() {
+    const active = Object.keys(liveMatchesCache).filter(id => isLiveActive(liveMatchesCache[id]));
+    let html = "";
+    active.forEach(id => {
+        const lm = liveMatchesCache[id];
+        html += `
+<div class="live-bar" data-id="${escapeHTML(id)}" onclick="openLiveScreen(this.dataset.id)">
+<span class="dot"></span>
+<span class="lb-txt">مباشر: <b>${escapeHTML(lm.p1)}</b><span class="lb-sc">${lm.s1 || 0} - ${lm.s2 || 0}</span><b>${escapeHTML(lm.p2)}</b></span>
+<span class="lb-go">شاهد ${ic("chevron-right")}</span>
+</div>`;
+    });
+    ["liveMatchesBar", "liveMatchesBarHome"].forEach(bid => {
+        const el = document.getElementById(bid);
+        if (el) el.innerHTML = html;
+    });
+}
+
+function canStartLive(m) {
+    if (!currentUser) return false;
+    if (isAdmin) return true;
+    return playerLinks[m.p1.name] === currentUser.uid || playerLinks[m.p2.name] === currentUser.uid;
+}
+
+/* يرجّع سطر البث اللي ينضاف تحت بطاقة المباراة (أو null) */
+function buildMatchLiveRow(m) {
+    if (!(m.s1 === "" || m.s2 === "")) return null;
+    const id = getMatchId(m);
+    const lm = liveMatchesCache[id];
+    const row = document.createElement("div");
+    row.className = "match-live-row";
+
+    if (isLiveActive(lm)) {
+        const b = document.createElement("button");
+        b.className = "live-watch-btn";
+        b.innerHTML = `<span class="dot" style="background:#fff;"></span> مباشر الآن ${lm.status === "playing" ? `(${lm.s1 || 0} - ${lm.s2 || 0})` : ""} — مشاهدة`;
+        b.onclick = () => openLiveScreen(id);
+        row.appendChild(b);
+        return row;
+    }
+    if (lm && lm.status === "finished" && !lm.resultApplied) {
+        const b = document.createElement("button");
+        b.className = "live-start-btn";
+        b.style.background = "#422006"; b.style.borderColor = "#a16207";
+        b.innerHTML = `${ic("hourglass")} انتهت ${lm.s1 || 0} - ${lm.s2 || 0} · بانتظار اعتماد النتيجة`;
+        b.onclick = () => openLiveScreen(id);
+        row.appendChild(b);
+        return row;
+    }
+    if (canStartLive(m)) {
+        const b = document.createElement("button");
+        b.className = "live-start-btn";
+        b.innerHTML = `${ic("zap")} بدء البث المباشر`;
+        b.onclick = () => startLiveMatch(m);
+        row.appendChild(b);
+        return row;
+    }
+    return null;
+}
+
+function pickLiveQuestions() {
+    const bank = (roomState.qbank || []).filter(q => q && q.text && q.answer);
+    const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    let picked = shuffle(bank).slice(0, LIVE_Q_COUNT);
+    if (picked.length < LIVE_Q_COUNT) {
+        const used = new Set(picked.map(q => q.text));
+        const extra = shuffle(LIVE_FALLBACK_QUESTIONS.filter(q => !used.has(q.text)));
+        picked = picked.concat(extra.slice(0, LIVE_Q_COUNT - picked.length));
+    }
+    return picked.map(q => ({ text: String(q.text), answer: String(q.answer) }));
+}
+
+async function startLiveMatch(m) {
+    if (!firebaseDB) return;
+    if (!canStartLive(m)) return roomToast("فقط المسؤول أو لاعبي المباراة يقدرون يبدون البث", "lock");
+    const uid1 = playerLinks[m.p1.name] || "";
+    const uid2 = playerLinks[m.p2.name] || "";
+    if (!uid1 || !uid2) {
+        const who = [!uid1 ? m.p1.name : "", !uid2 ? m.p2.name : ""].filter(Boolean).join(" و ");
+        return alert(`ما يمديك تبدأ البث: ${who} غير موثّق بحساب.\nالمسؤول يوثقه من ملفه الشخصي (توثيق اللاعب بالحساب) عشان يقدر يضغط "جاهز".`);
+    }
+    if (uid1 === uid2) return alert("اللاعبين مربوطين بنفس الحساب، لازم كل لاعب يكون له حساب مستقل.");
+
+    const id = getMatchId(m);
+    const existing = liveMatchesCache[id];
+    if (isLiveActive(existing)) return openLiveScreen(id);
+    if (!confirm(`بدء البث المباشر لمباراة ${m.p1.name} ضد ${m.p2.name}؟\nبتظهر لهم شاشة "جاهز" وأول ما يضغطونها تبدأ المباراة.`)) return;
+
+    const myName = (currentUserDocData && currentUserDocData.name) || (currentUser.displayName || "");
+    const data = {
+        matchId: id, round: m.round, p1: m.p1.name, p2: m.p2.name, uid1: uid1, uid2: uid2,
+        av1: getPlayerAvatar(m.p1.name).url, av2: getPlayerAvatar(m.p2.name).url,
+        status: "ready", ready1: false, ready2: false,
+        questions: pickLiveQuestions(), qIndex: 0, phase: "wait",
+        buzzer: 0, answerer: 0, tried1: false, tried2: false, passed: false,
+        lastAnswer: null, outcome: 0, deadline: 0, s1: 0, s2: 0,
+        log: Array(LIVE_Q_COUNT).fill(-1), resultApplied: false,
+        createdBy: currentUser.uid, createdByName: myName, v: 1,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+        await firebaseDB.runTransaction(async tx => {
+            const snap = await tx.get(liveRef(id));
+            if (snap.exists && isLiveActive(snap.data())) return;
+            tx.set(liveRef(id), data);
+        });
+        openLiveScreen(id);
+    } catch (err) {
+        console.log(err);
+        alert("تعذّر بدء البث: " + (err.code === "permission-denied" ? "صلاحيات قاعدة البيانات ما تسمح بالكتابة على room/main/liveMatches" : err.message));
+    }
+}
+
+/* تنفيذ تعديل على المباراة داخل Transaction (عشان أسرع ضغطة جرس هي اللي تفوز فعلاً) */
+function liveTx(id, fn) {
+    const ref = liveRef(id);
+    return firebaseDB.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        if (!snap.exists) return null;
+        const d = snap.data();
+        const upd = fn(d, Date.now());
+        if (upd) {
+            upd.v = (d.v || 0) + 1;
+            upd.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+            tx.update(ref, upd);
+        }
+        return upd;
+    });
+}
+
+function liveQuestionUpd(i, now) {
+    return { status: "playing", qIndex: i, phase: "buzz", buzzer: 0, answerer: 0, tried1: false, tried2: false, passed: false, lastAnswer: null, outcome: 0, deadline: now + LIVE_BUZZ_MS };
+}
+function liveRevealUpd(d, winner, now, last) {
+    const log = (d.log || Array(LIVE_Q_COUNT).fill(-1)).slice();
+    log[d.qIndex] = winner;
+    const u = { phase: "reveal", outcome: winner, log: log, deadline: now + LIVE_REVEAL_MS };
+    if (last !== undefined) u.lastAnswer = last;
+    if (winner === 1) u.s1 = (d.s1 || 0) + 1;
+    if (winner === 2) u.s2 = (d.s2 || 0) + 1;
+    return u;
+}
+/* الجواب ينتقل للاعب الثاني، وإذا الثاني جرّب قبل ينتهي السؤال وتظهر الإجابة */
+function livePassUpd(d, n, now, last) {
+    const o = n === 1 ? 2 : 1;
+    if (!d["tried" + o]) {
+        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS };
+        u["tried" + o] = true;
+        return u;
+    }
+    return liveRevealUpd(d, 0, now, last);
+}
+function liveNextStep(d, now) {
+    if (d.status === "countdown" && now >= d.deadline) return liveQuestionUpd(0, now);
+    if (d.status !== "playing" || now < d.deadline) return null;
+    if (d.phase === "buzz") return liveRevealUpd(d, 0, now, null);
+    if (d.phase === "answer") return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
+    if (d.phase === "reveal") {
+        const next = (d.qIndex || 0) + 1;
+        if (next >= (d.questions || []).length) return { status: "finished", phase: "done", finishedAt: now };
+        return liveQuestionUpd(next, now);
+    }
+    return null;
+}
+
+function liveAdvanceIfDue() {
+    const lm = liveMatchesCache[openLiveId];
+    if (!lm || liveAdvanceBusy) return;
+    if (!(lm.status === "countdown" || lm.status === "playing")) return;
+    if (Date.now() < (lm.deadline || 0) + 250) return;
+    if (Date.now() - liveLastAdvanceTry < 900) return;
+    liveLastAdvanceTry = Date.now();
+    liveAdvanceBusy = true;
+    const id = openLiveId;
+    liveTx(id, liveNextStep)
+        .catch(err => console.log("advance:", err))
+        .finally(() => { liveAdvanceBusy = false; });
+}
+
+function liveSetReady() {
+    const id = openLiveId;
+    if (!id) return;
+    liveTx(id, (d, now) => {
+        if (d.status !== "ready") return null;
+        const n = myLiveNum(d);
+        if (!n) return null;
+        const u = {};
+        u["ready" + n] = true;
+        const r1 = n === 1 || d.ready1, r2 = n === 2 || d.ready2;
+        if (r1 && r2) { u.status = "countdown"; u.deadline = now + LIVE_COUNT_MS; }
+        return u;
+    }).then(() => liveBeep(660, 0.12)).catch(err => roomToast("تعذّر: " + err.message, "alert"));
+}
+
+function liveBuzz() {
+    const id = openLiveId;
+    const lm = liveMatchesCache[id];
+    if (!lm || lm.status !== "playing" || lm.phase !== "buzz" || !myLiveNum(lm)) return;
+    const bell = document.getElementById("lvBell");
+    if (bell) bell.classList.add("rung");
+    liveTx(id, (d, now) => {
+        if (d.status !== "playing" || d.phase !== "buzz" || now > d.deadline + 1500) return null;
+        const n = myLiveNum(d);
+        if (!n) return null;
+        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: now + LIVE_ANSWER_MS };
+        u["tried" + n] = true;
+        return u;
+    }).catch(err => console.log("buzz:", err));
+}
+
+function liveSubmitAnswer() {
+    const id = openLiveId;
+    const inp = document.getElementById("lvAnswerInput");
+    if (!id || !inp) return;
+    const text = inp.value.trim();
+    if (!text) { inp.focus(); return; }
+    inp.disabled = true;
+    liveTx(id, (d, now) => {
+        const n = myLiveNum(d);
+        if (d.status !== "playing" || d.phase !== "answer" || d.answerer !== n || now > d.deadline + 2000) return null;
+        const q = (d.questions || [])[d.qIndex] || {};
+        const ok = liveAnswerMatches(text, q.answer || "");
+        const last = { by: n, text: text.slice(0, 80), correct: ok };
+        return ok ? liveRevealUpd(d, n, now, last) : livePassUpd(d, n, now, last);
+    }).catch(err => { console.log("answer:", err); inp.disabled = false; });
+}
+
+function liveCancel() {
+    const id = openLiveId;
+    const lm = liveMatchesCache[id];
+    if (!lm) return;
+    if (!isAdmin && !myLiveNum(lm)) return;
+    if (!confirm("إلغاء البث المباشر لهذي المباراة؟")) return;
+    liveTx(id, d => (isLiveActive(d) ? { status: "cancelled", phase: "done" } : null))
+        .catch(err => alert("تعذّر الإلغاء: " + err.message));
+}
+
+/* تسجيل النتيجة في جدول الدوري تلقائياً بعد نهاية المباراة */
+function liveApplyResult(id) {
+    const lm = liveMatchesCache[id];
+    if (!lm || lm.status !== "finished" || lm.resultApplied || !firebaseDB) return;
+    if (!isAdmin && !myLiveNum(lm)) return;
+    if (liveApplyTried[id] && Date.now() - liveApplyTried[id] < 15000) return;
+    liveApplyTried[id] = Date.now();
+    const leagueRef = firebaseDB.collection("league").doc("current");
+    firebaseDB.runTransaction(async tx => {
+        const s = await tx.get(leagueRef);
+        const ls = await tx.get(liveRef(id));
+        if (!s.exists || !ls.exists || ls.data().resultApplied) return;
+        const arr = (s.data().matches || []).slice();
+        const idx = arr.findIndex(x => x.round === lm.round && x.p1 === lm.p1 && x.p2 === lm.p2);
+        if (idx !== -1 && (arr[idx].s1 === "" || arr[idx].s2 === "")) {
+            arr[idx] = Object.assign({}, arr[idx], { s1: String(lm.s1 || 0), s2: String(lm.s2 || 0) });
+            tx.update(leagueRef, { matches: arr, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+        tx.update(liveRef(id), { resultApplied: true });
+    }).catch(err => console.log("النتيجة بانتظار المسؤول:", err && err.code));
+}
+
+/* ===== مطابقة الإجابة (تتجاهل الهمزات والتشكيل وال التعريف والمسافات) ===== */
+function liveNormalize(s) {
+    s = String(s || "").toLowerCase();
+    s = s.replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x0660));
+    s = s.replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x06F0));
+    s = s.replace(/[ً-ْٰـ]/g, "");
+    s = s.replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ؤ/g, "و").replace(/ئ/g, "ي");
+    s = s.replace(/[^؀-ۿa-z0-9\s]/g, " ");
+    s = s.split(/\s+/).filter(Boolean).map(w => (w.length > 3 && w.indexOf("ال") === 0) ? w.slice(2) : w).join(" ");
+    return s.trim();
+}
+function liveLev(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+        const cur = [i];
+        for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = cur;
+    }
+    return prev[n];
+}
+function liveAnswerMatches(given, answer) {
+    const g = liveNormalize(given);
+    if (!g) return false;
+    const gNoSpace = g.replace(/\s/g, "");
+    return String(answer || "").split("|").some(alt => {
+        const a = liveNormalize(alt);
+        if (!a) return false;
+        const aNoSpace = a.replace(/\s/g, "");
+        if (g === a || gNoSpace === aNoSpace) return true;
+        if (/^\d+$/.test(aNoSpace)) return (gNoSpace.match(/\d+/g) || []).indexOf(aNoSpace) !== -1;
+        if (aNoSpace.length >= 4) {
+            const dist = liveLev(gNoSpace, aNoSpace);
+            if (dist <= Math.max(1, Math.floor(aNoSpace.length * 0.2))) return true;
+            if (gNoSpace.length >= 4 && (gNoSpace.indexOf(aNoSpace) !== -1)) return true;
+        }
+        return false;
+    });
+}
+
+/* ===== أصوات بسيطة على الجهاز نفسه ===== */
+let liveAudioCtx = null;
+function liveBeep(freq, dur, type) {
+    try {
+        if (!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const c = liveAudioCtx, t = c.currentTime;
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = type || "sine"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.2));
+        o.connect(g); g.connect(c.destination);
+        o.start(t); o.stop(t + (dur || 0.2) + 0.05);
+    } catch (e) {}
+}
+function liveBellSound() { liveBeep(1320, 0.35, "triangle"); setTimeout(() => liveBeep(1760, 0.45, "triangle"), 90); }
+
+/* ===== الشاشة الكاملة للمباراة ===== */
+function openLiveScreen(id) {
+    if (!id) return;
+    const scr = document.getElementById("liveScreen");
+    if (!scr) return;
+    if (!openLiveId) {
+        try { window.history.pushState({ liveOpen: id }, ""); } catch (e) {}
+    }
+    openLiveId = id;
+    liveLastSig = "";
+    livePrevView = null;
+    scr.classList.add("open");
+    document.body.classList.add("live-open");
+    renderLiveScreen();
+    if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
+    try { if (liveAudioCtx && liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
+}
+
+function closeLiveScreen(fromPop) {
+    if (!openLiveId) return;
+    if (!fromPop && window.history.state && window.history.state.liveOpen) {
+        window.history.back();
+        return;
+    }
+    openLiveId = null;
+    const scr = document.getElementById("liveScreen");
+    if (scr) scr.classList.remove("open");
+    document.body.classList.remove("live-open");
+    if (liveTickTimer) { clearInterval(liveTickTimer); liveTickTimer = null; }
+}
+
+function liveTick() {
+    const lm = liveMatchesCache[openLiveId];
+    if (!lm) return;
+    const left = Math.max(0, (lm.deadline || 0) - Date.now());
+    if (lm.status === "countdown") {
+        const el = document.getElementById("lvCount");
+        const n = Math.max(1, Math.ceil((left - 500) / 1000));
+        if (el && el.textContent !== String(n)) { el.textContent = n; liveBeep(520, 0.12); }
+    } else if (lm.status === "playing") {
+        const total = lm.phase === "buzz" ? LIVE_BUZZ_MS : (lm.phase === "answer" ? LIVE_ANSWER_MS : LIVE_REVEAL_MS);
+        const bar = document.getElementById("lvTimerBar");
+        const num = document.getElementById("lvTimerNum");
+        const pct = Math.max(0, Math.min(100, (left / total) * 100));
+        if (bar) {
+            bar.style.width = pct + "%";
+            bar.style.background = pct > 50 ? "#4ade80" : (pct > 25 ? "#facc15" : "#ef4444");
+        }
+        if (num) num.textContent = Math.ceil(left / 1000);
+    }
+    liveAdvanceIfDue();
+}
+
+function livePlayerName(lm, n) { return n === 1 ? lm.p1 : (n === 2 ? lm.p2 : ""); }
+
+function renderLiveScreen() {
+    const body = document.getElementById("liveScreenBody");
+    if (!body || !openLiveId) return;
+    const lm = liveMatchesCache[openLiveId];
+    const me = lm ? myLiveNum(lm) : 0;
+
+    /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
+    const sig = lm ? [lm.v, lm.status, lm.phase, lm.qIndex, lm.answerer, lm.ready1, lm.ready2, lm.s1, lm.s2, lm.resultApplied, me, isAdmin].join("|") : "none";
+    if (sig === liveLastSig) return;
+    liveLastSig = sig;
+
+    if (lm) liveSoundsOnChange(lm, me);
+
+    if (!lm) {
+        body.innerHTML = `
+<div class="lv-top"><button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button></div>
+<div class="lv-stage"><div class="lv-muted">جاري تحميل المباراة...</div></div>`;
+        return;
+    }
+
+    const active = isLiveActive(lm);
+    const turn = (lm.status === "playing" && lm.phase === "answer") ? lm.answerer : 0;
+    let html = `
+<div class="lv-top">
+<button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button>
+<span class="lv-badge ${active ? "" : "off"}"><span class="dot"></span>${active ? "مباشر" : (lm.status === "finished" ? "انتهت" : "متوقفة")}</span>
+<span class="lv-round">الجولة ${escapeHTML(String(lm.round || ""))}</span>
+</div>
+<div class="lv-score">
+<div class="lv-pl ${turn === 1 ? "turn" : ""} ${me === 1 ? "me" : ""}"><img src="${escapeHTML(lm.av1 || getPlayerAvatar(lm.p1).url)}" alt=""><div class="nm">${escapeHTML(lm.p1)}</div></div>
+<div class="lv-sc"><span>${lm.s1 || 0}</span><i>-</i><span>${lm.s2 || 0}</span></div>
+<div class="lv-pl ${turn === 2 ? "turn" : ""} ${me === 2 ? "me" : ""}"><img src="${escapeHTML(lm.av2 || getPlayerAvatar(lm.p2).url)}" alt=""><div class="nm">${escapeHTML(lm.p2)}</div></div>
+</div>`;
+
+    html += `<div class="lv-stage">` + liveStageHTML(lm, me) + `</div>`;
+    body.innerHTML = html;
+
+    const inp = document.getElementById("lvAnswerInput");
+    if (inp) setTimeout(() => inp.focus(), 60);
+    liveTick();
+}
+
+function liveSoundsOnChange(lm, me) {
+    const view = { status: lm.status, phase: lm.phase, q: lm.qIndex, ans: lm.answerer, out: lm.outcome };
+    const p = livePrevView;
+    livePrevView = view;
+    if (!p) return;
+    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !lm.passed) liveBellSound();
+    if (view.phase === "reveal" && p.phase !== "reveal") {
+        if (view.out) { liveBeep(880, 0.15); setTimeout(() => liveBeep(1175, 0.25), 140); }
+        else liveBeep(220, 0.35, "sawtooth");
+    }
+    if (view.phase === "answer" && lm.passed && p.ans !== view.ans) liveBeep(330, 0.25, "square");
+    if (view.status === "finished" && p.status !== "finished") { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => liveBeep(f, 0.22), i * 150)); }
+}
+
+function liveStageHTML(lm, me) {
+    const canManage = isAdmin || me;
+
+    if (lm.status === "ready") {
+        const card = n => {
+            const ok = !!lm["ready" + n];
+            const av = n === 1 ? (lm.av1 || getPlayerAvatar(lm.p1).url) : (lm.av2 || getPlayerAvatar(lm.p2).url);
+            return `<div class="lv-rcard ${ok ? "ok" : ""}"><img src="${escapeHTML(av)}" alt=""><div class="nm">${escapeHTML(livePlayerName(lm, n))}</div><span class="lv-pill ${ok ? "ok" : ""}">${ok ? ic("check") + " جاهز" : ic("hourglass") + " بانتظاره"}</span></div>`;
+        };
+        let action;
+        if (me && !lm["ready" + me]) action = `<button class="lv-ready-btn" onclick="liveSetReady()">${ic("check-circle")} جاهز</button>`;
+        else if (me) action = `<div class="lv-muted">${ic("hourglass")} أنت جاهز، بانتظار خصمك...</div>`;
+        else action = `<div class="lv-muted">بانتظار جاهزية اللاعبين، المباراة تبدأ أول ما يضغطون الاثنين "جاهز"</div>`;
+        return `
+<div class="lv-h">المباراة على وشك تبدأ</div>
+<div class="lv-ready-grid">${card(1)}${card(2)}</div>
+${action}
+<div class="lv-rules">${LIVE_Q_COUNT} أسئلة · الجرس في النص وأسرع واحد يضغطه يجاوب<br>إذا انتهى وقته أو غلط ينتقل السؤال للثاني</div>
+${canManage ? `<button class="lv-link" onclick="liveCancel()">إلغاء البث</button>` : ""}`;
+    }
+
+    if (lm.status === "countdown") {
+        return `<div class="lv-muted">استعدوا!</div><div class="lv-count" id="lvCount">3</div><div class="lv-muted">السؤال الأول جاي...</div>`;
+    }
+
+    if (lm.status === "playing") {
+        const q = (lm.questions || [])[lm.qIndex] || { text: "", answer: "" };
+        const log = lm.log || [];
+        let dots = "";
+        for (let i = 0; i < (lm.questions || []).length; i++) {
+            let cls = "";
+            if (i === lm.qIndex && lm.phase !== "reveal") cls = "cur";
+            else if (log[i] === 1) cls = "w1";
+            else if (log[i] === 2) cls = "w2";
+            else if (log[i] === 0) cls = "w0";
+            dots += `<span class="${cls}"></span>`;
+        }
+        let html = `
+<div class="lv-dots">${dots}</div>
+<div class="lv-qcard"><div class="lv-qnum">السؤال ${lm.qIndex + 1} من ${(lm.questions || []).length}</div><div class="lv-qtext">${escapeHTML(q.text)}</div></div>`;
+
+        const last = lm.lastAnswer;
+        const lastHTML = (last && last.by && !last.correct)
+            ? `<div class="lv-last">${last.timeout ? ic("alarm") + " انتهى وقت " + escapeHTML(livePlayerName(lm, last.by)) : ic("x-circle") + " " + escapeHTML(livePlayerName(lm, last.by)) + " جاوب: «" + escapeHTML(last.text) + "» غلط"}</div>`
+            : "";
+
+        if (lm.phase === "buzz") {
+            const canBuzz = !!me;
+            html += `
+<div class="lv-timer"><div class="lv-timer-bar" id="lvTimerBar"></div></div>
+<button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz()"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
+<div class="lv-muted">${canBuzz ? "أسرع واحد يضغط الجرس هو اللي يجاوب" : "بانتظار أحد اللاعبين يضغط الجرس"} · <span class="lv-tnum" id="lvTimerNum"></span> ث</div>`;
+        } else if (lm.phase === "answer") {
+            const nm = escapeHTML(livePlayerName(lm, lm.answerer));
+            html += `
+<div class="lv-timer"><div class="lv-timer-bar" id="lvTimerBar"></div></div>
+${lastHTML}
+<div class="lv-turn">${lm.passed ? ic("chevron-right") + " انتقل السؤال إلى " + nm : ic("bell") + " " + nm + " ضغط الجرس أول"}</div>`;
+            if (me && me === lm.answerer) {
+                html += `
+<div class="lv-ans-row">
+<input type="text" id="lvAnswerInput" placeholder="اكتب إجابتك..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();liveSubmitAnswer();}">
+<button onclick="liveSubmitAnswer()">إرسال</button>
+</div>
+<div class="lv-muted">باقي <span class="lv-tnum" id="lvTimerNum"></span> ثانية</div>`;
+            } else {
+                html += `<div class="lv-muted">${nm} يكتب الإجابة الحين... <span class="lv-tnum" id="lvTimerNum"></span> ث</div>`;
+            }
+        } else if (lm.phase === "reveal") {
+            const w = lm.outcome;
+            const okLast = last && last.correct ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : lastHTML;
+            html += `
+<div class="lv-reveal ${w ? "" : "none"}">
+<div class="t">${w ? ic("check-circle") + " " + escapeHTML(livePlayerName(lm, w)) + " جاوب صح! +1" : ic("x-circle") + " محد جاوب صح"}</div>
+<div class="lv-muted">الإجابة الصحيحة</div>
+<div class="a">${escapeHTML(String(q.answer || "").split("|")[0])}</div>
+</div>
+${okLast}
+<div class="lv-muted">${lm.qIndex + 1 >= (lm.questions || []).length ? "النتيجة النهائية بعد لحظات..." : "السؤال التالي بعد لحظات..."}</div>`;
+        }
+        if (isAdmin) html += `<button class="lv-link" onclick="liveCancel()">إيقاف البث (المسؤول)</button>`;
+        return html;
+    }
+
+    if (lm.status === "finished") {
+        const s1 = lm.s1 || 0, s2 = lm.s2 || 0;
+        const winner = s1 > s2 ? lm.p1 : (s2 > s1 ? lm.p2 : "");
+        let sum = "";
+        (lm.questions || []).forEach((q, i) => {
+            const w = (lm.log || [])[i];
+            sum += `<div><span>${i + 1}. ${escapeHTML(q.text)}</span><span style="color:${w === 1 ? "#facc15" : (w === 2 ? "#38bdf8" : "#64748b")}">${w === 1 ? escapeHTML(lm.p1) : (w === 2 ? escapeHTML(lm.p2) : "—")}</span></div>`;
+        });
+        return `
+<div class="lv-final">
+<div class="tro">${ic("trophy")}</div>
+<div class="w">${winner ? "الفوز لـ " + escapeHTML(winner) : "تعادل!"}</div>
+</div>
+<div class="lv-sum">${sum}</div>
+<div class="lv-applied ${lm.resultApplied ? "" : "wait"}">${lm.resultApplied ? ic("check-circle") + " تم تسجيل النتيجة في جدول الدوري" : ic("hourglass") + " جاري تسجيل النتيجة في الجدول..."}</div>
+<button onclick="closeLiveScreen()" style="width:min(280px,100%);">رجوع للمباريات</button>`;
+    }
+
+    return `
+<div class="lv-h" style="color:#94a3b8;">تم إلغاء البث</div>
+<div class="lv-muted">تقدر تبدأ البث من جديد من بطاقة المباراة.</div>
+<button onclick="closeLiveScreen()" style="width:min(280px,100%);">رجوع</button>`;
+}
+
 </script>
 </body>
 
