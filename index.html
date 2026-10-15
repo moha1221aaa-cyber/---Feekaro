@@ -6122,12 +6122,12 @@ function cineNow() { return cineGraph().c.currentTime + 0.02; }
    g: تسوية مستوى كل ملف (عشان كلها تطلع بنفس العلو تقريباً قبل ما نحدد مستواها في المشهد) */
 const CINE_FILES = {
     braam: { g: 0.4 }, riser: { g: 0.65 }, impact: { g: 0.53 }, whoosh: { g: 1 }, slam: { g: 0.57 },
-    heartbeat: { g: 1 }, go: { g: 0.45 }, cheer: { g: 0.6 }, whistle: { g: 0.44 }, fireworks: { g: 0.7 },
+    heartbeat: { g: 1 }, fireworks: { g: 0.7 },
     buzz: { g: 1.3 }, correct: { g: 1 }, wrong: { g: 0.78 }, tick: { g: 1.4 }, timeout: { g: 0.85 },
-    bed_epic: { g: 0.9 }, bed_tension: { g: 0.65 }, crowd: { g: 0.85 }, lobby: { g: 0.62 },
+    bed_epic: { g: 0.9 }, lobby: { g: 0.62 },
     /* طابع برامج المسابقات */
-    show_intro: { g: 0.62 }, interlude: { g: 0.84 }, think: { g: 0.61 }, decider: { g: 0.79 }, reveal: { g: 0.83 },
-    match_end: { g: 0.81 }, applause: { g: 1 }, aww: { g: 0.42 }, start_q: { g: 0.87 }, outro: { g: 0.89 }, big_win: { g: 0.63 }
+    show_intro: { g: 0.62 }, interlude: { g: 0.84 }, decider: { g: 0.79 }, reveal: { g: 0.83 },
+    match_end: { g: 0.81 }, applause: { g: 1 }, think2: { g: 0.72 }, start_q: { g: 0.87 }, outro: { g: 0.89 }, big_win: { g: 0.63 }
 };
 const CINE_BUF = {};
 const CINE_LOADING = {};
@@ -6422,8 +6422,8 @@ const BEDS = { cur: null };
 const BED_MIX = {
     lobby:   [[["lobby"], 0.6]],
     epic:    [[["interlude", "bed_epic"], 0.5]],
-    tension: [[["think", "bed_tension"], 0.42]],
-    decider: [[["decider", "think", "bed_tension"], 0.5]]
+    tension: [[["think2"], 0.42]],   /* بدون تكتكة */
+    decider: [[["decider"], 0.5]]
 };
 function bedMoodFor(d) {
     if (!d) return "";
@@ -6946,7 +6946,7 @@ function liveSoundsOnChange(d) {
         cinePlay("reveal", 0.75, { tail: Math.max(0.4, wait / 1000 + 0.15) });
         setTimeout(() => {
             if (view.out) { cinePlay("correct", 0.7); cinePlay("applause", 0.4, { dur: 3 }); }
-            else { cinePlay("wrong", 0.55); cinePlay("aww", 0.45); }
+            else cinePlay("wrong", 0.55);
         }, wait);
     }
 }
