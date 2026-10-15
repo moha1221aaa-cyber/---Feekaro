@@ -5719,7 +5719,19 @@ const BC_FX_EXTRA = [
         fxNoiseHit(c, o, t + 1.35, 1.6, 0.2, "highpass", 5000, 0.5);
     } }
 ];
-function bcFxList() { return (typeof ROOM_FX !== "undefined" ? ROOM_FX : []).concat(BC_FX_EXTRA); }
+/* الأصوات الحقيقية في مكتبة المنظم (تطلع أول القائمة) */
+const BC_FX_REAL = [
+    { id: "r_braam", icon: ic("zap"), name: "براام سينمائي", play(c, o, t) { cineS("braam", t) || cineBraam(t); } },
+    { id: "r_slam", icon: ic("zap"), name: "رعد وضربة", play(c, o, t) { cineS("slam", t) || cineBoom(t); } },
+    { id: "r_impact", icon: ic("rocket"), name: "ضربة قوية", play(c, o, t) { cineS("impact", t) || cineHit(t); } },
+    { id: "r_riser", icon: ic("hourglass"), name: "تصاعد", play(c, o, t) { cineS("riser", t) || cineRiser(t, 2.5); } },
+    { id: "r_cheer", icon: ic("users"), name: "هتاف الجمهور", play(c, o, t) { cineS("cheer", t) || bcFxList().find(f => f.id === "cheer").play(c, o, t); } },
+    { id: "r_whistle", icon: ic("bell"), name: "صافرة الحكم", play(c, o, t) { cineS("whistle", t) || liveWhistle(); } },
+    { id: "r_fireworks", icon: ic("trophy"), name: "ألعاب نارية", play(c, o, t) { cineS("fireworks", t) || cineFireworkSnd(t); } },
+    { id: "r_heart", icon: ic("alarm"), name: "نبض قلب", play(c, o, t) { cineS("heartbeat", t) || cineHeart(t); } },
+    { id: "r_whoosh", icon: ic("zap"), name: "ووش", play(c, o, t) { cineS("whoosh", t) || cineWhoosh(t); } }
+];
+function bcFxList() { return BC_FX_REAL.concat(typeof ROOM_FX !== "undefined" ? ROOM_FX : [], BC_FX_EXTRA); }
 
 let bcFxOut = null;
 function bcFxPlayLocal(id) {
@@ -5775,11 +5787,11 @@ function bcAutoFx(d) {
     bcAutoFx.prev = view;
     if (!p || d.status !== "live") return;
     if (view.phase === "reveal" && p.phase !== "reveal") {
-        if (view.out) setTimeout(() => bcFxPlayLocal("applause"), 300);
+        if (view.out) setTimeout(() => { cineS("cheer", cineNow(), 0.6, { dur: 2.8 }) || bcFxPlayLocal("applause"); }, 300);
         else if (view.last && view.last.timeout) bcFxPlayLocal("alarm");
     }
-    if (view.scene === "result" && p.scene !== "result") setTimeout(() => { bcFxPlayLocal("fanfare"); bcFxPlayLocal("cheer"); }, 1200);
-    if (view.scene === "countdown" && p.scene !== "countdown") bcFxPlayLocal("suspense");
+    if (view.scene === "result" && p.scene !== "result" && !cineReal()) setTimeout(() => { bcFxPlayLocal("fanfare"); bcFxPlayLocal("cheer"); }, 1200);
+    if (view.scene === "countdown" && p.scene !== "countdown" && !bedReal("tension")) bcFxPlayLocal("suspense");
 }
 
 /* =====================================================================
@@ -5818,8 +5830,9 @@ function cineGraph() {
     rev.connect(revOut); revOut.connect(comp);
     const bus = c.createGain(); bus.connect(comp);
     const bed = c.createGain(); bed.gain.value = 0; bed.connect(comp);
-    const bedRev = c.createGain(); bedRev.gain.value = 0.6; bed.connect(bedRev); bedRev.connect(rev);
-    Object.assign(CINE, { c, bus, rev, bed });
+    const bedSyn = c.createGain(); bedSyn.connect(bed);
+    const bedRev = c.createGain(); bedRev.gain.value = 0.6; bedSyn.connect(bedRev); bedRev.connect(rev);
+    Object.assign(CINE, { c, bus, rev, bed, bedSyn });
     return CINE;
 }
 function cineRoute(node, wet, out) {
@@ -5828,6 +5841,52 @@ function cineRoute(node, wet, out) {
     node.connect(G.bus);
     if (wet) { const s = G.c.createGain(); s.gain.value = wet; node.connect(s); s.connect(G.rev); }
 }
+/* ===== الأصوات الحقيقية (تسجيلات mp3 في مجلد audio/ مولّدة بـ ElevenLabs) =====
+   إذا ملف ما توفر لأي سبب، نرجع للصوت المولّد من المتصفح كاحتياط */
+const CINE_SAMPLES = ["braam", "riser", "impact", "whoosh", "slam", "heartbeat", "go", "cheer", "whistle", "fireworks", "bed_epic", "bed_tension", "crowd"];
+const CINE_BUF = {};
+const CINE_LOADING = {};
+function cineLoadSamples() {
+    let c;
+    try { c = cineGraph().c; } catch (e) { return; }
+    CINE_SAMPLES.forEach(id => {
+        if (CINE_BUF[id] || CINE_LOADING[id]) return;
+        CINE_LOADING[id] = fetch("audio/" + id + ".mp3")
+            .then(r => {
+                if (!r.ok || (r.headers.get("Content-Type") || "").indexOf("audio") === -1) throw new Error("no file");
+                return r.arrayBuffer();
+            })
+            .then(ab => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
+            .then(b => {
+                CINE_BUF[id] = b;
+                if (/^bed_|^crowd$/.test(id) && BED.mood) bedLoopTo(cineBgOn ? BED.mood : "");
+            })
+            .catch(() => setTimeout(() => { delete CINE_LOADING[id]; }, 60000));
+    });
+}
+/* يشغّل صوت حقيقي، ويرجع false إذا الملف ما تحمّل (عشان نستخدم الاحتياط)
+   o.tail: نشغّل آخر جزء بس (عشان الرايزر يخلص بالضبط لحظة الضربة)، o.dur: نقصّه بنعومة */
+function cineS(id, t, v, o) {
+    const b = CINE_BUF[id];
+    if (!b) return false;
+    try {
+        const G = cineGraph(), c = G.c;
+        const src = c.createBufferSource(); src.buffer = b;
+        const g = c.createGain(); g.gain.value = v == null ? 1 : v;
+        src.connect(g); g.connect(G.bus);
+        if (o && o.wet) { const sd = c.createGain(); sd.gain.value = o.wet; g.connect(sd); sd.connect(G.rev); }
+        const off = (o && o.tail) ? Math.max(0, b.duration - o.tail) : 0;
+        src.start(t, off);
+        if (o && o.dur) {
+            g.gain.setValueAtTime(g.gain.value, t + Math.max(0, o.dur - 0.4));
+            g.gain.linearRampToValueAtTime(0.0001, t + o.dur);
+            src.stop(t + o.dur + 0.05);
+        }
+        return true;
+    } catch (e) { return false; }
+}
+function cineReal() { return !!(CINE_BUF.braam && CINE_BUF.impact); }
+
 /* نغمة: {type,f,f1,a,d,peak,lp,lpPeak,lp1,det,wet,out} */
 function cineTone(t, o) {
     try {
@@ -5953,7 +6012,7 @@ function cpRocket(withSound) {
     if (CP.parts.length > cpMax() - 80) return;
     const cols = [["#facc15", "#fde68a", "#fff"], ["#38bdf8", "#93c5fd", "#fff"], ["#f97316", "#facc15", "#fff"], ["#a78bfa", "#38bdf8", "#fff"]];
     CP.parts.push({ k: "r", x: CP.w * (0.15 + Math.random() * 0.7), y: CP.h + 10, px: 0, py: 0, vx: (Math.random() - 0.5) * 60, vy: -(CP.h * 0.85 + Math.random() * CP.h * 0.35), life: 3, max: 3, cols: cols[Math.floor(Math.random() * cols.length)] });
-    if (withSound) cineFireworkSnd(cineNow(), 0.8);
+    if (withSound && !CINE_BUF.fireworks) cineFireworkSnd(cineNow(), 0.8);
 }
 function cpLoop(ts) {
     if (!CP.cv || !CP.cv.isConnected) { CP.raf = 0; CP.cv = null; CP.parts = []; CP.emb = 0; CP.fw = 0; return; }
@@ -6076,12 +6135,12 @@ function cineOpening(d) {
 <div class="cine-skip">اضغط للتخطي</div>`, 6000);
     if (!el) return;
     CP.emb = 0.35;
-    cineAt(el, 0, () => { const t = cineNow(); cineRiser(t, 1.45); cineDrone(t, 5); cineShimmer(t + 0.4, 0.6); });
-    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); cineBraam(cineNow()); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
-    cineAt(el, 2.3, () => { cineOn(el, ".cine-big"); cineHit(cineNow(), 0.6); cineShimmer(cineNow()); });
-    cineAt(el, 3.3, () => { cineOn(el, ".cine-onair"); cineHit(cineNow(), 0.5); });
-    cineAt(el, 4.6, () => cineRiser(cineNow(), 0.7, 0.7));
-    cineAt(el, 5.3, () => { cineHit(cineNow(), 0.7); cineFlash(el, 1, 650); });
+    cineAt(el, 0, () => { const t = cineNow(); if (!cineS("riser", t, 0.9, { tail: 1.5 })) { cineRiser(t, 1.45); cineDrone(t, 5); cineShimmer(t + 0.4, 0.6); } });
+    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); const t = cineNow(); cineS("braam", t, 1) || cineBraam(t); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
+    cineAt(el, 2.3, () => { cineOn(el, ".cine-big"); const t = cineNow(); cineS("whoosh", t, 0.8) || (cineHit(t, 0.6), cineShimmer(t)); });
+    cineAt(el, 3.3, () => { cineOn(el, ".cine-onair"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.5); cineS("cheer", t + 0.2, 0.45, { dur: 3 }); });
+    cineAt(el, 4.6, () => { const t = cineNow(); cineS("riser", t, 0.7, { tail: 0.7 }) || cineRiser(t, 0.7, 0.7); });
+    cineAt(el, 5.3, () => { const t = cineNow(); cineS("impact", t, 0.8) || cineHit(t, 0.7); cineFlash(el, 1, 650); });
 }
 
 /* ===== المشهد السينمائي بين كل مباراة ومباراة ===== */
@@ -6105,25 +6164,26 @@ function cineMatchIntro(d) {
     if (!el) return;
     CP.emb = 0.4;
     /* 0.0: ظلام، أشرطة سينما، إضاءات، رايزر */
-    cineAt(el, 0, () => { const t = cineNow(); cineRiser(t, 1.45); cineDrone(t, 6); cineShimmer(t + 0.3, 0.6); });
+    cineAt(el, 0, () => { const t = cineNow(); if (!cineS("riser", t, 0.9, { tail: 1.5 })) { cineRiser(t, 1.45); cineDrone(t, 6); cineShimmer(t + 0.3, 0.6); } });
     /* 1.5: براااام + وميض + اهتزاز + عنوان المباراة */
-    cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); cineBraam(cineNow()); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
-    cineAt(el, 2.85, () => cineWhoosh(cineNow()));
+    cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); const t = cineNow(); cineS("braam", t, 1) || cineBraam(t); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
+    cineAt(el, 2.85, () => { const t = cineNow(); cineS("whoosh", t, 0.9) || cineWhoosh(t); });
     /* 3.1 و 3.45: دخول اللاعبين */
-    cineAt(el, 3.1, () => { cineOn(el, ".cine-p.p1"); cineHit(cineNow(), 0.65); cpSpark(CP.w * 0.78, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
-    cineAt(el, 3.3, () => cineSwell(cineNow(), 0.7));
-    cineAt(el, 3.45, () => { cineOn(el, ".cine-p.p2"); cineHit(cineNow(), 0.65); cpSpark(CP.w * 0.22, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
+    cineAt(el, 3.1, () => { cineOn(el, ".cine-p.p1"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.65); cpSpark(CP.w * 0.78, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
+    cineAt(el, 3.3, () => { const t = cineNow(); cineS("riser", t, 0.8, { tail: 0.7 }) || cineSwell(t, 0.7); });
+    cineAt(el, 3.45, () => { cineOn(el, ".cine-p.p2"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.65); cpSpark(CP.w * 0.22, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
     /* 4.0: VS ينضرب في النص + برق + موجة صدمة */
     cineAt(el, 4.0, () => {
         cineOn(el, ".cine-vs");
-        const t = cineNow(); cineBoom(t, 1.1); cineHit(t, 1); cineBraam(t + 0.02, 0.5);
+        const t = cineNow();
+        if (cineS("slam", t, 1)) { cineS("cheer", t + 0.15, 0.5, { dur: 3.5 }); } else { cineBoom(t, 1.1); cineHit(t, 1); cineBraam(t + 0.02, 0.5); }
         cineFlash(el, 0.95, 500); cineFlash(el, 0.5, 900, "#38bdf8"); cineShake(17);
         cpSpark(CP.w / 2, CP.h * 0.48, 140, null, 520);
     });
-    cineAt(el, 4.4, () => { cineOn(el, ".cine-of"); cineShimmer(cineNow()); });
+    cineAt(el, 4.4, () => { cineOn(el, ".cine-of"); if (!cineReal()) cineShimmer(cineNow()); });
     /* 5.7: رايزر أخير ← وميض أبيض ويبدأ المشهد */
-    cineAt(el, 5.7, () => cineRiser(cineNow(), 0.7, 0.7));
-    cineAt(el, 6.4, () => { cineHit(cineNow(), 0.6); cineFlash(el, 1, 650); });
+    cineAt(el, 5.7, () => { const t = cineNow(); cineS("riser", t, 0.7, { tail: 0.7 }) || cineRiser(t, 0.7, 0.7); });
+    cineAt(el, 6.4, () => { const t = cineNow(); cineS("impact", t, 0.7) || cineHit(t, 0.6); cineFlash(el, 1, 650); });
 }
 
 /* ===== "انطلق!" لحظة بداية الأسئلة ===== */
@@ -6132,7 +6192,7 @@ function cineGo() {
     const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, 1400);
     if (!el) return;
     const t = cineNow();
-    cineHit(t, 1); cineBoom(t, 0.7); cineShimmer(t + 0.05, 0.7);
+    if (!cineS("go", t, 1)) { cineHit(t, 1); cineBoom(t, 0.7); cineShimmer(t + 0.05, 0.7); }
     cineFlash(el, 0.6, 350); cineShake(9);
     setTimeout(() => cpSpark(CP.w / 2, CP.h * 0.45, 90, null, 450), 30);
 }
@@ -6142,8 +6202,8 @@ function cineResult() {
     cineReady();
     const el = cineOverlay("fxonly", "", 6500);
     if (!el) return;
-    cineAt(el, 0.85, () => { const t = cineNow(); cineBoom(t, 0.9); cineShimmer(t + 0.1); cineFlash(el, 0.5, 500, "#facc15"); cineShake(8); cpConfetti(150); cpSpark(CP.w / 2, CP.h * 0.35, 80); });
-    cineAt(el, 2.2, () => { cpConfetti(90); cineShimmer(cineNow(), 0.6); });
+    cineAt(el, 0.85, () => { const t = cineNow(); if (cineS("impact", t, 0.8)) cineS("cheer", t + 0.1, 0.9); else { cineBoom(t, 0.9); cineShimmer(t + 0.1); } cineFlash(el, 0.5, 500, "#facc15"); cineShake(8); cpConfetti(150); cpSpark(CP.w / 2, CP.h * 0.35, 80); });
+    cineAt(el, 2.2, () => { cpConfetti(90); if (!cineReal()) cineShimmer(cineNow(), 0.6); });
 }
 
 /* ===== ألعاب نارية في ختام الجولة ===== */
@@ -6151,7 +6211,11 @@ function cineClosing() {
     cineReady();
     const el = cineOverlay("fxonly", "", 9000);
     if (!el) return;
-    cineAt(el, 0.6, () => { cineBoom(cineNow(), 0.8); cpConfetti(120); CP.fw = performance.now() + 300; });
+    cineAt(el, 0.6, () => {
+        const t = cineNow();
+        if (cineS("fireworks", t, 0.9)) cineS("cheer", t + 0.5, 0.6); else cineBoom(t, 0.8);
+        cpConfetti(120); CP.fw = performance.now() + 300;
+    });
     cineAt(el, 6.5, () => { CP.fw = 0; });
 }
 
@@ -6179,9 +6243,36 @@ function bedApply() {
     } catch (e) {}
 }
 function bedDuck(on) { if (BED.duck !== on) { BED.duck = on; bedApply(); } }
+/* الموسيقى الحقيقية: لوب ملحمي/تشويقي + أجواء جمهور، مع تلاشي ناعم بين المودات */
+const BEDS = { cur: null };
+function bedReal(mood) { return mood === "epic" ? !!CINE_BUF.bed_epic : (mood === "tension" ? !!CINE_BUF.bed_tension : false); }
+function bedLoopTo(mood) {
+    try {
+        const G = cineGraph(), c = G.c, t = c.currentTime;
+        if (BEDS.cur && BEDS.cur.mood === mood) return;
+        if (BEDS.cur) {
+            BEDS.cur.nodes.forEach(n => { n.g.gain.cancelScheduledValues(t); n.g.gain.setTargetAtTime(0.0001, t, 0.5); try { n.src.stop(t + 3); } catch (e) {} });
+            BEDS.cur = null;
+        }
+        if (!mood || !bedReal(mood)) return;
+        const nodes = [];
+        const add = (id, vol) => {
+            const b = CINE_BUF[id];
+            if (!b) return;
+            const src = c.createBufferSource(); src.buffer = b; src.loop = true;
+            const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.setTargetAtTime(vol, t, 0.7);
+            src.connect(g); g.connect(G.bed); src.start(t, Math.random() * b.duration * 0.5);
+            nodes.push({ src, g });
+        };
+        add(mood === "epic" ? "bed_epic" : "bed_tension", mood === "epic" ? 0.55 : 0.45);
+        add("crowd", mood === "epic" ? 0.35 : 0.15);
+        BEDS.cur = { mood, nodes };
+    } catch (e) {}
+}
 function bedSet(mood) {
     if (mood !== BED.mood) BED.mood = mood;
     bedApply();
+    bedLoopTo(cineBgOn ? mood : "");
     if (mood && !BED.timer) {
         BED.next = cineGraph().c.currentTime + 0.15; BED.step = 0;
         BED.timer = setInterval(bedPump, 100);
@@ -6194,10 +6285,11 @@ function bedPump() {
     if (c.state !== "running" || !BED.mood || !cineBgOn) { BED.next = c.currentTime + 0.15; return; }
     if (BED.next < c.currentTime) BED.next = c.currentTime + 0.05;
     const e = CINE_BEAT / 2;
+    if (bedReal(BED.mood)) { BED.next = c.currentTime + 0.15; return; }   /* الموسيقى الحقيقية شغالة */
     while (BED.next < c.currentTime + 0.35) { bedStep(BED.step, BED.next, e); BED.step++; BED.next += e; }
 }
 function bedStep(s, t, e) {
-    const out = cineGraph().bed, bar = Math.floor(s / 8), pos = s % 8;
+    const out = cineGraph().bedSyn, bar = Math.floor(s / 8), pos = s % 8;
     if (BED.mood === "epic") {
         const ch = BED_CHORDS[bar % 4];
         if (pos === 0) {
@@ -6232,7 +6324,7 @@ function bedStep(s, t, e) {
 function bcToggleBg() {
     cineBgOn = !cineBgOn;
     try { localStorage.setItem("bcBgOn", cineBgOn ? "1" : "0"); } catch (e) {}
-    cineReady(); bedApply();
+    cineReady(); bedSet(BED.mood);
     liveLastSig = ""; renderLiveScreen();
 }
 
@@ -6445,6 +6537,7 @@ function openLiveScreen(id) {
     scr.classList.add("open");
     document.body.classList.add("live-open");
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
+    cineLoadSamples();
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
@@ -6479,7 +6572,7 @@ function liveTick() {
         const n = Math.max(1, Math.ceil((left - 500) / 1000));
         if (el && el.textContent !== String(n)) {
             el.textContent = n; liveBeep(520, 0.12);
-            cineHeart(cineNow(), 0.9);
+            { const t = cineNow(); cineS("heartbeat", t, 1) || cineHeart(t, 0.9); }
             el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
         }
     } else if (d.scene === "playing") {
@@ -6507,7 +6600,7 @@ function bcStinger(title, sub) {
     el.className = "bc-stinger";
     el.innerHTML = `<div class="bc-st-band"></div><div class="bc-st-txt"><div class="t">${escapeHTML(title)}</div>${sub ? `<div class="s">${escapeHTML(sub)}</div>` : ""}</div>`;
     scr.appendChild(el);
-    liveWhoosh();
+    cineS("whoosh", cineNow(), 0.9) || liveWhoosh();
     setTimeout(() => el.remove(), 1700);
 }
 
@@ -6530,13 +6623,13 @@ function bcSceneEffects(d) {
     } else if (d.scene === "playing" && prevScene === "countdown") {
         cineGo();
     } else if (d.scene === "result") {
-        liveWhistle();
+        cineS("whistle", cineNow(), 0.9) || liveWhistle();
         setTimeout(() => bcStinger("صافرة النهاية", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
         cineResult();
     } else if (d.scene === "closing") {
         cineCloseAll();
         bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج");
-        setTimeout(liveFanfare, 700);
+        if (!cineReal()) setTimeout(liveFanfare, 700);
         cineClosing();
     }
 }
