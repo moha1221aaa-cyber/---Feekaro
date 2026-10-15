@@ -1,5 +1,6 @@
 /* صوت المذيع: يحوّل نص السؤال لصوت بشري (Google Text-to-Speech)
-   - يحتاج سر GCP_SA (حساب خدمة Google بصيغة JSON) في Cloudflare Pages
+   - يحتاج سر TTS_KEY (مفتاح API من مشروع الدوري في Google Cloud) في Cloudflare Pages
+     (أو GCP_SA: حساب خدمة بصيغة JSON، كبديل)
    - كل جملة تنحفظ في كاش Cloudflare، فنفس السؤال ما ينطلب من Google مرتين */
 
 const MAX_CHARS = 300;
@@ -55,18 +56,20 @@ export async function onRequestGet(context) {
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
-  if (!env.GCP_SA) return err(503, "TTS not configured");
-  let sa;
-  try { sa = JSON.parse(env.GCP_SA); } catch (e) { return err(500, "bad GCP_SA"); }
+  const apiKey = (env.TTS_KEY || "").trim();
+  if (!apiKey && !env.GCP_SA) return err(503, "TTS not configured");
+  let sa = null;
+  if (!apiKey) { try { sa = JSON.parse(env.GCP_SA); } catch (e) { return err(500, "bad GCP_SA"); } }
 
   try {
-    const token = await googleToken(sa);
+    const auth = apiKey ? {} : { "Authorization": "Bearer " + await googleToken(sa), "x-goog-user-project": sa.project_id };
+    const endpoint = "https://texttospeech.googleapis.com/v1/text:synthesize" + (apiKey ? "?key=" + encodeURIComponent(apiKey) : "");
     const voices = env.TTS_VOICE ? [env.TTS_VOICE].concat(VOICES) : VOICES;
     let last = "";
     for (const name of voices) {
-      const r = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
+      const r = await fetch(endpoint, {
         method: "POST",
-        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", "x-goog-user-project": sa.project_id },
+        headers: Object.assign({ "Content-Type": "application/json", "Referer": url.origin + "/" }, auth),
         body: JSON.stringify({
           input: { text },
           voice: { languageCode: "ar-XA", name },
