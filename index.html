@@ -1727,9 +1727,17 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 
 /* ===== فيديو الاستوديو الحقيقي ===== */
 .st-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0;transition:opacity .8s,filter .8s;filter:brightness(.62) saturate(1.1);}
-#liveScreen:not([data-scene="waiting"]):not([data-scene="ended"]):not([data-scene=""]) .st-video{opacity:1;}
+#liveScreen[data-shot="studio"] .st-video{opacity:1;}
 #liveScreen[data-scene="playing"] .st-video,#liveScreen[data-scene="countdown"] .st-video{filter:brightness(.45) saturate(1.05);}
 #liveScreen[data-decider] .st-video{filter:brightness(.38) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
+/* لقطات المخرج: تلاشي ناعم بين اللقطات + حركة كاميرا بطيئة */
+.st-shots{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.st-shots img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s ease,filter .8s;filter:brightness(.62) saturate(1.1);transform:scale(1.04);}
+.st-shots img.on{opacity:1;animation:stPush 16s ease-in-out infinite alternate;}
+@keyframes stPush{from{transform:scale(1.04) translateY(0)}to{transform:scale(1.16) translateY(-1.5%)}}
+#liveScreen[data-scene="playing"] .st-shots img{filter:brightness(.5) saturate(1.05);}
+#liveScreen[data-decider] .st-shots img{filter:brightness(.4) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
+@media (prefers-reduced-motion: reduce){.st-shots img.on{animation:none;}}
 #liveScreen:not([data-scene="waiting"]):not([data-scene="ended"])::before{opacity:0;}
 /* المشاهد السينمائية: الاستوديو الحقيقي يبان من وراها بدل خلفية مرسومة */
 .cine{background:linear-gradient(to bottom,rgba(2,6,23,.55),rgba(2,6,23,.35) 45%,rgba(2,6,23,.65));}
@@ -6119,6 +6127,27 @@ function bcLowerThird(d) {
 }
 let bcLastQAnim = "";
 
+/* ===== المخرج: يقطع بين لقطات الاستوديو حسب اللحظة ===== */
+const BC_SHOTS = ["screen", "ident", "wide", "podium"];
+function bcShotFor(d) {
+    if (!d || d.status !== "live") return "";
+    switch (d.scene) {
+        case "opening": return "ident";                                      /* فاصل الافتتاح */
+        case "intro": return "wide";                                         /* لقطة علوية بين المواجهات */
+        case "playing": return d.phase === "answer" ? "podium" : "screen";   /* المنصة لما أحد يضغط الجرس، وشاشة السؤال غير كذا */
+        case "closing": return "wide";
+        default: return "studio";                                            /* الفيديو الأساسي */
+    }
+}
+function bcDirector(d) {
+    const scr = document.getElementById("liveScreen");
+    if (!scr) return;
+    const shot = bcShotFor(d);
+    if (scr.dataset.shot === shot) return;
+    scr.dataset.shot = shot;
+    document.querySelectorAll("#stShots img").forEach(img => img.classList.toggle("on", img.dataset.shot === shot));
+}
+
 /* ===== تفاعلات المشاهدين (بدون صوت) ===== */
 const BC_RX = ["👏", "🔥", "❤️"];
 let bcRxLastSend = 0, bcRxSeenN = null;
@@ -6788,6 +6817,14 @@ function openLiveScreen(id) {
         v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", "auto");
         scr.insertBefore(v, scr.firstChild);
     }
+    /* لقطات الاستوديو الثانية (صور من Google Flow بحركة كاميرا بطيئة) */
+    if (!document.getElementById("stShots")) {
+        const w = document.createElement("div");
+        w.id = "stShots"; w.className = "st-shots";
+        w.innerHTML = BC_SHOTS.map(k => `<img data-shot="${k}" src="media/shot_${k}.jpg" alt="" decoding="async">`).join("");
+        const v = document.getElementById("stVideo");
+        scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
+    }
     scr.classList.add("open");
     try { const v = document.getElementById("stVideo"); if (v && v.paused) v.play().catch(() => {}); } catch (e) {}
     document.body.classList.add("live-open");
@@ -6816,7 +6853,7 @@ function closeLiveScreen(fromPop) {
     bedSet("");
     bcTicker(null);
     { const l3 = document.getElementById("stL3"); if (l3) l3.remove(); BC_L3.key = ""; }
-    if (scr) delete scr.dataset.scene;
+    if (scr) { delete scr.dataset.scene; delete scr.dataset.shot; }
     bcSyncAudio();
 }
 
@@ -6943,6 +6980,7 @@ function renderLiveScreen() {
         scrEl.dataset.scene = d.status === "live" ? (d.scene || "") : (d.status === "scheduled" ? "waiting" : "ended");
         if (bcIsDecider(d)) scrEl.dataset.decider = "1"; else delete scrEl.dataset.decider;
     }
+    bcDirector(d);
     bcTicker(d);
     bcClockLast = -1;
     bcSceneEffects(d);
