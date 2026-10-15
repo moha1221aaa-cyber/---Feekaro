@@ -1622,19 +1622,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 @media (prefers-reduced-motion: reduce){.live-screen[data-scene="waiting"],.bc-wavebg svg,.bc-wavebg::before,.bc-wait-logo{animation:none!important;}}
 
 /* ===== استوديو برنامج المسابقات ===== */
-.st-studio{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;}
-.st-studio .sp{position:absolute;top:-10%;width:55%;height:95%;opacity:.55;mix-blend-mode:screen;filter:blur(10px);clip-path:polygon(46% 0,54% 0,100% 100%,0 100%);transform-origin:50% 0;}
-.st-studio .sp.l{left:-12%;background:linear-gradient(to bottom,rgba(96,165,250,.55),rgba(96,165,250,.05) 75%,transparent);animation:stSpL 7s ease-in-out infinite alternate;}
-.st-studio .sp.r{right:-12%;background:linear-gradient(to bottom,rgba(250,204,21,.45),rgba(250,204,21,.04) 75%,transparent);animation:stSpR 8s ease-in-out infinite alternate;}
-@keyframes stSpL{from{transform:rotate(-30deg)}to{transform:rotate(14deg)}}
-@keyframes stSpR{from{transform:rotate(30deg)}to{transform:rotate(-14deg)}}
-.st-studio .led{position:absolute;left:0;right:0;top:0;height:42%;opacity:.35;background:repeating-linear-gradient(90deg,rgba(56,189,248,.18) 0 2px,transparent 2px 22px),repeating-linear-gradient(0deg,rgba(56,189,248,.12) 0 2px,transparent 2px 22px);-webkit-mask:linear-gradient(to bottom,#000,transparent);mask:linear-gradient(to bottom,#000,transparent);animation:stLed 6s ease-in-out infinite;}
-@keyframes stLed{50%{opacity:.18}}
-.st-studio .floor{position:absolute;left:-30%;right:-30%;bottom:-6%;height:34%;transform:perspective(380px) rotateX(58deg);transform-origin:50% 100%;
-  background:radial-gradient(ellipse at 50% 0%,rgba(250,204,21,.22),transparent 60%),repeating-linear-gradient(90deg,rgba(148,163,184,.16) 0 1px,transparent 1px 46px),repeating-linear-gradient(0deg,rgba(148,163,184,.16) 0 1px,transparent 1px 46px),linear-gradient(to bottom,#0b1638,#020617);}
-.live-screen[data-decider] .st-studio .sp{opacity:.15;}
 .live-screen[data-decider]::after{animation:cineTense 1.2s ease-in-out infinite;}
-.live-screen[data-decider] .st-studio .floor{background:radial-gradient(ellipse at 50% 0%,rgba(239,68,68,.35),transparent 60%),repeating-linear-gradient(90deg,rgba(239,68,68,.15) 0 1px,transparent 1px 46px),linear-gradient(to bottom,#1a0b0b,#020617);}
 .st-air{font-variant-numeric:tabular-nums;font-weight:900;margin-right:4px;color:#fff;}
 /* منصات المتسابقين */
 .st-pods{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:6px;margin:10px 0 6px;flex-shrink:0;}
@@ -1725,7 +1713,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .st-delta{position:absolute;left:0;top:-4px;font-size:11px;font-weight:900;animation:stDelta 1.5s ease forwards;}
 .st-delta.up{color:#4ade80}.st-delta.down{color:#f87171}
 @keyframes stDelta{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-18px)}}
-@media (prefers-reduced-motion: reduce){.st-studio .sp,.st-studio .led,.st-tk-in{animation:none!important;}}
+@media (prefers-reduced-motion: reduce){.st-tk-in{animation:none!important;}}
 
 /* إصلاحات التخطيط: الشريط العلوي سطر واحد، والمشاهد الطويلة تنزل بدل ما ينقص أعلاها */
 .lv-top .lv-badge{white-space:nowrap;flex-shrink:0;font-size:11px;padding:5px 9px;}
@@ -1734,6 +1722,16 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 #liveScreen .lv-stage{justify-content:flex-start;}
 #liveScreen .lv-stage>:first-child{margin-top:auto;}
 #liveScreen .lv-stage>:last-child{margin-bottom:auto;}
+
+/* ===== فيديو الاستوديو الحقيقي ===== */
+.st-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0;transition:opacity .8s,filter .8s;filter:brightness(.62) saturate(1.1);}
+#liveScreen:not([data-scene="waiting"]):not([data-scene="ended"]):not([data-scene=""]) .st-video{opacity:1;}
+#liveScreen[data-scene="playing"] .st-video,#liveScreen[data-scene="countdown"] .st-video{filter:brightness(.45) saturate(1.05);}
+#liveScreen[data-decider] .st-video{filter:brightness(.38) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
+#liveScreen:not([data-scene="waiting"]):not([data-scene="ended"])::before{opacity:0;}
+/* المشاهد السينمائية: الاستوديو الحقيقي يبان من وراها بدل خلفية مرسومة */
+.cine{background:linear-gradient(to bottom,rgba(2,6,23,.55),rgba(2,6,23,.35) 45%,rgba(2,6,23,.65));}
+.cine-beam{display:none;}
 
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -6191,6 +6189,7 @@ function cpResize() {
 }
 function cpMax() { return CINE_REDUCED ? 60 : 650; }
 function cpSpark(x, y, n, colors, speed) {
+    return;   /* الشرارات شلناها عشان البث يكون أقرب للتلفزيون */
     colors = colors || CP_GOLD;
     n = Math.min(n, cpMax() - CP.parts.length);
     for (let i = 0; i < n; i++) {
@@ -6269,7 +6268,7 @@ function cineFlash(el, peak, ms, color) {
     an.onfinish = () => f.remove();
 }
 function cineShake(px) {
-    if (CINE_REDUCED) return;
+    return;   /* الاهتزاز يخلي البث يحس إنه لعبة، فشلناه */
     const kf = [];
     for (let i = 0; i < 9; i++) {
         const k = px * (1 - i / 9);
@@ -6331,7 +6330,6 @@ function cineOpening(d) {
 <div class="cine-onair"><span>ON AIR</span></div>
 <div class="cine-skip">اضغط للتخطي</div>`, 6000);
     if (!el) return;
-    CP.emb = 0.35;
     /* موسيقى افتتاح البرنامج، والخلفية تنخفض لين تخلص */
     const theme = CINE_BUF.show_intro;
     bedHold(theme ? theme.duration : 6);
@@ -6362,7 +6360,6 @@ function cineMatchIntro(d) {
 <div class="cine-of">المواجهة ${n} من ${total} · ${LIVE_Q_COUNT} أسئلة</div>
 <div class="cine-skip">اضغط للتخطي</div>`, 7000);
     if (!el) return;
-    CP.emb = 0.4;
     bedHold(7);
     cineAt(el, 0, () => cinePlay("riser", 0.7, { tail: 1.5 }));
     cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
@@ -6722,7 +6719,17 @@ function openLiveScreen(id) {
     bcAutoFx.prev = null;
     bcRxSeenN = null;
     bcTickerSig = "";
+    /* فيديو الاستوديو الحقيقي (من Google Flow) خلفية ثابتة للبث */
+    if (!document.getElementById("stVideo")) {
+        const v = document.createElement("video");
+        v.id = "stVideo"; v.className = "st-video";
+        v.src = "media/studio.mp4"; v.poster = "media/studio.jpg";
+        v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+        v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", "auto");
+        scr.insertBefore(v, scr.firstChild);
+    }
     scr.classList.add("open");
+    try { const v = document.getElementById("stVideo"); if (v && v.paused) v.play().catch(() => {}); } catch (e) {}
     document.body.classList.add("live-open");
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
     cineLoadSamples();
@@ -6887,8 +6894,7 @@ function renderLiveScreen() {
     const sched = d.status === "scheduled";
     const o = bcCur(d);
     const total = (d.order || []).length;
-    let html = live ? `<div class="st-studio"><i class="sp l"></i><i class="sp r"></i><i class="led"></i><i class="floor"></i></div>` : "";
-    html += sched ? `<div class="bc-wavebg"><svg class="w1" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 0 300 120 450 60 S750 0 900 60 1050 120 1200 60 V120 H0Z"/></svg><svg class="w2" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 120 300 0 450 60 S750 120 900 60 1050 0 1200 60 V120 H0Z"/></svg><svg class="w3" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70 C200 20 400 110 600 60 S1000 20 1200 70 V120 H0Z"/></svg></div>` : "";
+    let html = sched ? `<div class="bc-wavebg"><svg class="w1" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 0 300 120 450 60 S750 0 900 60 1050 120 1200 60 V120 H0Z"/></svg><svg class="w2" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 120 300 0 450 60 S750 120 900 60 1050 0 1200 60 V120 H0Z"/></svg><svg class="w3" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70 C200 20 400 110 600 60 S1000 20 1200 70 V120 H0Z"/></svg></div>` : "";
     html += `
 <div class="lv-top">
 <button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button>
