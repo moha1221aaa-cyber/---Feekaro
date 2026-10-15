@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-title" content="MASRO7">
 <meta name="mobile-web-app-capable" content="yes">
 <title>MASRO7 LEAGUE - دوري بنو مسروح للنخبة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&display=swap">
 <script>
 function ic(n, c) { return '<svg class="ic' + (c ? " " + c : "") + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }
 </script>
@@ -1732,6 +1734,30 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 /* المشاهد السينمائية: الاستوديو الحقيقي يبان من وراها بدل خلفية مرسومة */
 .cine{background:linear-gradient(to bottom,rgba(2,6,23,.55),rgba(2,6,23,.35) 45%,rgba(2,6,23,.65));}
 .cine-beam{display:none;}
+
+/* ===== جرافيكس تلفزيوني: خط القنوات، شريط الاسم، شاشة السؤال ===== */
+#liveScreen,#liveScreen button,#liveScreen input,.bc-ask{font-family:"Tajawal",Arial,sans-serif;}
+#liveScreen .lv-qtext{font-size:21px;font-weight:800;line-height:1.55;letter-spacing:0;}
+.st-l3{position:absolute;right:12px;bottom:150px;z-index:6;display:flex;align-items:center;gap:0;max-width:78%;pointer-events:none;opacity:0;transform:translateX(30px);transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1);}
+.st-l3.on{opacity:1;transform:none;}
+.st-l3 img{width:46px;height:46px;border-radius:8px 0 0 8px;object-fit:cover;border:2px solid #3b82f6;border-left:none;background:#0f172a;position:relative;z-index:1;}
+.st-l3 .tx{display:flex;flex-direction:column;justify-content:center;min-height:46px;box-sizing:border-box;padding:4px 14px 4px 18px;background:linear-gradient(90deg,rgba(2,6,23,.92),rgba(23,37,84,.96));border:1px solid #3b82f6;border-right:none;border-left:4px solid #3b82f6;clip-path:polygon(0 0,100% 0,100% 100%,10px 100%);}
+.st-l3 b{font-size:16px;font-weight:900;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.st-l3 span{font-size:11px;color:#93c5fd;font-weight:700;white-space:nowrap;}
+.st-l3.gold img{border-color:#facc15;}
+.st-l3.gold .tx{border-color:#facc15;border-left-color:#facc15;background:linear-gradient(90deg,rgba(2,6,23,.92),rgba(66,32,6,.96));}
+.st-l3.gold span{color:#fde68a;}
+/* شاشة السؤال: الإطار يتفتح من النص، وبعدها يظهر النص */
+.st-qcard{animation:stFrameOpen .55s cubic-bezier(.7,0,.2,1) both;}
+.st-qcard .st-qhead,.st-qcard .lv-qtext{animation:stTextIn .6s .5s ease both;}
+.st-qcard::after{animation-delay:.9s;}
+.st-qcard.still,.st-qcard.still .st-qhead,.st-qcard.still .lv-qtext{animation:none;}
+.st-qcard.still::after{display:none;}
+@keyframes stFrameOpen{0%{clip-path:inset(46% 50% 46% 50% round 18px);opacity:.4}45%{clip-path:inset(46% 0 46% 0 round 18px);opacity:1}100%{clip-path:inset(0 0 0 0 round 18px);opacity:1}}
+@keyframes stTextIn{from{opacity:0;transform:translateY(6px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
+/* حركات أهدى */
+.st-pod.lit{transform:none;}
+.st-pod{transition:opacity .4s;}
 
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -6059,6 +6085,40 @@ function bcTicker(d) {
     el.innerHTML = `<span class="st-tk-tag">${ic("megaphone")} أخبار</span><div class="st-tk-win"><div class="st-tk-in" style="animation-duration:${dur}s">${row}${row}</div></div>`;
 }
 
+/* ===== الشريط السفلي (Lower third) لاسم المتسابق: لما يضغط الجرس أو يتكلم ===== */
+const BC_L3 = { key: "", talkUid: "", talkUntil: 0 };
+function bcLowerThird(d) {
+    const scr = document.getElementById("liveScreen");
+    if (!scr) return;
+    let el = document.getElementById("stL3");
+    let want = null;
+    if (d && d.status === "live") {
+        const o = bcCur(d);
+        if (o && d.scene === "playing" && d.phase === "answer" && d.answerer) {
+            const n = d.answerer;
+            want = { key: "a" + d.cur + n + d.qIndex, name: n === 1 ? o.p1 : o.p2, sub: d.passed ? "انتقل له السؤال · يجاوب الحين" : "ضغط الجرس أول · يجاوب الحين", av: bcAv(o, n), gold: true };
+        } else {
+            /* أعلى صوت يتكلم الحين (مع مهلة عشان ما يرمش) */
+            let best = null;
+            bcSpeakers(d).forEach(sp => { const m = bcMicLevel(sp.uid); if (m.on && m.lvl > 0.06 && (!best || m.lvl > best.lvl)) best = Object.assign({ lvl: m.lvl }, sp); });
+            const now = Date.now();
+            if (best) { BC_L3.talkUid = best.uid; BC_L3.talkUntil = now + 1800; BC_L3.talk = best; }
+            if (BC_L3.talk && now < BC_L3.talkUntil) want = { key: "t" + BC_L3.talk.uid, name: BC_L3.talk.name, sub: BC_L3.talk.role === "المنظم" ? "مقدم البرنامج" : "متسابق · على الهواء", av: BC_L3.talk.av };
+        }
+    }
+    if (!want) { if (el && el.classList.contains("on")) el.classList.remove("on"); BC_L3.key = ""; return; }
+    if (!el) { el = document.createElement("div"); el.id = "stL3"; el.className = "st-l3"; scr.appendChild(el); }
+    if (BC_L3.key !== want.key) {
+        BC_L3.key = want.key;
+        el.classList.remove("on");
+        el.innerHTML = `<img src="${escapeHTML(want.av)}" alt=""><div class="tx"><b>${escapeHTML(want.name)}</b><span>${escapeHTML(want.sub)}</span></div>`;
+        el.classList.toggle("gold", !!want.gold);
+        void el.offsetWidth;
+    }
+    el.classList.add("on");
+}
+let bcLastQAnim = "";
+
 /* ===== تفاعلات المشاهدين (بدون صوت) ===== */
 const BC_RX = ["👏", "🔥", "❤️"];
 let bcRxLastSend = 0, bcRxSeenN = null;
@@ -6651,7 +6711,7 @@ function bcSpeakers(d) {
         [1, 2].forEach(n => {
             const uid = n === 1 ? o.uid1 : o.uid2;
             if (!uid || uid === d.hostUid) return;
-            list.push({ uid: uid, name: n === 1 ? o.p1 : o.p2, av: bcAv(o, n), role: "لاعب" });
+            list.push({ uid: uid, name: n === 1 ? o.p1 : o.p2, av: bcAv(o, n), role: "متسابق" });
         });
     }
     return list;
@@ -6755,6 +6815,7 @@ function closeLiveScreen(fromPop) {
     cineCloseAll();
     bedSet("");
     bcTicker(null);
+    { const l3 = document.getElementById("stL3"); if (l3) l3.remove(); BC_L3.key = ""; }
     if (scr) delete scr.dataset.scene;
     bcSyncAudio();
 }
@@ -6787,6 +6848,7 @@ function liveTick() {
     }
     bcAirClock(d);
     bcTickMics();
+    bcLowerThird(d);
     liveAdvanceIfDue();
 }
 
@@ -6927,6 +6989,8 @@ ${pod(2)}
     if (live) html += bcOnAirHTML(d);
     body.innerHTML = html;
 
+    const qc = body.querySelector(".st-qcard");
+    if (qc) { if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
     const inp = document.getElementById("lvAnswerInput");
     if (inp) setTimeout(() => inp.focus(), 60);
     liveTick();
