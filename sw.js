@@ -2,7 +2,7 @@
    - يخزن الصفحة الرئيسية والشعار مؤقتاً ليفتح الموقع بسرعة حتى مع نت ضعيف.
    - لا يخزن بيانات الدوري نفسها (النتائج، الشات، الغرفة)، فهذي دائماً تجي محدثة من الإنترنت.
    - رقم الإصدار CACHE_NAME: لازم يتغيّر مع كل تحديث كبير للموقع حتى يحمّل الأجهزة النسخة الجديدة. */
-const CACHE_NAME = "masro7-shell-v4";
+const CACHE_NAME = "masro7-shell-v5";
 const SHELL_FILES = ["/", "/index.html", "/logo.png", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

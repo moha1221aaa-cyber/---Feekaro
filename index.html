@@ -1574,6 +1574,53 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
   background:repeating-conic-gradient(rgba(250,204,21,.22) 0 8deg,transparent 8deg 22deg);-webkit-mask:radial-gradient(circle,#000 20%,transparent 68%);mask:radial-gradient(circle,#000 20%,transparent 68%);animation:cineRays 14s linear infinite;}
 @keyframes cineRays{to{transform:rotate(360deg)}}
 
+/* ===== شاشة انتظار البث المجدول: ألوان تتدرج وتتموج + عداد ===== */
+.live-screen[data-scene="waiting"]{background:linear-gradient(-45deg,#0b1d5c,#1e3a8a,#5b21b6,#0e7490,#1e3a8a,#92400e);background-size:400% 400%;animation:bcGrad 16s ease infinite;}
+@keyframes bcGrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.bc-wavebg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;}
+.bc-wavebg::before{content:"";position:absolute;left:50%;top:38%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;background:radial-gradient(circle,rgba(250,204,21,.28),rgba(56,189,248,.12) 45%,transparent 70%);animation:bcGlow 4s ease-in-out infinite;}
+@keyframes bcGlow{0%,100%{transform:scale(.85);opacity:.7}50%{transform:scale(1.12);opacity:1}}
+.bc-wavebg svg{position:absolute;left:0;bottom:0;width:200%;height:26%;}
+.bc-wavebg .w1{fill:rgba(56,189,248,.18);animation:bcWave 9s linear infinite;}
+.bc-wavebg .w2{fill:rgba(250,204,21,.14);height:21%;animation:bcWave 13s linear infinite reverse;}
+.bc-wavebg .w3{fill:rgba(124,58,237,.22);height:16%;animation:bcWave 7s linear infinite;}
+@keyframes bcWave{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bc-wait{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bc-wait-logo{width:74px;height:74px;object-fit:contain;filter:drop-shadow(0 0 24px rgba(250,204,21,.6));animation:bcFloat 3.5s ease-in-out infinite;}
+@keyframes bcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.bc-wait-k{color:#fde68a;font-size:12px;font-weight:bold;letter-spacing:2px;}
+.bc-wait-t{color:#e2e8f0;font-size:14px;margin-top:6px;}
+.bc-clock{display:flex;align-items:flex-start;justify-content:center;gap:6px;direction:ltr;min-height:86px;}
+.bc-clock>div{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.bc-clock b{display:block;min-width:74px;padding:8px 6px;border-radius:14px;background:rgba(2,6,23,.45);border:1px solid rgba(250,204,21,.45);box-shadow:0 0 24px rgba(250,204,21,.18) inset,0 8px 24px rgba(0,0,0,.3);font-size:44px;font-weight:900;line-height:1;color:#facc15;font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(250,204,21,.6);}
+.bc-clock b.sec{animation:bcTickPop 1s ease infinite;}
+@keyframes bcTickPop{0%{transform:scale(1.08)}25%{transform:scale(1)}}
+.bc-clock i{font-style:normal;font-size:11px;color:#cbd5e1;}
+.bc-clock>span{font-size:38px;font-weight:900;color:rgba(250,204,21,.7);line-height:60px;animation:bcBlinkC 1s steps(2) infinite;}
+@keyframes bcBlinkC{50%{opacity:.25}}
+.bc-clock.final b{color:#fff;border-color:#ef4444;background:rgba(127,29,29,.55);text-shadow:0 0 22px #ef4444;}
+.bc-clock.final b.sec{animation:bcFinal 1s ease infinite;}
+@keyframes bcFinal{0%{transform:scale(1.35)}35%{transform:scale(1)}}
+.bc-clock .now{font-size:46px;font-weight:900;color:#facc15;text-shadow:0 0 30px rgba(250,204,21,.8);animation:bcFinal 1s ease infinite;}
+.bc-wait-at{display:inline-flex;align-items:center;gap:6px;background:rgba(2,6,23,.4);border:1px solid rgba(255,255,255,.15);color:#fff;font-weight:bold;font-size:13px;padding:5px 12px;border-radius:20px;}
+.bc-wait-at .ic{width:15px;height:15px;}
+.lv-badge.soon{background:#422006;border-color:#f59e0b;color:#fde68a;}
+.lv-badge.soon .dot{background:#f59e0b;}
+.bc-endbtn{margin:0;padding:5px 10px;font-size:12px;border-radius:20px;background:#7f1d1d;border:1px solid #ef4444;color:#fff;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;}
+.bc-endbtn .ic{width:14px;height:14px;}
+/* نافذة اختيار وقت البث */
+.bc-ask{position:fixed;inset:0;z-index:1000005;background:rgba(2,6,23,.75);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+.bc-ask-card{width:min(360px,100%);background:#0f172a;border:1px solid #1e40af;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.bc-ask-t{font-size:18px;font-weight:900;color:#facc15;display:flex;align-items:center;justify-content:center;gap:6px;}
+.bc-ask-s{color:#cbd5e1;font-size:13px;}
+.bc-ask-w{color:#fde68a;font-size:12px;background:#422006;border-radius:10px;padding:8px;text-align:right;}
+.bc-ask-or{color:#94a3b8;font-size:12px;margin-top:4px;}
+.bc-ask-row{display:flex;gap:8px;}
+.bc-ask-row input{flex:1;min-width:0;font-size:18px;padding:8px;border-radius:10px;border:1px solid #475569;background:#1e293b;color:#fff;text-align:center;margin:0;}
+.bc-ask-row button{margin:0;white-space:nowrap;width:auto;}
+.bc-ask .bc-go{width:100%;margin:0;}
+@media (prefers-reduced-motion: reduce){.live-screen[data-scene="waiting"],.bc-wavebg svg,.bc-wavebg::before,.bc-wait-logo{animation:none!important;}}
+
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .cine.fxonly{background:none;pointer-events:none;cursor:default;}
@@ -1647,12 +1694,6 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .bc-voicebtn{margin:0;padding:3px 9px;font-size:11px;border-radius:20px;background:#1e3a8a;display:inline-flex;align-items:center;gap:4px;}
 .bc-voicebtn .ic{width:13px;height:13px;}
 .bc-voicebtn.off{background:#334155;color:#94a3b8;}
-.bc-fxtoggle{margin:0;width:100%;padding:7px;font-size:12px;border-radius:10px;background:#1e293b;border:1px solid #475569;display:flex;align-items:center;justify-content:center;gap:6px;}
-.bc-fxtoggle.on{border-color:#facc15;color:#facc15;}
-.bc-fxgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:104px;overflow-y:auto;}
-.bc-fxbtn{margin:0;padding:7px 2px;font-size:10px;border-radius:10px;background:#172554;border:1px solid #1e40af;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2;}
-.bc-fxbtn .ic{width:18px;height:18px;}
-.bc-fxbtn:active{transform:scale(.94);background:#1e40af;}
 .live-screen{display:none;position:fixed;inset:0;z-index:1000001;background:radial-gradient(ellipse at top,#172554 0%,#0f172a 55%);flex-direction:column;padding:calc(8px + env(safe-area-inset-top,0px)) 12px calc(10px + env(safe-area-inset-bottom,0px));box-sizing:border-box;overflow:hidden;}
 .live-screen.open{display:flex;}
 #liveScreenBody{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;}
@@ -5117,7 +5158,15 @@ let bcPrevKey = null;
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
 function liveRef(id) { return liveCol().doc(id); }
 function bcId(r) { return "round_" + r; }
-function isLiveActive(d) { return !!d && d.status === "live"; }
+function isLiveActive(d) { return !!d && (d.status === "live" || d.status === "scheduled"); }
+/* وقت بداية البث المجدول بصيغة "10:30 م" */
+function bcTimeLabel(ms) {
+    const t = new Date(ms);
+    let h = t.getHours(); const m = String(t.getMinutes()).padStart(2, "0");
+    const pm = h >= 12; h = h % 12 || 12;
+    const day = new Date().toDateString() === t.toDateString() ? "" : " (بكرة)";
+    return `${h}:${m} ${pm ? "م" : "ص"}${day}`;
+}
 function bcCur(d) { return (d && d.order && d.cur >= 0) ? (d.order[d.cur] || null) : null; }
 function bcInMatch(d) { return !!d && d.status === "live" && BC_MATCH_SCENES.indexOf(d.scene) !== -1 && !!bcCur(d); }
 
@@ -5150,7 +5199,7 @@ function initLiveMatches() {
             renderMatches();
             renderLiveBars();
         }
-        if (openLiveId) { renderLiveScreen(); bcSyncAudio(); bcCheckRemoteFx(next[openLiveId]); }
+        if (openLiveId) { renderLiveScreen(); bcSyncAudio(); }
         Object.keys(next).forEach(id => bcApplyResults(id));
     }, err => {
         console.log("liveMatches listener:", err);
@@ -5163,13 +5212,14 @@ function renderLiveBars() {
         const d = liveMatchesCache[id];
         const o = bcCur(d);
         let info = "الافتتاح";
-        if (d.scene === "closing") info = "ختام الجولة";
+        if (d.status === "scheduled") info = "يبدأ الساعة " + bcTimeLabel(d.startAt || 0);
+        else if (d.scene === "closing") info = "ختام الجولة";
         else if (o && bcInMatch(d)) info = `<b>${escapeHTML(o.p1)}</b><span class="lb-sc">${d.s1 || 0} - ${d.s2 || 0}</span><b>${escapeHTML(o.p2)}</b>`;
         html += `
 <div class="live-bar" data-id="${escapeHTML(id)}" onclick="openLiveScreen(this.dataset.id)">
 <span class="dot"></span>
 <span class="lb-txt">بث الجولة ${escapeHTML(String(d.round))} · ${info}</span>
-<span class="lb-go">${ic("volume-2")} استمع</span>
+<span class="lb-go">${ic("volume-2")} ${d.status === "scheduled" ? "ادخل" : "استمع"}</span>
 </div>`;
     });
     ["liveMatchesBar", "liveMatchesBarHome"].forEach(bid => {
@@ -5187,7 +5237,9 @@ function buildRoundLiveRow(r) {
     if (isLiveActive(d)) {
         const b = document.createElement("button");
         b.className = "live-watch-btn";
-        b.innerHTML = `<span class="dot" style="background:#fff;"></span> بث الجولة ${escapeHTML(String(r))} مباشر الآن — استمع`;
+        b.innerHTML = d.status === "scheduled"
+            ? `${ic("hourglass")} بث الجولة ${escapeHTML(String(r))} يبدأ الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))} — ادخل`
+            : `<span class="dot" style="background:#fff;"></span> بث الجولة ${escapeHTML(String(r))} مباشر الآن — استمع`;
         b.onclick = () => openLiveScreen(id);
         row.appendChild(b);
         return row;
@@ -5256,9 +5308,8 @@ async function bcStartRound(r) {
 
     const unlinked = [];
     ms.forEach(m => [m.p1.name, m.p2.name].forEach(n => { if (!playerLinks[n] && unlinked.indexOf(n) === -1) unlinked.push(n); }));
-    let msg = `بدء البث المباشر للجولة ${r}؟\n\nفيها ${ms.length} مباريات بتنلعب ورا بعض في بث واحد، ومايكك بينفتح أول ما يبدأ البث.`;
-    if (unlinked.length) msg += `\n\nتنبيه: ${unlinked.join("، ")} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مباراته وقت البث.`;
-    if (!confirm(msg)) return;
+    const choice = await bcAskStart(r, ms.length, unlinked);
+    if (!choice) return;
 
     const myName = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "المنظم";
     const myAv = (currentUserDocData && currentUserDocData.photoURL) || getPlayerAvatar(myName).url;
@@ -5269,7 +5320,8 @@ async function bcStartRound(r) {
         s1: 0, s2: 0, state: "pending", applied: false
     }));
     const data = Object.assign(bcQuizReset(), {
-        type: "round", round: r, status: "live", scene: "opening", cur: -1, order: order,
+        type: "round", round: r, status: choice.at ? "scheduled" : "live", scene: choice.at ? "waiting" : "opening", cur: -1, order: order,
+        startAt: choice.at || Date.now(),
         hostUid: currentUser.uid, hostName: myName, hostAv: myAv,
         questions: [], usedQ: [], sceneAt: Date.now(), v: 1,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -5377,6 +5429,55 @@ function bcNext(skip) {
     }).catch(err => alert("تعذّر: " + err.message));
 }
 
+/* البث المجدول: يبدأ الافتتاح (المنظم يضغط "ابدأ الحين" أو لحاله أول ما يخلص العداد) */
+let bcGoLiveTry = 0;
+function bcGoLive(manual) {
+    const id = openLiveId;
+    const d = liveMatchesCache[id];
+    if (!d || !isAdmin || d.status !== "scheduled") return;
+    if (manual && !confirm("تبدأ البث الحين قبل الموعد؟")) return;
+    if (!manual && Date.now() - bcGoLiveTry < 6000) return;
+    bcGoLiveTry = Date.now();
+    liveTx(id, (x, now) => x.status === "scheduled" ? { status: "live", scene: "opening", sceneAt: now, startedAt: now, hostUid: currentUser.uid, hostName: (currentUserDocData && currentUserDocData.name) || x.hostName } : null)
+        .catch(err => roomToast("تعذّر بدء البث: " + err.message, "alert"));
+}
+
+/* نافذة اختيار وقت البث: الحين أو موعد محدد */
+function bcAskStart(r, count, unlinked) {
+    return new Promise(resolve => {
+        const now = new Date();
+        const def = new Date(now.getTime() + 30 * 60000);
+        def.setMinutes(def.getMinutes() < 30 ? 30 : 60, 0, 0);
+        const hh = String(def.getHours()).padStart(2, "0"), mm = String(def.getMinutes()).padStart(2, "0");
+        const box = document.createElement("div");
+        box.className = "bc-ask";
+        box.innerHTML = `
+<div class="bc-ask-card">
+<div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
+<div class="bc-ask-s">فيها ${count} مباريات بتنلعب ورا بعض في بث واحد.</div>
+${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.join("، "))} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مباراته وقت البث.</div>` : ""}
+<button class="bc-go" data-a="now">${ic("zap")} ابدأ البث الحين</button>
+<div class="bc-ask-or">أو حدد موعد، ويطلع للكل عداد لين يبدأ:</div>
+<div class="bc-ask-row"><input type="time" id="bcAskTime" value="${hh}:${mm}"><button class="bc-ghost" data-a="at">${ic("hourglass")} جدولة البث</button></div>
+<button class="lv-link" data-a="no">إلغاء</button>
+</div>`;
+        const done = v => { box.remove(); resolve(v); };
+        box.addEventListener("click", e => {
+            const b = e.target.closest("[data-a]");
+            if (!b) { if (e.target === box) done(null); return; }
+            const a = b.dataset.a;
+            if (a === "no") return done(null);
+            if (a === "now") return done({ at: 0 });
+            const v = (box.querySelector("#bcAskTime").value || "").split(":");
+            if (v.length < 2) return;
+            const at = new Date(); at.setHours(+v[0], +v[1], 0, 0);
+            if (at.getTime() <= Date.now() + 30000) at.setDate(at.getDate() + 1);   /* وقت فات اليوم ← بكرة */
+            done({ at: at.getTime() });
+        });
+        document.body.appendChild(box);
+    });
+}
+
 function bcForceStart() {
     if (!isAdmin) return;
     liveTx(openLiveId, (d, now) => (d.status === "live" && d.scene === "intro") ? { scene: "countdown", deadline: now + LIVE_COUNT_MS } : null)
@@ -5387,8 +5488,10 @@ function bcEnd() {
     const d = liveMatchesCache[openLiveId];
     if (!d || !isAdmin) return;
     const left = (d.order || []).filter(o => o.state === "pending").length;
-    if (!confirm(left && d.scene !== "closing" ? `إنهاء بث الجولة؟ باقي ${left} مباريات ما تلعبت.` : "إنهاء بث الجولة؟")) return;
-    liveTx(openLiveId, (x, now) => x.status === "live" ? { status: "ended", phase: "done", endedAt: now } : null)
+    const q = d.status === "scheduled" ? "إلغاء البث المجدول؟"
+        : (left && d.scene !== "closing" ? `إنهاء بث الجولة؟ باقي ${left} مباريات ما تلعبت، وتقدر تبدأ لها بث ثاني بعدين.` : "إنهاء بث الجولة؟");
+    if (!confirm(q)) return;
+    liveTx(openLiveId, (x, now) => isLiveActive(x) ? { status: "ended", phase: "done", endedAt: now } : null)
         .catch(err => alert("تعذّر: " + err.message));
 }
 
@@ -5404,7 +5507,7 @@ function liveSetReady() {
         const r1 = n === 1 || d.ready1, r2 = n === 2 || d.ready2;
         if (r1 && r2) { u.scene = "countdown"; u.deadline = now + LIVE_COUNT_MS; }
         return u;
-    }).then(() => liveBeep(660, 0.12)).catch(err => roomToast("تعذّر: " + err.message, "alert"));
+    }).then(() => cinePlay("tick", 0.6)).catch(err => roomToast("تعذّر: " + err.message, "alert"));
 }
 
 function liveBuzz() {
@@ -5517,38 +5620,6 @@ function liveCtx() {
     if (!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     return liveAudioCtx;
 }
-function liveBeep(freq, dur, type, vol) {
-    try {
-        const c = liveCtx(), t = c.currentTime;
-        const o = c.createOscillator(), g = c.createGain();
-        o.type = type || "sine"; o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.2));
-        o.connect(g); g.connect(c.destination);
-        o.start(t); o.stop(t + (dur || 0.2) + 0.05);
-    } catch (e) {}
-}
-function liveBellSound() { liveBeep(1320, 0.35, "triangle"); setTimeout(() => liveBeep(1760, 0.45, "triangle"), 90); }
-/* صوت "ووووش" للانتقال بين المشاهد */
-function liveWhoosh() {
-    try {
-        const c = liveCtx(), t = c.currentTime, dur = 0.9;
-        const buf = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate);
-        const ch = buf.getChannelData(0);
-        for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-        const src = c.createBufferSource(); src.buffer = buf;
-        const f = c.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1.2;
-        f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(3200, t + dur * 0.6); f.frequency.exponentialRampToValueAtTime(600, t + dur);
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        src.connect(f); f.connect(g); g.connect(c.destination);
-        src.start(t); src.stop(t + dur);
-    } catch (e) {}
-}
-function liveFanfare() { [392, 523, 659, 784].forEach((f, i) => setTimeout(() => liveBeep(f, 0.28, "triangle", 0.22), i * 120)); setTimeout(() => liveBeep(1047, 0.7, "triangle", 0.25), 520); }
-function liveWhistle() { liveBeep(2100, 0.25, "sine", 0.2); setTimeout(() => liveBeep(2100, 0.7, "sine", 0.2), 320); }
-
 /* =====================================================================
    مذيع البث + مكتبة الأصوات
    - المذيع: صوت بشري (Google) يقرا السؤال والإجابة ويقدّم المباريات، وإذا ما توفر يستخدم صوت الجوال
@@ -5561,7 +5632,6 @@ let bcTtsServerOk = true;          /* يتعطل لو السيرفر قال ما
 const bcTtsBuf = {};               /* النص ← Promise<AudioBuffer> */
 let bcSpeechSrc = null;
 let bcLastSpokenKey = "";
-let bcLastSfxN = null;
 
 function bcTtsUrl(text) { return "/tts?t=" + encodeURIComponent(text); }
 
@@ -5680,176 +5750,47 @@ function bcAnnouncer(d) {
     setTimeout(() => bcSpeak(text), delay);
 }
 
-/* ===== مكتبة الأصوات ===== */
-const BC_FX_EXTRA = [
-    { id: "cheer", icon: ic("users"), name: "جمهور يهتف", play(c, o, t) {
-        /* هتاف: ضجيج بأصوات بشرية (فورمنت) + تصفيق */
-        [[700, 1100], [500, 1500], [850, 1250]].forEach(([f1, f2], k) => {
-            [f1, f2].forEach(f => fxNoiseHit(c, o, t + k * 0.05, 2.8, 0.22, "bandpass", f, 6));
-        });
-        for (let i = 0; i < 160; i++) fxNoiseHit(c, o, t + 0.2 + Math.random() * 2.6, 0.05, 0.06 + Math.random() * 0.1, "bandpass", 1300 + Math.random() * 1700, 0.9);
-    } },
-    { id: "suspense", icon: ic("hourglass"), name: "تشويق", play(c, o, t) {
-        fxTone(c, o, "sawtooth", 55, t, 3.2, 0.25, 58, 400);
-        fxTone(c, o, "sawtooth", 82.4, t, 3.2, 0.12, 87, 500);
-        for (let i = 0; i < 5; i++) {
-            fxTone(c, o, "sine", 60, t + i * 0.62, 0.12, 0.6, 40);
-            fxTone(c, o, "sine", 55, t + i * 0.62 + 0.18, 0.12, 0.45, 38);
-        }
-    } },
-    { id: "tick", icon: ic("alarm"), name: "عقارب الساعة", play(c, o, t) {
-        for (let i = 0; i < 10; i++) fxNoiseHit(c, o, t + i * 0.5, 0.025, i % 2 ? 0.35 : 0.5, "bandpass", i % 2 ? 2600 : 3400, 4);
-    } },
-    { id: "whoosh", icon: ic("zap"), name: "انتقال", play(c, o, t) {
-        fxNoiseHit(c, o, t, 0.9, 0.5, "bandpass", 1400, 1.2);
-        fxTone(c, o, "sine", 300, t, 0.8, 0.12, 1400);
-    } },
-    { id: "buzzer", icon: ic("x"), name: "صافرة خطأ", play(c, o, t) {
-        fxTone(c, o, "square", 110, t, 0.9, 0.35, null, 900);
-        fxTone(c, o, "sawtooth", 116, t, 0.9, 0.25, null, 900);
-    } },
-    { id: "intro", icon: ic("music"), name: "موسيقى افتتاح", play(c, o, t) {
-        const seq = [[392, 0, .18], [523, .2, .18], [659, .4, .18], [784, .6, .5], [659, 1.15, .18], [784, 1.35, .9]];
-        seq.forEach(([f, d, dur]) => {
-            fxTone(c, o, "sawtooth", f, t + d, dur, 0.16, null, 2600);
-            fxTone(c, o, "triangle", f / 2, t + d, dur, 0.2);
-        });
-        [131, 196].forEach(f => fxTone(c, o, "sine", f, t + 0.6, 1.8, 0.25));
-        fxNoiseHit(c, o, t + 0.6, 1.4, 0.18, "highpass", 5000, 0.5);
-        fxNoiseHit(c, o, t + 1.35, 1.6, 0.2, "highpass", 5000, 0.5);
-    } }
-];
-/* الأصوات الحقيقية في مكتبة المنظم (تطلع أول القائمة) */
-const BC_FX_REAL = [
-    { id: "r_braam", icon: ic("zap"), name: "براام سينمائي", play(c, o, t) { cineS("braam", t) || cineBraam(t); } },
-    { id: "r_slam", icon: ic("zap"), name: "رعد وضربة", play(c, o, t) { cineS("slam", t) || cineBoom(t); } },
-    { id: "r_impact", icon: ic("rocket"), name: "ضربة قوية", play(c, o, t) { cineS("impact", t) || cineHit(t); } },
-    { id: "r_riser", icon: ic("hourglass"), name: "تصاعد", play(c, o, t) { cineS("riser", t) || cineRiser(t, 2.5); } },
-    { id: "r_cheer", icon: ic("users"), name: "هتاف الجمهور", play(c, o, t) { cineS("cheer", t) || bcFxList().find(f => f.id === "cheer").play(c, o, t); } },
-    { id: "r_whistle", icon: ic("bell"), name: "صافرة الحكم", play(c, o, t) { cineS("whistle", t) || liveWhistle(); } },
-    { id: "r_fireworks", icon: ic("trophy"), name: "ألعاب نارية", play(c, o, t) { cineS("fireworks", t) || cineFireworkSnd(t); } },
-    { id: "r_heart", icon: ic("alarm"), name: "نبض قلب", play(c, o, t) { cineS("heartbeat", t) || cineHeart(t); } },
-    { id: "r_whoosh", icon: ic("zap"), name: "ووش", play(c, o, t) { cineS("whoosh", t) || cineWhoosh(t); } }
-];
-function bcFxList() { return BC_FX_REAL.concat(typeof ROOM_FX !== "undefined" ? ROOM_FX : [], BC_FX_EXTRA); }
-
-let bcFxOut = null;
-function bcFxPlayLocal(id) {
-    const fx = bcFxList().find(e => e.id === id);
-    if (!fx) return;
-    try {
-        const c = liveCtx();
-        if (c.state === "suspended") c.resume();
-        if (!bcFxOut || bcFxOut.context !== c) {
-            const comp = c.createDynamicsCompressor();
-            comp.threshold.value = -14; comp.ratio.value = 6;
-            bcFxOut = c.createGain(); bcFxOut.gain.value = 0.8;
-            bcFxOut.connect(comp); comp.connect(c.destination);
-        }
-        fx.play(c, bcFxOut, c.currentTime + 0.03);
-    } catch (e) { console.log("fx:", e); }
-}
-
-/* المنظم يضغط صوت: ينكتب في البث وكل الأجهزة تشغّله */
-function bcSendFx(id) {
-    if (!isAdmin || !openLiveId || !firebaseDB) return;
-    const n = Date.now();
-    bcLastSfxN = n;
-    bcFxPlayLocal(id);
-    liveRef(openLiveId).update({ sfx: { id: id, n: n } }).catch(err => roomToast("تعذّر إرسال الصوت: " + err.message, "alert"));
-}
-
-/* يشغّل الصوت اللي أرسله المنظم (لو جديد) */
-function bcCheckRemoteFx(d) {
-    const s = d && d.sfx;
-    if (!s || !s.n) return;
-    if (bcLastSfxN === null) { bcLastSfxN = s.n; return; }    /* أول فتح: ما نشغّل القديم */
-    if (s.n === bcLastSfxN) return;
-    bcLastSfxN = s.n;
-    if (Date.now() - s.n < 8000) bcFxPlayLocal(s.id);
-}
-
-let bcFxOpen = false;
-function bcToggleFxPanel() { bcFxOpen = !bcFxOpen; liveLastSig = ""; renderLiveScreen(); }
-
-function bcFxPanelHTML() {
-    if (!isAdmin) return "";
-    const btns = bcFxList().map(f => `<button class="bc-fxbtn" onclick="bcSendFx('${f.id}')">${f.icon}<span>${escapeHTML(f.name)}</span></button>`).join("");
-    return `
-<button class="bc-fxtoggle ${bcFxOpen ? "on" : ""}" onclick="bcToggleFxPanel()">${ic("music")} مكتبة الأصوات ${bcFxOpen ? "▲" : "▼"}</button>
-${bcFxOpen ? `<div class="bc-fxgrid">${btns}</div>` : ""}`;
-}
-
-/* مؤثرات تلقائية حسب أحداث المباراة */
-function bcAutoFx(d) {
-    const view = { scene: d.scene, phase: d.phase, q: d.qIndex, out: d.outcome, cur: d.cur, last: d.lastAnswer };
-    const p = bcAutoFx.prev;
-    bcAutoFx.prev = view;
-    if (!p || d.status !== "live") return;
-    if (view.phase === "reveal" && p.phase !== "reveal") {
-        if (view.out) setTimeout(() => { cineS("cheer", cineNow(), 0.6, { dur: 2.8 }) || bcFxPlayLocal("applause"); }, 300);
-        else if (view.last && view.last.timeout) bcFxPlayLocal("alarm");
-    }
-    if (view.scene === "result" && p.scene !== "result" && !cineReal()) setTimeout(() => { bcFxPlayLocal("fanfare"); bcFxPlayLocal("cheer"); }, 1200);
-    if (view.scene === "countdown" && p.scene !== "countdown" && !bedReal("tension")) bcFxPlayLocal("suspense");
-}
-
 /* =====================================================================
-   المشاهد السينمائية + الموسيقى الخلفية للبث
-   - مشهد سينمائي كامل بين كل مباراة ومباراة (إضاءات، شرارات، VS، برق، اهتزاز)
-   - افتتاح سينمائي، "انطلق!" قبل الأسئلة، احتفال بالنتيجة، ألعاب نارية في الختام
-   - مؤثرات صوتية سينمائية بصدى قاعة (بوم، براام، رايزر، ضربات، نبض قلب)
-   - موسيقى خلفية حية: ملحمية بين المباريات، وتشويقية وقت الأسئلة (تنخفض لما المذيع يتكلم)
-   كل شي يشتغل على جهاز كل مستمع بنفس اللحظة حسب مشهد البث، بدون ما يمر في المايك
+   المشاهد السينمائية + الأصوات الحقيقية للبث
+   - كل الأصوات تسجيلات حقيقية (mp3 في مجلد audio/ مولّدة بـ ElevenLabs)، وما فيه أي صوت من المتصفح
+   - مشهد سينمائي بين كل مباراة، "انطلق!"، احتفال النتيجة، ألعاب نارية في الختام
+   - موسيقى خلفية حقيقية: انتظار قبل البث، ملحمية بين المباريات، تشويق وقت الأسئلة
+   - مكساج منظم: كل صوت له مستوى ثابت، وما يتراكب أكثر من صوتين بنفس اللحظة
    ===================================================================== */
 const CINE_REDUCED = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
 let cineBgOn = true;
 try { cineBgOn = localStorage.getItem("bcBgOn") !== "0"; } catch (e) {}
-const CINE = { c: null, bus: null, rev: null, bed: null };
+const CINE = { c: null, bus: null, bed: null };
 
-function cineNow() { return cineGraph().c.currentTime + 0.02; }
-
-/* صدى قاعة كبيرة (يعطي الأصوات إحساس سينمائي حقيقي) */
-function cineImpulse(c, sec, decay) {
-    const len = Math.floor(c.sampleRate * sec), b = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-        const d = b.getChannelData(ch);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
-    }
-    return b;
-}
 function cineGraph() {
     const c = liveCtx();
     if (CINE.c === c) return CINE;
+    /* ليمتر ناعم عشان ما يطلع أي صوت عالي فجأة */
     const comp = c.createDynamicsCompressor();
-    comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.25;
-    const master = c.createGain(); master.gain.value = 0.95;
+    comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = 0.004; comp.release.value = 0.3;
+    const master = c.createGain(); master.gain.value = 0.9;
     comp.connect(master); master.connect(c.destination);
-    const rev = c.createConvolver(); rev.buffer = cineImpulse(c, 3, 2.6);
-    const revOut = c.createGain(); revOut.gain.value = 0.55;
-    rev.connect(revOut); revOut.connect(comp);
     const bus = c.createGain(); bus.connect(comp);
     const bed = c.createGain(); bed.gain.value = 0; bed.connect(comp);
-    const bedSyn = c.createGain(); bedSyn.connect(bed);
-    const bedRev = c.createGain(); bedRev.gain.value = 0.6; bedSyn.connect(bedRev); bedRev.connect(rev);
-    Object.assign(CINE, { c, bus, rev, bed, bedSyn });
+    Object.assign(CINE, { c, bus, bed });
     return CINE;
 }
-function cineRoute(node, wet, out) {
-    const G = cineGraph();
-    if (out) { node.connect(out); return; }
-    node.connect(G.bus);
-    if (wet) { const s = G.c.createGain(); s.gain.value = wet; node.connect(s); s.connect(G.rev); }
-}
-/* ===== الأصوات الحقيقية (تسجيلات mp3 في مجلد audio/ مولّدة بـ ElevenLabs) =====
-   إذا ملف ما توفر لأي سبب، نرجع للصوت المولّد من المتصفح كاحتياط */
-const CINE_SAMPLES = ["braam", "riser", "impact", "whoosh", "slam", "heartbeat", "go", "cheer", "whistle", "fireworks", "bed_epic", "bed_tension", "crowd"];
+function cineNow() { return cineGraph().c.currentTime + 0.02; }
+
+/* ===== مكتبة الأصوات الحقيقية =====
+   g: تسوية مستوى كل ملف (عشان كلها تطلع بنفس العلو تقريباً قبل ما نحدد مستواها في المشهد) */
+const CINE_FILES = {
+    braam: { g: 0.4 }, riser: { g: 0.65 }, impact: { g: 0.53 }, whoosh: { g: 1 }, slam: { g: 0.57 },
+    heartbeat: { g: 1 }, go: { g: 0.45 }, cheer: { g: 0.6 }, whistle: { g: 0.44 }, fireworks: { g: 0.7 },
+    buzz: { g: 1.3 }, correct: { g: 1 }, wrong: { g: 0.78 }, tick: { g: 1.4 }, timeout: { g: 0.85 },
+    bed_epic: { g: 0.9 }, bed_tension: { g: 0.65 }, crowd: { g: 0.85 }, lobby: { g: 0.62 }
+};
 const CINE_BUF = {};
 const CINE_LOADING = {};
 function cineLoadSamples() {
     let c;
     try { c = cineGraph().c; } catch (e) { return; }
-    CINE_SAMPLES.forEach(id => {
+    Object.keys(CINE_FILES).forEach(id => {
         if (CINE_BUF[id] || CINE_LOADING[id]) return;
         CINE_LOADING[id] = fetch("audio/" + id + ".mp3")
             .then(r => {
@@ -5857,124 +5798,35 @@ function cineLoadSamples() {
                 return r.arrayBuffer();
             })
             .then(ab => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
-            .then(b => {
-                CINE_BUF[id] = b;
-                if (/^bed_|^crowd$/.test(id) && BED.mood) bedLoopTo(cineBgOn ? BED.mood : "");
-            })
-            .catch(() => setTimeout(() => { delete CINE_LOADING[id]; }, 60000));
+            .then(b => { CINE_BUF[id] = b; if (BED.mood) bedLoopTo(cineBgOn ? BED.mood : ""); })
+            .catch(() => setTimeout(() => { delete CINE_LOADING[id]; }, 30000));
     });
 }
-/* يشغّل صوت حقيقي، ويرجع false إذا الملف ما تحمّل (عشان نستخدم الاحتياط)
-   o.tail: نشغّل آخر جزء بس (عشان الرايزر يخلص بالضبط لحظة الضربة)، o.dur: نقصّه بنعومة */
+/* يشغّل صوت حقيقي بمستوى v (0..1)
+   o.tail: نشغّل آخر جزء بس (الرايزر يخلص بالضبط لحظة الضربة)، o.dur: نقصّه بتلاشي ناعم */
 function cineS(id, t, v, o) {
     const b = CINE_BUF[id];
     if (!b) return false;
     try {
         const G = cineGraph(), c = G.c;
+        try { if (c.state === "suspended") c.resume(); } catch (e) {}
         const src = c.createBufferSource(); src.buffer = b;
-        const g = c.createGain(); g.gain.value = v == null ? 1 : v;
+        const g = c.createGain();
+        const vol = (v == null ? 1 : v) * ((CINE_FILES[id] || {}).g || 1);
+        g.gain.value = vol;
         src.connect(g); g.connect(G.bus);
-        if (o && o.wet) { const sd = c.createGain(); sd.gain.value = o.wet; g.connect(sd); sd.connect(G.rev); }
         const off = (o && o.tail) ? Math.max(0, b.duration - o.tail) : 0;
-        src.start(t, off);
+        src.start(t || cineNow(), off);
         if (o && o.dur) {
-            g.gain.setValueAtTime(g.gain.value, t + Math.max(0, o.dur - 0.4));
-            g.gain.linearRampToValueAtTime(0.0001, t + o.dur);
-            src.stop(t + o.dur + 0.05);
+            const st = t || cineNow();
+            g.gain.setValueAtTime(vol, st + Math.max(0, o.dur - 0.5));
+            g.gain.linearRampToValueAtTime(0.0001, st + o.dur);
+            src.stop(st + o.dur + 0.05);
         }
         return true;
     } catch (e) { return false; }
 }
-function cineReal() { return !!(CINE_BUF.braam && CINE_BUF.impact); }
-
-/* نغمة: {type,f,f1,a,d,peak,lp,lpPeak,lp1,det,wet,out} */
-function cineTone(t, o) {
-    try {
-        const c = cineGraph().c, a = o.a || 0.01, end = t + a + o.d;
-        const osc = c.createOscillator();
-        osc.type = o.type || "sine";
-        osc.frequency.setValueAtTime(o.f, t);
-        if (o.f1) osc.frequency.exponentialRampToValueAtTime(o.f1, end);
-        if (o.det) osc.detune.value = o.det;
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(o.peak, t + a);
-        g.gain.exponentialRampToValueAtTime(0.0001, end);
-        let n = osc;
-        if (o.lp) {
-            const f = c.createBiquadFilter(); f.type = "lowpass";
-            f.frequency.setValueAtTime(o.lp, t);
-            if (o.lpPeak) f.frequency.exponentialRampToValueAtTime(o.lpPeak, t + Math.min(0.4, a + o.d * 0.3));
-            if (o.lp1) f.frequency.exponentialRampToValueAtTime(o.lp1, end);
-            osc.connect(f); n = f;
-        }
-        n.connect(g); cineRoute(g, o.wet, o.out);
-        osc.start(t); osc.stop(end + 0.05);
-    } catch (e) {}
-}
-/* ضجيج مفلتر: {ft,f,f1,q,a,d,peak,wet,out} */
-function cineNoise(t, o) {
-    try {
-        const c = cineGraph().c, a = o.a || 0.004, end = t + a + o.d;
-        const src = c.createBufferSource(); src.buffer = fxNoiseBuf(c); src.loop = true;
-        const f = c.createBiquadFilter(); f.type = o.ft || "lowpass"; f.Q.value = o.q || 0.7;
-        f.frequency.setValueAtTime(o.f, t);
-        if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, end);
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(o.peak, t + a);
-        g.gain.exponentialRampToValueAtTime(0.0001, end);
-        src.connect(f); f.connect(g); cineRoute(g, o.wet, o.out);
-        src.start(t, Math.random() * 2); src.stop(end + 0.05);
-    } catch (e) {}
-}
-
-/* ===== مكتبة المؤثرات السينمائية ===== */
-function cineBoom(t, v) {
-    v = v || 1;
-    cineTone(t, { f: 95, f1: 26, a: 0.004, d: 2.3, peak: 0.9 * v, wet: 0.35 });
-    cineNoise(t, { ft: "lowpass", f: 500, f1: 50, a: 0.003, d: 1, peak: 0.55 * v, wet: 0.5 });
-}
-function cineBraam(t, v) {
-    v = v || 1;
-    [55, 55.5, 54.5, 110, 110.8, 82.4, 164.8].forEach(f =>
-        cineTone(t, { type: "sawtooth", f: f, a: 0.05, d: 2.8, peak: 0.1 * v, lp: 160, lpPeak: 1500, lp1: 220, wet: 0.7 }));
-    cineBoom(t, v);
-}
-function cineHit(t, v) {
-    v = v || 1;
-    cineNoise(t, { ft: "bandpass", f: 2800, q: 1.3, a: 0.002, d: 0.4, peak: 0.45 * v, wet: 0.8 });
-    cineTone(t, { type: "triangle", f: 200, f1: 70, a: 0.003, d: 0.6, peak: 0.45 * v, wet: 0.6 });
-    cineTone(t, { f: 75, f1: 32, a: 0.003, d: 0.9, peak: 0.7 * v });
-}
-function cineRiser(t, dur, v) {
-    v = v || 1;
-    cineNoise(t, { ft: "highpass", f: 250, f1: 7500, a: dur, d: 0.04, peak: 0.3 * v, wet: 0.5 });
-    cineTone(t, { type: "sawtooth", f: 150, f1: 1400, a: dur, d: 0.04, peak: 0.05 * v, lp: 2600, wet: 0.5 });
-    cineTone(t, { type: "sawtooth", f: 151.5, f1: 1415, a: dur, d: 0.04, peak: 0.04 * v, lp: 2600, wet: 0.5 });
-}
-function cineSwell(t, dur, v) { cineNoise(t, { ft: "highpass", f: 1200, f1: 6500, a: dur, d: 0.03, peak: 0.32 * (v || 1), wet: 0.7 }); }
-function cineWhoosh(t, v) { cineNoise(t, { ft: "bandpass", f: 300, f1: 3200, q: 1.1, a: 0.32, d: 0.5, peak: 0.42 * (v || 1), wet: 0.45 }); }
-function cineShimmer(t, v) {
-    for (let i = 0; i < 14; i++) cineTone(t + i * 0.06 + Math.random() * 0.04, { f: 1800 + Math.random() * 3400, a: 0.005, d: 0.6, peak: 0.045 * (v || 1), wet: 0.95 });
-}
-function cineHeart(t, v) {
-    v = v || 1;
-    cineTone(t, { f: 62, f1: 38, a: 0.005, d: 0.2, peak: 0.85 * v, lp: 200 });
-    cineTone(t + 0.21, { f: 56, f1: 36, a: 0.005, d: 0.25, peak: 0.6 * v, lp: 200 });
-}
-function cineDrone(t, dur, v) {
-    cineTone(t, { type: "sawtooth", f: 41.2, a: 0.9, d: dur, peak: 0.07 * (v || 1), lp: 220, wet: 0.6 });
-    cineTone(t, { type: "sawtooth", f: 61.7, a: 1.2, d: dur, peak: 0.04 * (v || 1), lp: 260, wet: 0.6 });
-}
-function cineFireworkSnd(t, v) {
-    v = v || 1;
-    cineTone(t, { f: 500, f1: 1700, a: 0.02, d: 0.7, peak: 0.035 * v, wet: 0.5 });
-    const b = t + 0.75;
-    cineNoise(b, { ft: "lowpass", f: 2400, f1: 150, a: 0.002, d: 0.9, peak: 0.5 * v, wet: 0.7 });
-    cineTone(b, { f: 80, f1: 30, a: 0.003, d: 0.6, peak: 0.5 * v });
-    for (let i = 0; i < 22; i++) cineNoise(b + 0.25 + Math.random() * 1.2, { ft: "highpass", f: 3000 + Math.random() * 3000, a: 0.001, d: 0.03, peak: 0.12 * v, wet: 0.6 });
-}
+function cinePlay(id, v, o) { return cineS(id, cineNow(), v, o); }
 
 /* ===== محرك الجسيمات (شرارات، جمر، قصاصات، ألعاب نارية) ===== */
 const CP = { cv: null, x: null, w: 0, h: 0, parts: [], raf: 0, emb: 0, last: 0, fw: 0 };
@@ -6008,11 +5860,10 @@ function cpConfetti(n) {
             r: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sw: Math.random() * 6, life: 6, max: 6, c: cols[i % cols.length], w: 5 + Math.random() * 5, h: 8 + Math.random() * 7 });
     }
 }
-function cpRocket(withSound) {
+function cpRocket() {
     if (CP.parts.length > cpMax() - 80) return;
     const cols = [["#facc15", "#fde68a", "#fff"], ["#38bdf8", "#93c5fd", "#fff"], ["#f97316", "#facc15", "#fff"], ["#a78bfa", "#38bdf8", "#fff"]];
     CP.parts.push({ k: "r", x: CP.w * (0.15 + Math.random() * 0.7), y: CP.h + 10, px: 0, py: 0, vx: (Math.random() - 0.5) * 60, vy: -(CP.h * 0.85 + Math.random() * CP.h * 0.35), life: 3, max: 3, cols: cols[Math.floor(Math.random() * cols.length)] });
-    if (withSound && !CINE_BUF.fireworks) cineFireworkSnd(cineNow(), 0.8);
 }
 function cpLoop(ts) {
     if (!CP.cv || !CP.cv.isConnected) { CP.raf = 0; CP.cv = null; CP.parts = []; CP.emb = 0; CP.fw = 0; return; }
@@ -6023,7 +5874,7 @@ function cpLoop(ts) {
     if (CP.emb && CP.parts.length < cpMax() && Math.random() < CP.emb) {
         CP.parts.push({ k: "e", x: Math.random() * W, y: H + 5, vx: (Math.random() - 0.5) * 20, vy: -(25 + Math.random() * 55), life: 4 + Math.random() * 4, max: 8, c: Math.random() < 0.8 ? "#facc15" : "#7dd3fc", w: 0.8 + Math.random() * 1.8, ph: Math.random() * 6 });
     }
-    if (CP.fw && ts > CP.fw) { cpRocket(true); CP.fw = ts + 450 + Math.random() * 650; }
+    if (CP.fw && ts > CP.fw) { cpRocket(); CP.fw = ts + 450 + Math.random() * 650; }
     const keep = [];
     for (const p of CP.parts) {
         p.life -= dt;
@@ -6135,15 +5986,16 @@ function cineOpening(d) {
 <div class="cine-skip">اضغط للتخطي</div>`, 6000);
     if (!el) return;
     CP.emb = 0.35;
-    cineAt(el, 0, () => { const t = cineNow(); if (!cineS("riser", t, 0.9, { tail: 1.5 })) { cineRiser(t, 1.45); cineDrone(t, 5); cineShimmer(t + 0.4, 0.6); } });
-    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); const t = cineNow(); cineS("braam", t, 1) || cineBraam(t); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
-    cineAt(el, 2.3, () => { cineOn(el, ".cine-big"); const t = cineNow(); cineS("whoosh", t, 0.8) || (cineHit(t, 0.6), cineShimmer(t)); });
-    cineAt(el, 3.3, () => { cineOn(el, ".cine-onair"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.5); cineS("cheer", t + 0.2, 0.45, { dur: 3 }); });
-    cineAt(el, 4.6, () => { const t = cineNow(); cineS("riser", t, 0.7, { tail: 0.7 }) || cineRiser(t, 0.7, 0.7); });
-    cineAt(el, 5.3, () => { const t = cineNow(); cineS("impact", t, 0.8) || cineHit(t, 0.7); cineFlash(el, 1, 650); });
+    cineAt(el, 0, () => cinePlay("riser", 0.7, { tail: 1.5 }));
+    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
+    cineAt(el, 2.3, () => { cineOn(el, ".cine-big"); cinePlay("whoosh", 0.6); });
+    cineAt(el, 3.3, () => cineOn(el, ".cine-onair"));
+    cineAt(el, 4.6, () => cinePlay("riser", 0.5, { tail: 0.7 }));
+    cineAt(el, 5.3, () => { cinePlay("impact", 0.6); cineFlash(el, 1, 650); });
 }
 
-/* ===== المشهد السينمائي بين كل مباراة ومباراة ===== */
+/* ===== المشهد السينمائي بين كل مباراة ومباراة =====
+   ترتيب الأصوات (صوت واحد بكل لحظة): تصاعد ← براام ← ووش لكل لاعب ← رعد VS ← ووش للمشهد */
 function cineMatchIntro(d) {
     const o = bcCur(d);
     if (!o) return;
@@ -6163,27 +6015,17 @@ function cineMatchIntro(d) {
 <div class="cine-skip">اضغط للتخطي</div>`, 7000);
     if (!el) return;
     CP.emb = 0.4;
-    /* 0.0: ظلام، أشرطة سينما، إضاءات، رايزر */
-    cineAt(el, 0, () => { const t = cineNow(); if (!cineS("riser", t, 0.9, { tail: 1.5 })) { cineRiser(t, 1.45); cineDrone(t, 6); cineShimmer(t + 0.3, 0.6); } });
-    /* 1.5: براااام + وميض + اهتزاز + عنوان المباراة */
-    cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); const t = cineNow(); cineS("braam", t, 1) || cineBraam(t); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
-    cineAt(el, 2.85, () => { const t = cineNow(); cineS("whoosh", t, 0.9) || cineWhoosh(t); });
-    /* 3.1 و 3.45: دخول اللاعبين */
-    cineAt(el, 3.1, () => { cineOn(el, ".cine-p.p1"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.65); cpSpark(CP.w * 0.78, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
-    cineAt(el, 3.3, () => { const t = cineNow(); cineS("riser", t, 0.8, { tail: 0.7 }) || cineSwell(t, 0.7); });
-    cineAt(el, 3.45, () => { cineOn(el, ".cine-p.p2"); const t = cineNow(); cineS("impact", t, 0.55) || cineHit(t, 0.65); cpSpark(CP.w * 0.22, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
-    /* 4.0: VS ينضرب في النص + برق + موجة صدمة */
+    cineAt(el, 0, () => cinePlay("riser", 0.7, { tail: 1.5 }));
+    cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
+    cineAt(el, 3.1, () => { cineOn(el, ".cine-p.p1"); cinePlay("whoosh", 0.7); cpSpark(CP.w * 0.78, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
+    cineAt(el, 3.45, () => { cineOn(el, ".cine-p.p2"); cinePlay("whoosh", 0.7); cpSpark(CP.w * 0.22, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
     cineAt(el, 4.0, () => {
-        cineOn(el, ".cine-vs");
-        const t = cineNow();
-        if (cineS("slam", t, 1)) { cineS("cheer", t + 0.15, 0.5, { dur: 3.5 }); } else { cineBoom(t, 1.1); cineHit(t, 1); cineBraam(t + 0.02, 0.5); }
+        cineOn(el, ".cine-vs"); cinePlay("slam", 1);
         cineFlash(el, 0.95, 500); cineFlash(el, 0.5, 900, "#38bdf8"); cineShake(17);
         cpSpark(CP.w / 2, CP.h * 0.48, 140, null, 520);
     });
-    cineAt(el, 4.4, () => { cineOn(el, ".cine-of"); if (!cineReal()) cineShimmer(cineNow()); });
-    /* 5.7: رايزر أخير ← وميض أبيض ويبدأ المشهد */
-    cineAt(el, 5.7, () => { const t = cineNow(); cineS("riser", t, 0.7, { tail: 0.7 }) || cineRiser(t, 0.7, 0.7); });
-    cineAt(el, 6.4, () => { const t = cineNow(); cineS("impact", t, 0.7) || cineHit(t, 0.6); cineFlash(el, 1, 650); });
+    cineAt(el, 4.4, () => cineOn(el, ".cine-of"));
+    cineAt(el, 6.4, () => { cinePlay("whoosh", 0.6); cineFlash(el, 1, 650); });
 }
 
 /* ===== "انطلق!" لحظة بداية الأسئلة ===== */
@@ -6191,19 +6033,19 @@ function cineGo() {
     cineReady();
     const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, 1400);
     if (!el) return;
-    const t = cineNow();
-    if (!cineS("go", t, 1)) { cineHit(t, 1); cineBoom(t, 0.7); cineShimmer(t + 0.05, 0.7); }
+    cinePlay("impact", 0.8);
     cineFlash(el, 0.6, 350); cineShake(9);
     setTimeout(() => cpSpark(CP.w / 2, CP.h * 0.45, 90, null, 450), 30);
 }
 
-/* ===== احتفال النتيجة ===== */
+/* ===== احتفال النتيجة: صافرة ← هتاف مع قصاصات ===== */
 function cineResult() {
     cineReady();
+    cinePlay("whistle", 0.8);
     const el = cineOverlay("fxonly", "", 6500);
     if (!el) return;
-    cineAt(el, 0.85, () => { const t = cineNow(); if (cineS("impact", t, 0.8)) cineS("cheer", t + 0.1, 0.9); else { cineBoom(t, 0.9); cineShimmer(t + 0.1); } cineFlash(el, 0.5, 500, "#facc15"); cineShake(8); cpConfetti(150); cpSpark(CP.w / 2, CP.h * 0.35, 80); });
-    cineAt(el, 2.2, () => { cpConfetti(90); if (!cineReal()) cineShimmer(cineNow(), 0.6); });
+    cineAt(el, 1.1, () => { cinePlay("cheer", 0.45, { dur: 4.5 }); cineFlash(el, 0.5, 500, "#facc15"); cineShake(8); cpConfetti(150); cpSpark(CP.w / 2, CP.h * 0.35, 80); });
+    cineAt(el, 2.4, () => cpConfetti(90));
 }
 
 /* ===== ألعاب نارية في ختام الجولة ===== */
@@ -6211,28 +6053,30 @@ function cineClosing() {
     cineReady();
     const el = cineOverlay("fxonly", "", 9000);
     if (!el) return;
-    cineAt(el, 0.6, () => {
-        const t = cineNow();
-        if (cineS("fireworks", t, 0.9)) cineS("cheer", t + 0.5, 0.6); else cineBoom(t, 0.8);
-        cpConfetti(120); CP.fw = performance.now() + 300;
-    });
-    cineAt(el, 6.5, () => { CP.fw = 0; });
+    cineAt(el, 0.6, () => { cinePlay("fireworks", 0.7); cpConfetti(120); CP.fw = performance.now() + 300; });
+    cineAt(el, 7.5, () => { CP.fw = 0; });
 }
 
-/* ===== الموسيقى الخلفية الحية ===== */
-const CINE_BEAT = 60 / 84;
-const BED = { mood: "", timer: null, next: 0, step: 0, duck: false };
-/* Dm - Bb - F - C */
-const BED_CHORDS = [[73.42, 110, 146.83, 174.61], [58.27, 87.31, 116.54, 146.83], [87.31, 130.81, 174.61, 220], [65.41, 98, 130.81, 164.81]];
+/* ===== الموسيقى الخلفية الحقيقية =====
+   lobby: انتظار قبل البث · epic: بين المباريات · tension: وقت الأسئلة */
+const BED = { mood: "", duck: false };
+const BEDS = { cur: null };
+const BED_MIX = {
+    lobby:   [["lobby", 0.6]],
+    epic:    [["bed_epic", 0.5], ["crowd", 0.08]],
+    tension: [["bed_tension", 0.4]]
+};
 function bedMoodFor(d) {
-    if (!d || d.status !== "live") return "";
+    if (!d) return "";
+    if (d.status === "scheduled") return "lobby";
+    if (d.status !== "live") return "";
     return (d.scene === "countdown" || d.scene === "playing") ? "tension" : "epic";
 }
 function bedTarget() {
     if (!cineBgOn || !BED.mood) return 0;
-    let v = BED.mood === "tension" ? 0.6 : 0.8;
+    let v = 0.8;
     if (bcTrack && !bcSelfMuted) v *= 0.5;   /* مايكك مفتوح: نخفضها عشان ما تدخل المايك */
-    if (BED.duck) v *= 0.35;                  /* المذيع يتكلم */
+    if (BED.duck) v *= 0.3;                   /* المذيع يتكلم */
     return v;
 }
 function bedApply() {
@@ -6243,89 +6087,48 @@ function bedApply() {
     } catch (e) {}
 }
 function bedDuck(on) { if (BED.duck !== on) { BED.duck = on; bedApply(); } }
-/* الموسيقى الحقيقية: لوب ملحمي/تشويقي + أجواء جمهور، مع تلاشي ناعم بين المودات */
-const BEDS = { cur: null };
-function bedReal(mood) { return mood === "epic" ? !!CINE_BUF.bed_epic : (mood === "tension" ? !!CINE_BUF.bed_tension : false); }
 function bedLoopTo(mood) {
     try {
         const G = cineGraph(), c = G.c, t = c.currentTime;
-        if (BEDS.cur && BEDS.cur.mood === mood) return;
+        if (BEDS.cur && BEDS.cur.mood === mood && BEDS.cur.n === BEDS.cur.nodes.length) return;
         if (BEDS.cur) {
-            BEDS.cur.nodes.forEach(n => { n.g.gain.cancelScheduledValues(t); n.g.gain.setTargetAtTime(0.0001, t, 0.5); try { n.src.stop(t + 3); } catch (e) {} });
+            BEDS.cur.nodes.forEach(x => { x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0.0001, t, 0.6); try { x.src.stop(t + 3); } catch (e) {} });
             BEDS.cur = null;
         }
-        if (!mood || !bedReal(mood)) return;
+        const mix = BED_MIX[mood];
+        if (!mix) return;
         const nodes = [];
-        const add = (id, vol) => {
+        mix.forEach(([id, vol]) => {
             const b = CINE_BUF[id];
             if (!b) return;
+            const v = vol * ((CINE_FILES[id] || {}).g || 1);
             const src = c.createBufferSource(); src.buffer = b; src.loop = true;
-            const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.setTargetAtTime(vol, t, 0.7);
-            src.connect(g); g.connect(G.bed); src.start(t, Math.random() * b.duration * 0.5);
+            const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.setTargetAtTime(v, t, 0.8);
+            src.connect(g); g.connect(G.bed); src.start(t);
             nodes.push({ src, g });
-        };
-        add(mood === "epic" ? "bed_epic" : "bed_tension", mood === "epic" ? 0.55 : 0.45);
-        add("crowd", mood === "epic" ? 0.35 : 0.15);
-        BEDS.cur = { mood, nodes };
+        });
+        BEDS.cur = { mood, nodes, n: mix.length };
     } catch (e) {}
 }
 function bedSet(mood) {
-    if (mood !== BED.mood) BED.mood = mood;
+    BED.mood = mood;
     bedApply();
     bedLoopTo(cineBgOn ? mood : "");
-    if (mood && !BED.timer) {
-        BED.next = cineGraph().c.currentTime + 0.15; BED.step = 0;
-        BED.timer = setInterval(bedPump, 100);
-    } else if (!mood && BED.timer) {
-        clearInterval(BED.timer); BED.timer = null;
-    }
-}
-function bedPump() {
-    const c = cineGraph().c;
-    if (c.state !== "running" || !BED.mood || !cineBgOn) { BED.next = c.currentTime + 0.15; return; }
-    if (BED.next < c.currentTime) BED.next = c.currentTime + 0.05;
-    const e = CINE_BEAT / 2;
-    if (bedReal(BED.mood)) { BED.next = c.currentTime + 0.15; return; }   /* الموسيقى الحقيقية شغالة */
-    while (BED.next < c.currentTime + 0.35) { bedStep(BED.step, BED.next, e); BED.step++; BED.next += e; }
-}
-function bedStep(s, t, e) {
-    const out = cineGraph().bedSyn, bar = Math.floor(s / 8), pos = s % 8;
-    if (BED.mood === "epic") {
-        const ch = BED_CHORDS[bar % 4];
-        if (pos === 0) {
-            /* وتريات/باد ملحمي */
-            ch.forEach(f => [-7, 7].forEach(dt => cineTone(t, { type: "sawtooth", f: f * 2, det: dt, a: 0.8, d: e * 8 - 0.5, peak: 0.016, lp: 1100, out })));
-            cineTone(t, { type: "triangle", f: ch[0], a: 0.05, d: e * 8, peak: 0.13, out });
-        }
-        /* طبول تايكو */
-        if (pos === 0 || pos === 3 || pos === 4) {
-            const acc = pos === 0 ? 1 : 0.6;
-            cineTone(t, { f: 115, f1: 42, a: 0.004, d: 0.5, peak: 0.32 * acc, out });
-            cineNoise(t, { ft: "lowpass", f: 1000, f1: 140, a: 0.002, d: 0.22, peak: 0.16 * acc, out });
-        }
-        if (pos === 6 && bar % 2 === 1) cineNoise(t, { ft: "bandpass", f: 900, q: 2, a: 0.002, d: 0.12, peak: 0.12, out });
-        /* أربيجيو لامع */
-        cineTone(t, { type: "triangle", f: ch[(pos * 3) % 4] * 4, a: 0.005, d: 0.32, peak: pos % 2 ? 0.012 : 0.02, out });
-    } else {
-        /* تشويق: نبض منخفض + تكتكة + درون متنافر */
-        if (pos % 2 === 0) cineTone(t, { f: 58, f1: 44, a: 0.005, d: 0.32, peak: pos === 0 ? 0.32 : 0.2, lp: 180, out });
-        cineNoise(t, { ft: "highpass", f: 7500, a: 0.001, d: 0.03, peak: pos % 2 ? 0.025 : 0.045, out });
-        if (pos === 0 && bar % 2 === 0) {
-            cineTone(t, { type: "sawtooth", f: 55, a: 1.4, d: e * 16 - 1.2, peak: 0.035, lp: 380, out });
-            cineTone(t, { type: "sawtooth", f: 58.27, a: 1.6, d: e * 16 - 1.4, peak: 0.025, lp: 380, out });
-        }
-        if (pos === 0 && bar % 4 === 2) {
-            cineTone(t, { type: "triangle", f: 880, a: 1.8, d: e * 14, peak: 0.008, out });
-            cineTone(t, { type: "triangle", f: 932.3, a: 2, d: e * 14, peak: 0.006, out });
-        }
-        if (pos === 4 && bar % 4 === 3) cineSwell(t, e * 4 - 0.05, 0.35);
-    }
 }
 function bcToggleBg() {
     cineBgOn = !cineBgOn;
     try { localStorage.setItem("bcBgOn", cineBgOn ? "1" : "0"); } catch (e) {}
     cineReady(); bedSet(BED.mood);
     liveLastSig = ""; renderLiveScreen();
+}
+
+/* مؤثرات تلقائية حسب أحداث المباراة (أصوات حقيقية بس) */
+function bcAutoFx(d) {
+    const view = { phase: d.phase, q: d.qIndex, last: d.lastAnswer };
+    const p = bcAutoFx.prev;
+    bcAutoFx.prev = view;
+    if (!p || d.status !== "live") return;
+    if (view.phase === "reveal" && p.phase !== "reveal" && !d.outcome && view.last && view.last.timeout) cinePlay("timeout", 0.6);
 }
 
 /* =====================================================================
@@ -6532,7 +6335,6 @@ function openLiveScreen(id) {
     livePrevView = null;
     bcPrevKey = null;
     bcLastSpokenKey = "";
-    bcLastSfxN = null;
     bcAutoFx.prev = null;
     scr.classList.add("open");
     document.body.classList.add("live-open");
@@ -6566,13 +6368,14 @@ function closeLiveScreen(fromPop) {
 function liveTick() {
     const d = liveMatchesCache[openLiveId];
     if (!d) return;
+    if (d.status === "scheduled") { bcTickClock(d); return; }
     const left = Math.max(0, (d.deadline || 0) - Date.now());
     if (d.scene === "countdown") {
         const el = document.getElementById("lvCount");
         const n = Math.max(1, Math.ceil((left - 500) / 1000));
         if (el && el.textContent !== String(n)) {
-            el.textContent = n; liveBeep(520, 0.12);
-            { const t = cineNow(); cineS("heartbeat", t, 1) || cineHeart(t, 0.9); }
+            el.textContent = n;
+            cinePlay("heartbeat", 0.9);
             el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
         }
     } else if (d.scene === "playing") {
@@ -6590,6 +6393,28 @@ function liveTick() {
     liveAdvanceIfDue();
 }
 
+/* عداد البث المجدول: ساعات:دقايق:ثواني، وآخر 10 ثواني تكتكة ونبض */
+let bcClockLast = -1;
+function bcTickClock(d) {
+    const left = Math.max(0, (d.startAt || 0) - Date.now());
+    const sec = Math.ceil(left / 1000);
+    const el = document.getElementById("bcClock");
+    if (el && sec !== bcClockLast) {
+        bcClockLast = sec;
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+        const p = n => String(n).padStart(2, "0");
+        el.innerHTML = `<div><b>${p(h)}</b><i>ساعة</i></div><span>:</span><div><b>${p(m)}</b><i>دقيقة</i></div><span>:</span><div><b class="sec">${p(x)}</b><i>ثانية</i></div>`;
+        el.classList.toggle("final", sec <= 10 && sec > 0);
+        if (sec <= 10 && sec > 0) cinePlay(sec <= 3 ? "heartbeat" : "tick", sec <= 3 ? 0.9 : 0.6);
+        if (sec === 0) {
+            el.innerHTML = `<div class="now">الحين!</div>`;
+            const lb = document.getElementById("bcWaitNote");
+            if (lb) lb.textContent = isAdmin ? "جاري بدء البث..." : "بانتظار المنظم يبدأ البث...";
+        }
+    }
+    if (left <= 0 && isAdmin) bcGoLive(false);
+}
+
 /* لقطة انتقالية بين المشاهد (ستينجر) */
 function bcStinger(title, sub) {
     const scr = document.getElementById("liveScreen");
@@ -6600,7 +6425,7 @@ function bcStinger(title, sub) {
     el.className = "bc-stinger";
     el.innerHTML = `<div class="bc-st-band"></div><div class="bc-st-txt"><div class="t">${escapeHTML(title)}</div>${sub ? `<div class="s">${escapeHTML(sub)}</div>` : ""}</div>`;
     scr.appendChild(el);
-    cineS("whoosh", cineNow(), 0.9) || liveWhoosh();
+    cinePlay("whoosh", 0.6);
     setTimeout(() => el.remove(), 1700);
 }
 
@@ -6611,25 +6436,25 @@ function bcSceneEffects(d) {
     /* لو فتحت البث متأخر، نعرض المشهد السينمائي بس إذا بدأ قبل لحظات */
     const fresh = ms => Math.abs(Date.now() - (d.sceneAt || 0)) < ms;
     if (prev === null) {
-        if (d.status === "live" && d.scene === "opening") { if (fresh(8000)) cineOpening(d); else setTimeout(liveFanfare, 150); }
+        if (d.status === "live" && d.scene === "opening") { if (fresh(8000)) cineOpening(d); }
         else if (d.status === "live" && d.scene === "intro" && fresh(5000)) cineMatchIntro(d);
         return;
     }
     if (prev === key || d.status !== "live") return;
     const o = bcCur(d);
     const prevScene = prev.split(":")[1];
-    if (d.scene === "intro" && o) {
+    if (d.scene === "opening") {
+        cineOpening(d);
+    } else if (d.scene === "intro" && o) {
         cineMatchIntro(d);
     } else if (d.scene === "playing" && prevScene === "countdown") {
         cineGo();
     } else if (d.scene === "result") {
-        cineS("whistle", cineNow(), 0.9) || liveWhistle();
         setTimeout(() => bcStinger("صافرة النهاية", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
         cineResult();
     } else if (d.scene === "closing") {
         cineCloseAll();
         bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج");
-        if (!cineReal()) setTimeout(liveFanfare, 700);
         cineClosing();
     }
 }
@@ -6643,7 +6468,7 @@ function renderLiveScreen() {
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, bcFxOpen ? 1 : 0, cineBgOn ? 1 : 0].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -6655,7 +6480,8 @@ function renderLiveScreen() {
     }
 
     const scrEl = document.getElementById("liveScreen");
-    if (scrEl) scrEl.dataset.scene = d.status === "live" ? (d.scene || "") : "ended";
+    if (scrEl) scrEl.dataset.scene = d.status === "live" ? (d.scene || "") : (d.status === "scheduled" ? "waiting" : "ended");
+    bcClockLast = -1;
     bcSceneEffects(d);
     bedSet(bedMoodFor(d));
     bcAnnouncer(d);
@@ -6664,13 +6490,16 @@ function renderLiveScreen() {
     else livePrevView = null;
 
     const live = d.status === "live";
+    const sched = d.status === "scheduled";
     const o = bcCur(d);
     const total = (d.order || []).length;
-    let html = `
+    let html = sched ? `<div class="bc-wavebg"><svg class="w1" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 0 300 120 450 60 S750 0 900 60 1050 120 1200 60 V120 H0Z"/></svg><svg class="w2" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 120 300 0 450 60 S750 120 900 60 1050 0 1200 60 V120 H0Z"/></svg><svg class="w3" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70 C200 20 400 110 600 60 S1000 20 1200 70 V120 H0Z"/></svg></div>` : "";
+    html += `
 <div class="lv-top">
 <button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button>
-<span class="lv-badge ${live ? "" : "off"}"><span class="dot"></span>${live ? "على الهواء" : "انتهى البث"}</span>
+<span class="lv-badge ${live ? "" : (sched ? "soon" : "off")}"><span class="dot"></span>${live ? "على الهواء" : (sched ? "قريباً" : "انتهى البث")}</span>
 <span class="lv-round">الجولة ${escapeHTML(String(d.round || ""))}${live ? ` · ${ic("users")} <b id="bcListeners">…</b>` : ""}</span>
+${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic("power")} ${sched ? "إلغاء" : "إنهاء البث"}</button>` : ""}
 </div>`;
 
     if (live && o && (d.scene === "countdown" || d.scene === "playing" || d.scene === "result")) {
@@ -6698,12 +6527,9 @@ function liveSoundsOnChange(d) {
     const p = livePrevView;
     livePrevView = view;
     if (!p) return;
-    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed) liveBellSound();
-    if (view.phase === "reveal" && p.phase !== "reveal") {
-        if (view.out) { liveBeep(880, 0.15); setTimeout(() => liveBeep(1175, 0.25), 140); }
-        else liveBeep(220, 0.35, "sawtooth");
-    }
-    if (view.phase === "answer" && d.passed && p.ans !== view.ans) liveBeep(330, 0.25, "square");
+    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed) cinePlay("buzz", 0.7);
+    if (view.phase === "reveal" && p.phase !== "reveal") cinePlay(view.out ? "correct" : "wrong", 0.7);
+    if (view.phase === "answer" && d.passed && p.ans !== view.ans) cinePlay("wrong", 0.5);
 }
 
 /* شريط "على الهواء": المتكلمين + التحكم بمايكي */
@@ -6729,7 +6555,7 @@ function bcOnAirHTML(d) {
     }
     const voiceBtn = `<button class="bc-voicebtn ${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()">${ic(bcVoiceOn ? "volume-2" : "volume-x")} المذيع</button>`;
     const bgBtn = `<button class="bc-voicebtn ${cineBgOn ? "" : "off"}" onclick="bcToggleBg()">${ic("music")} الخلفية</button>`;
-    return `<div class="bc-onair"><div class="bc-onair-h"><span><span class="dot"></span> على الهواء</span><span style="display:flex;gap:5px;">${bgBtn}${voiceBtn}</span></div><div class="bc-spks">${items}</div>${ctl}${bcFxPanelHTML()}</div>`;
+    return `<div class="bc-onair"><div class="bc-onair-h"><span><span class="dot"></span> على الهواء</span><span style="display:flex;gap:5px;">${bgBtn}${voiceBtn}</span></div><div class="bc-spks">${items}</div>${ctl}</div>`;
 }
 
 function bcFixturesHTML(d, withScores) {
@@ -6752,6 +6578,21 @@ function bcStageHTML(d, me) {
     const o = bcCur(d);
     const total = (d.order || []).length;
     const adminBar = btns => isAdmin ? `<div class="bc-admin">${btns}<button class="lv-link" onclick="bcEnd()">إنهاء البث</button></div>` : "";
+
+    if (d.status === "scheduled") {
+        return `
+<div class="bc-wait">
+<img src="logo.png" class="bc-wait-logo" alt="">
+<div class="bc-wait-k">دوري بنو مسروح للنخبة</div>
+<div class="bc-title">بث الجولة ${escapeHTML(String(d.round))}</div>
+<div class="bc-wait-t">يبدأ البث بعد</div>
+<div class="bc-clock" id="bcClock"></div>
+<div class="bc-wait-at">${ic("hourglass")} الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))}</div>
+<div class="lv-muted" id="bcWaitNote">${isAdmin ? "البث يبدأ لحاله أول ما يخلص العداد وأنت فاتح هالشاشة" : "خلك هنا، والبث يبدأ أول ما يخلص العداد"}</div>
+</div>
+<div class="bc-fixtures">${bcFixturesHTML(d, false)}</div>
+${isAdmin ? `<div class="bc-admin"><button class="bc-go" onclick="bcGoLive(true)">${ic("zap")} ابدأ البث الحين</button></div>` : ""}`;
+    }
 
     if (d.status !== "live") {
         const done = (d.order || []).filter(x => x.state === "done").length;
