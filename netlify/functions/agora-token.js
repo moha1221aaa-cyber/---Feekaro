@@ -1,6 +1,7 @@
 const { RtcTokenBuilder, RtcRole } = require("agora-token");
 
-const CHANNEL = "masro7_main_room";
+/* القنوات المسموحة: الغرفة الصوتية + صوت بث الجولة */
+const CHANNELS = ["masro7_main_room", "masro7_live_round"];
 const TTL_SECONDS = 60 * 60 * 24;
 const HEX32 = /^[0-9a-fA-F]{32}$/;
 
@@ -18,7 +19,10 @@ const fail = (message) => ({
   body: JSON.stringify({ error: message })
 });
 
-exports.handler = async () => {
+exports.handler = async (event) => {
+  const q = (event && event.queryStringParameters) || {};
+  const channel = CHANNELS.indexOf(q.channel) !== -1 ? q.channel : CHANNELS[0];
+
   const appId = clean(process.env.AGORA_APP_ID);
   const appCertificate = clean(process.env.AGORA_APP_CERTIFICATE);
 
@@ -36,7 +40,7 @@ exports.handler = async () => {
     const token = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
-      CHANNEL,
+      channel,
       0,
       RtcRole.PUBLISHER,
       TTL_SECONDS,
