@@ -33,7 +33,6 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/.netlify/") ||
     url.pathname.startsWith("/agora-token") ||
     url.pathname.startsWith("/tts") ||
-    url.pathname.startsWith("/sfx-gen") ||
     req.headers.get("accept")?.includes("text/event-stream")
   ) {
     return;
