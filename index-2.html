@@ -5548,15 +5548,14 @@ function bcAText(d, i) {
     return q ? `الإجابة الصحيحة: ${String(q.answer || "").split("|")[0]}` : "";
 }
 
-function bcRevealText(d, i, outcome) {
-    return (outcome ? `إجابة صحيحة من ${livePlayerName(d, outcome)}. ` : "محد جاوب صح. ") + bcAText(d, i);
-}
-/* أول ما تبدأ المباراة نحمّل أصوات أسئلتها كلها مسبقاً */
+function bcRevealText(d, i) { return bcAText(d, i); }
+/* أول ما تبدأ المباراة، جهاز المنظم بس يجهّز أصوات الأسئلة مسبقاً (تنحفظ في الكاش)،
+   وبعدها كل الأجهزة تاخذها من الكاش. كذا كل جملة تنحسب من رصيد الأصوات مرة وحدة بس */
 function bcPrefetchVoice(d) {
-    if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d)) return;
+    if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d) || !amBcHost(d)) return;
     (d.questions || []).forEach((q, i) => {
         bcTtsLoad(bcQText(d, i)).catch(() => {});
-        [1, 2, 0].forEach(w => bcTtsLoad(bcRevealText(d, i, w)).catch(() => {}));
+        bcTtsLoad(bcRevealText(d, i)).catch(() => {});
     });
 }
 
@@ -5574,7 +5573,7 @@ function bcAnnouncer(d) {
         key = "q" + d.cur + "_" + d.qIndex; text = bcQText(d, d.qIndex);
     } else if (d.scene === "playing" && d.phase === "reveal") {
         key = "a" + d.cur + "_" + d.qIndex;
-        text = bcRevealText(d, d.qIndex, d.outcome);
+        text = bcRevealText(d, d.qIndex);
     } else if (d.scene === "result" && o) {
         const s1 = d.s1 || 0, s2 = d.s2 || 0;
         key = "res" + d.cur;

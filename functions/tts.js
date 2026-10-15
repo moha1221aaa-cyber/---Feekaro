@@ -1,95 +1,73 @@
-/* صوت المذيع: يحوّل نص السؤال لصوت بشري (Google Text-to-Speech)
-   - يحتاج سر TTS_KEY (مفتاح API من مشروع الدوري في Google Cloud) في Cloudflare Pages
-     (أو GCP_SA: حساب خدمة بصيغة JSON، كبديل)
-   - كل جملة تنحفظ في كاش Cloudflare، فنفس السؤال ما ينطلب من Google مرتين */
+/* صوت المذيع: يحوّل نص السؤال لصوت بشري
+   - الأساسي: ElevenLabs (سر ELEVEN_KEY في Cloudflare Pages، والصوت من ELEVEN_VOICE أو الافتراضي تحت)
+   - احتياط: Google Text-to-Speech لو انضاف سر TTS_KEY
+   - كل جملة تنحفظ في كاش Cloudflare 30 يوم، فنفس السؤال ما ينحسب من الرصيد مرتين */
 
 const MAX_CHARS = 300;
-const VOICES = ["ar-XA-Chirp3-HD-Charon", "ar-XA-Wavenet-B", "ar-XA-Standard-B"];
-
-let cachedToken = null, tokenExp = 0;
-
-const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-const b64urlStr = (s) => b64url(new TextEncoder().encode(s));
-
-async function googleToken(sa) {
-  if (cachedToken && Date.now() < tokenExp - 60000) return cachedToken;
-  const now = Math.floor(Date.now() / 1000);
-  const header = b64urlStr(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claim = b64urlStr(JSON.stringify({
-    iss: sa.client_email, scope: "https://www.googleapis.com/auth/cloud-platform",
-    aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600
-  }));
-  const pem = sa.private_key.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
-  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(header + "." + claim));
-  const jwt = header + "." + claim + "." + b64url(sig);
-  const r = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=" + jwt
-  });
-  const d = await r.json();
-  if (!d.access_token) throw new Error("Google auth: " + (d.error_description || d.error || r.status));
-  cachedToken = d.access_token;
-  tokenExp = Date.now() + (d.expires_in || 3600) * 1000;
-  return cachedToken;
-}
+const DEFAULT_ELEVEN_VOICE = "pNInz6obpgDQGcFmaJgB"; /* يتغيّر بعد ما يختار محمد الصوت */
+const ELEVEN_MODEL = "eleven_multilingual_v2";
 
 const err = (status, msg) => new Response(JSON.stringify({ error: msg }), {
   status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
 });
 
+async function eleven(env, text) {
+  const voice = (env.ELEVEN_VOICE || DEFAULT_ELEVEN_VOICE).trim();
+  const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voice) + "?output_format=mp3_44100_64", {
+    method: "POST",
+    headers: { "xi-api-key": env.ELEVEN_KEY.trim(), "Content-Type": "application/json", "Accept": "audio/mpeg" },
+    body: JSON.stringify({
+      text,
+      model_id: ELEVEN_MODEL,
+      voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true }
+    })
+  });
+  if (!r.ok) {
+    let m = String(r.status);
+    try { const d = await r.json(); m = (d.detail && (d.detail.message || d.detail.status || JSON.stringify(d.detail))) || m; } catch (e) {}
+    throw new Error("ElevenLabs: " + m);
+  }
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+async function google(env, text, origin) {
+  const r = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize?key=" + encodeURIComponent(env.TTS_KEY.trim()), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Referer": origin + "/" },
+    body: JSON.stringify({ input: { text }, voice: { languageCode: "ar-XA", name: env.TTS_VOICE || "ar-XA-Wavenet-B" }, audioConfig: { audioEncoding: "MP3" } })
+  });
+  const d = await r.json();
+  if (!d.audioContent) throw new Error("Google: " + ((d.error && d.error.message) || r.status));
+  return Uint8Array.from(atob(d.audioContent), (c) => c.charCodeAt(0));
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  /* بس صفحات موقع الدوري تقدر تطلب صوت (عشان ما يستخدمه غيرنا ويستهلك الحصة) */
+  /* بس صفحات موقع الدوري تقدر تطلب صوت (عشان ما يستخدمه غيرنا ويخلص الرصيد) */
   const from = request.headers.get("Origin") || request.headers.get("Referer") || "";
-  if (from && new URL(from).host !== url.host) return err(403, "forbidden");
+  try { if (from && new URL(from).host !== url.host) return err(403, "forbidden"); } catch (e) { return err(403, "forbidden"); }
 
   const text = (url.searchParams.get("t") || "").trim().slice(0, MAX_CHARS);
   if (!text) return err(400, "no text");
 
+  const engine = env.ELEVEN_KEY ? "el:" + (env.ELEVEN_VOICE || DEFAULT_ELEVEN_VOICE) : (env.TTS_KEY ? "g:" + (env.TTS_VOICE || "") : "");
+  if (!engine) return err(503, "TTS not configured");
+
   const cache = caches.default;
-  const cacheKey = new Request(url.origin + "/tts?t=" + encodeURIComponent(text) + "&v=" + (env.TTS_VOICE || VOICES[0]));
+  const cacheKey = new Request(url.origin + "/tts-cache?e=" + encodeURIComponent(engine) + "&t=" + encodeURIComponent(text));
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
-  const apiKey = (env.TTS_KEY || "").trim();
-  if (!apiKey && !env.GCP_SA) return err(503, "TTS not configured");
-  let sa = null;
-  if (!apiKey) { try { sa = JSON.parse(env.GCP_SA); } catch (e) { return err(500, "bad GCP_SA"); } }
-
   try {
-    const auth = apiKey ? {} : { "Authorization": "Bearer " + await googleToken(sa), "x-goog-user-project": sa.project_id };
-    const endpoint = "https://texttospeech.googleapis.com/v1/text:synthesize" + (apiKey ? "?key=" + encodeURIComponent(apiKey) : "");
-    const voices = env.TTS_VOICE ? [env.TTS_VOICE].concat(VOICES) : VOICES;
-    let last = "";
-    for (const name of voices) {
-      const r = await fetch(endpoint, {
-        method: "POST",
-        headers: Object.assign({ "Content-Type": "application/json", "Referer": url.origin + "/" }, auth),
-        body: JSON.stringify({
-          input: { text },
-          voice: { languageCode: "ar-XA", name },
-          audioConfig: { audioEncoding: "MP3", speakingRate: 1.0 }
-        })
-      });
-      const d = await r.json();
-      if (d.audioContent) {
-        const bin = Uint8Array.from(atob(d.audioContent), (c) => c.charCodeAt(0));
-        const res = new Response(bin, {
-          headers: { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=2592000", "X-Voice": name }
-        });
-        context.waitUntil(cache.put(cacheKey, res.clone()));
-        return res;
-      }
-      last = (d.error && d.error.message) || String(r.status);
-      if (r.status !== 400 && r.status !== 404) break; /* الصوت موجود بس فيه مشكلة ثانية: لا نجرب غيره */
-    }
-    return err(502, "TTS: " + last);
+    const audio = env.ELEVEN_KEY ? await eleven(env, text) : await google(env, text, url.origin);
+    const res = new Response(audio, {
+      headers: { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=2592000" }
+    });
+    context.waitUntil(cache.put(cacheKey, res.clone()));
+    return res;
   } catch (e) {
-    return err(500, String((e && e.message) || e));
+    return err(502, String((e && e.message) || e));
   }
 }
