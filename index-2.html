@@ -2011,10 +2011,12 @@ measurementId: "G-HZ65BFFXNL"
 
 const AGORA_APP_ID = "6affdf8140bb4004b2ec1ba75d202bbc";
 const AGORA_CHANNEL = "masro7_main_room";
-/* يجلب Token من دالة Netlify (netlify/functions/agora-token.js) لأن مشروع أجورا عليه Certificate */
+/* يجلب Token أجورا من السيرفر لأن مشروع أجورا عليه Certificate:
+   على Cloudflare Pages من /agora-token (functions/agora-token.js)، وعلى Netlify من دالته القديمة */
 let agoraJoinPromise = null;
 async function fetchAgoraToken(channel) {
-    const res = await fetch("/.netlify/functions/agora-token" + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { cache: "no-store" });
+    const base = location.hostname.endsWith("netlify.app") ? "/.netlify/functions/agora-token" : "/agora-token";
+    const res = await fetch(base + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { cache: "no-store" });
     let data = null;
     try { data = await res.json(); } catch (e) {}
     if (!res.ok || !data || !data.token) {
