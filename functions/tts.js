@@ -4,7 +4,7 @@
    - كل جملة تنحفظ في كاش Cloudflare 30 يوم، فنفس السؤال ما ينحسب من الرصيد مرتين */
 
 const MAX_CHARS = 300;
-const DEFAULT_ELEVEN_VOICE = "pNInz6obpgDQGcFmaJgB"; /* يتغيّر بعد ما يختار محمد الصوت */
+const DEFAULT_ELEVEN_VOICE = "nPczCjzI2devNBz1zQrb"; /* Brian: اختاره محمد مذيع للدوري */
 const ELEVEN_MODEL = "eleven_multilingual_v2";
 
 const err = (status, msg) => new Response(JSON.stringify({ error: msg }), {
