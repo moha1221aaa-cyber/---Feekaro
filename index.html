@@ -1502,7 +1502,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .round-live-row button{margin:0;width:100%;padding:10px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;}
 .lv-round b{color:#fff;font-variant-numeric:tabular-nums;}
 .lv-round .ic{width:13px;height:13px;vertical-align:-2px;}
-.bc-scene{animation:bcSceneIn .55s cubic-bezier(.2,.8,.2,1);}
+.bc-scene{animation:none;}
 @keyframes bcSceneIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
 .bc-mlabel{text-align:center;font-size:12px;color:#93c5fd;font-weight:bold;letter-spacing:.5px;margin-top:8px;flex-shrink:0;}
 .bc-mlabel.big{font-size:15px;color:#facc15;background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.35);padding:5px 14px;border-radius:20px;margin:0;}
@@ -1829,6 +1829,37 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 @keyframes stTalkPulse{50%{box-shadow:0 0 0 12px rgba(74,222,128,.08),0 0 34px rgba(74,222,128,.6)}}
 .st-talk .t{font-size:20px;font-weight:900;color:#fff;}
 .st-talk .s{font-size:13px;color:#bbf7d0;text-align:center;}
+
+/* ===== دخول ناعم وانتقالات ===== */
+.lv-stage.enter>*{animation:stIn .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 90ms + 120ms);}
+.lv-stage.soft>*:not(.st-qcard):not(.lv-dots){animation:stSoft .45s ease both;animation-delay:calc(var(--i,0) * 50ms);}
+@keyframes stIn{from{opacity:0;transform:translateY(22px) scale(.97);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes stSoft{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.st-pods.enter .st-pod:first-child{animation:stPodR .8s cubic-bezier(.2,.9,.25,1.1) both .15s;}
+.st-pods.enter .st-pod:last-child{animation:stPodL .8s cubic-bezier(.2,.9,.25,1.1) both .3s;}
+.st-pods.enter .st-mid{animation:stIn .6s ease both .5s;}
+@keyframes stPodR{from{opacity:0;transform:translateX(70px) scale(.85);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes stPodL{from{opacity:0;transform:translateX(-70px) scale(.85);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
+.st-hostrow.enter{animation:stIn .7s ease both;}
+#liveScreen[data-scene="talk"] .st-host{border-color:#4ade80;box-shadow:0 0 22px rgba(74,222,128,.35);transition:box-shadow .6s,border-color .6s;}
+/* لقطة الانتقال */
+.st-trans{position:absolute;inset:0;z-index:9;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;animation:stTrOut 1.7s ease forwards;}
+@keyframes stTrOut{0%,70%{opacity:1}100%{opacity:0}}
+.st-trans .lbl{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;animation:stLbl 1.4s cubic-bezier(.2,.8,.2,1) both;}
+.st-trans .lbl b{font-size:22px;font-weight:900;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.6);}
+.st-trans .lbl span{font-size:13px;color:#bbf7d0;font-weight:700;}
+.st-trans .lbl .ic{width:34px;height:34px;color:#fff;background:#16a34a;border-radius:50%;padding:12px;box-shadow:0 0 30px rgba(74,222,128,.7);}
+@keyframes stLbl{0%{opacity:0;transform:scale(.6);filter:blur(8px)}30%{opacity:1;transform:scale(1);filter:blur(0)}75%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(1.12);filter:blur(4px)}}
+.st-trans.talk .bloom{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(74,222,128,.35),rgba(2,6,23,.75) 60%);animation:stBloom 1.6s ease both;}
+@keyframes stBloom{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+.st-trans .ring{position:absolute;left:50%;top:50%;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;border:3px solid rgba(74,222,128,.85);animation:stRing 1.3s ease-out both .1s;}
+.st-trans .ring.two{border-color:rgba(250,204,21,.7);animation-delay:.3s;}
+@keyframes stRing{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(7)}}
+.st-trans.count .iris{position:absolute;inset:-30%;background:radial-gradient(circle,transparent 0,transparent 18%,rgba(2,6,23,.92) 38%);animation:stIris 1.5s cubic-bezier(.7,0,.3,1) both;}
+@keyframes stIris{0%{transform:scale(2.4);opacity:0}35%{transform:scale(1);opacity:1}100%{transform:scale(1.6);opacity:0}}
+.st-trans .sweep{position:absolute;top:0;bottom:0;width:60%;left:-70%;background:linear-gradient(100deg,transparent,rgba(250,204,21,.35),rgba(255,255,255,.4),transparent);animation:stSw 1s ease both;}
+@keyframes stSw{to{left:110%}}
+@media (prefers-reduced-motion: reduce){.lv-stage.enter>*,.lv-stage.soft>*,.st-pods.enter>*,.st-trans *{animation:none!important;}}
 
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -7110,6 +7141,7 @@ function openLiveScreen(id) {
     bcAutoFx.prev = null;
     bcRxSeenN = null;
     bcTickerSig = "";
+    bcEnterScene = ""; bcEnterPhase = "";
     /* فيديو الاستوديو الحقيقي (من Google Flow) خلفية ثابتة للبث */
     if (!document.getElementById("stVideo")) {
         const v = document.createElement("video");
@@ -7248,6 +7280,10 @@ function bcSceneEffects(d) {
         cineOpening(d);
     } else if (d.scene === "intro" && o) {
         cineMatchIntro(d);
+    } else if (d.scene === "talk") {
+        bcTransition("talk");
+    } else if (d.scene === "countdown") {
+        bcTransition("count");
     } else if (d.scene === "playing" && prevScene === "countdown") {
         cineGo();
     } else if (d.scene === "result") {
@@ -7258,6 +7294,50 @@ function bcSceneEffects(d) {
         bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج");
         cineClosing();
     }
+}
+
+/* ===== دخول ناعم للعناصر: كل مشهد جديد تدخل عناصره وحدة ورا الثانية =====
+   تغيير المشهد = دخول كامل، تغيير المرحلة داخل نفس المشهد (الجرس/الإجابة/الكشف) = دخول خفيف */
+let bcEnterScene = "", bcEnterPhase = "";
+function bcEntrance(body, d) {
+    const sk = d.status + ":" + d.scene + ":" + d.cur;
+    const pk = sk + ":" + (d.phase || "") + ":" + (d.qIndex || 0) + ":" + (d.answerer || 0);
+    const stage = body.querySelector(".lv-stage");
+    const pods = body.querySelector(".st-pods");
+    if (sk !== bcEnterScene) {
+        const wasPods = bcEnterScene && bcEnterScene.split(":")[1];
+        bcEnterScene = sk; bcEnterPhase = pk;
+        if (stage) { stage.classList.add("enter"); [...stage.children].forEach((el, i) => el.style.setProperty("--i", Math.min(i, 8))); }
+        /* المنصات تدخل من الجنبين أول ما تطلع (مع فقرة الترحيب) */
+        if (pods && !/^(talk|countdown|playing|result)$/.test(wasPods || "")) pods.classList.add("enter");
+        const host = body.querySelector(".st-hostrow");
+        if (host && !wasPods) host.classList.add("enter");
+    } else if (pk !== bcEnterPhase) {
+        bcEnterPhase = pk;
+        if (stage) { stage.classList.add("soft"); [...stage.children].forEach((el, i) => el.style.setProperty("--i", Math.min(i, 6))); }
+    }
+}
+
+/* ===== لقطات انتقال بين المشاهد ===== */
+function bcTransition(kind) {
+    const scr = document.getElementById("liveScreen");
+    if (!scr) return;
+    scr.querySelectorAll(".st-trans").forEach(e => e.remove());
+    const el = document.createElement("div");
+    el.className = "st-trans " + kind;
+    if (kind === "talk") {
+        el.innerHTML = `<i class="bloom"></i><i class="ring"></i><i class="ring two"></i><div class="lbl">${ic("mic")}<b>الترحيب بالمتسابقين</b><span>المايكات مفتوحة</span></div>`;
+        cinePlay("whoosh", 0.35);
+        setTimeout(() => cinePlay("impact", 0.25), 350);
+    } else if (kind === "count") {
+        el.innerHTML = `<i class="iris"></i><div class="lbl"><b>المواجهة تبدأ</b></div>`;
+        cinePlay("riser", 0.45, { tail: 1.1 });
+    } else {
+        el.innerHTML = `<i class="sweep"></i>`;
+        cinePlay("whoosh", 0.3);
+    }
+    scr.appendChild(el);
+    setTimeout(() => el.remove(), 1700);
 }
 
 function renderLiveScreen() {
@@ -7335,6 +7415,7 @@ ${pod(2)}
     html += `<div class="lv-stage bc-scene" data-scene="${escapeHTML(d.scene || "")}">` + bcStageHTML(d, me) + `</div>`;
 
     body.innerHTML = html;
+    bcEntrance(body, d);
 
     const qc = body.querySelector(".st-qcard");
     if (qc) { if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
