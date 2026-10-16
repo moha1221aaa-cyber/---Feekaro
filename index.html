@@ -18,7 +18,21 @@
 <script>
 function ic(n, c) { return '<svg class="ic' + (c ? " " + c : "") + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }
 </script>
-<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+<script>
+/* مكتبة الصوت (أجورا) تتحمل بس لما أحد يدخل الغرفة أو البث، عشان الموقع يفتح أسرع */
+let agoraLoading = null;
+function loadAgora() {
+    if (window.AgoraRTC) return Promise.resolve(window.AgoraRTC);
+    if (!agoraLoading) agoraLoading = new Promise((res, rej) => {
+        const sc = document.createElement("script");
+        sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js";
+        sc.onload = () => window.AgoraRTC ? res(window.AgoraRTC) : rej(new Error("مكتبة الصوت ما تحمّلت"));
+        sc.onerror = () => { agoraLoading = null; rej(new Error("مكتبة الصوت ما تحمّلت، تأكد من النت")); };
+        document.head.appendChild(sc);
+    });
+    return agoraLoading;
+}
+</script>
 <style>
 body {
 font-family: Arial, sans-serif;
@@ -1797,6 +1811,17 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .st-microw .bc-mybtn{padding:6px;font-size:12px;border-radius:20px;}
 .st-pod.talk img{border-color:#4ade80!important;box-shadow:0 0 0 4px rgba(74,222,128,.25),0 0 22px rgba(74,222,128,.6)!important;}
 
+/* توقّع الفائز + السؤال الذهبي */
+.st-pred{width:100%;box-sizing:border-box;border-radius:14px;padding:9px 10px;background:rgba(2,6,23,.6);border:1px solid rgba(147,197,253,.35);display:flex;flex-direction:column;gap:6px;}
+.st-pred .t{font-weight:900;font-size:13px;color:#fde68a;display:flex;align-items:center;justify-content:center;gap:6px;}
+.st-predbtns{display:flex;gap:8px;}
+.st-predbtns button{flex:1;margin:0;padding:8px;border-radius:10px;font-size:13px;font-weight:800;background:#1e293b;border:1px solid #3b82f6;}
+.st-predbtns button.on{background:linear-gradient(90deg,#a16207,#facc15);color:#0f172a;border-color:#facc15;}
+.st-predbar{height:8px;border-radius:6px;background:#38bdf8;overflow:hidden;}
+.st-predbar i{display:block;height:100%;background:#facc15;transition:width .5s;}
+.st-predlbl{display:flex;justify-content:space-between;font-size:11px;color:#cbd5e1;}
+.st-decider.gold{background:linear-gradient(90deg,#a16207,#facc15,#a16207);color:#0f172a;border-color:#fde68a;box-shadow:0 0 22px rgba(250,204,21,.6);animation:none;}
+
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .cine.fxonly{background:none;pointer-events:none;cursor:default;}
@@ -2390,6 +2415,7 @@ let myMicIndex = null;
    لأن معرّف Firebase (uid) نص طويل وأجورا يتوقع رقمًا وليس نصًا، وهذا كان
    سبب فشل الانضمام بالكامل سابقًا. */
 async function ensureAgoraJoined() {
+    await loadAgora();
     if (!agoraClient) {
         agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
@@ -2600,6 +2626,14 @@ let userProfileDocListener = null;
 let videosListener = null;
 
 let cachedUsersData = {};
+/* صور Cloudinary بحجم صغير (بدل الصورة الكاملة) عشان الموقع يفتح أسرع */
+function cdnThumb(url, size) {
+    size = size || 160;
+    if (!url || typeof url !== "string" || url.indexOf("res.cloudinary.com") === -1 || url.indexOf("/upload/") === -1) return url;
+    if (/\/upload\/[^/]*(w_|c_fill)/.test(url)) return url;
+    return url.replace("/upload/", `/upload/w_${size},h_${size},c_fill,g_face,q_auto,f_auto/`);
+}
+function thumbUser(u) { if (u && u.photoURL) u.photoURL = cdnThumb(u.photoURL); return u; }
 let cachedPredictionsData = {};
 let isRankingDataLoaded = false;
 let activeModalId = null;
@@ -2725,8 +2759,30 @@ firebaseAuth.signInWithEmailAndPassword(email, password)
 .then(() => alert("تم تسجيل دخول المسؤول بنجاح"))
 .catch(error => {
 console.log(error);
-alert("فشل تسجيل الدخول\n\n" + error.code + "\n\n" + error.message);
+alert("فشل تسجيل الدخول\n\n" + authErrAr(error));
 });
+}
+
+/* رسائل أخطاء تسجيل الدخول بالعربي */
+function authErrAr(err) {
+    const c = (err && err.code) || "";
+    const m = {
+        "auth/invalid-email": "البريد الإلكتروني مكتوب غلط.",
+        "auth/user-not-found": "ما فيه حساب بهذا البريد.",
+        "auth/wrong-password": "كلمة المرور غلط.",
+        "auth/invalid-credential": "البريد أو كلمة المرور غلط.",
+        "auth/invalid-login-credentials": "البريد أو كلمة المرور غلط.",
+        "auth/too-many-requests": "حاولت كثير. انتظر شوي وجرّب مرة ثانية.",
+        "auth/network-request-failed": "فيه مشكلة في الاتصال بالإنترنت. تأكد من النت وجرّب مرة ثانية.",
+        "auth/email-already-in-use": "هذا البريد مسجّل قبل. سجّل دخول بدل ما تنشئ حساب جديد.",
+        "auth/weak-password": "كلمة المرور ضعيفة. لازم تكون 6 أحرف أو أكثر.",
+        "auth/user-disabled": "هذا الحساب موقوف.",
+        "auth/unauthorized-domain": "هذا الرابط مو مسموح له بتسجيل الدخول. كلّم المنظم.",
+        "auth/operation-not-allowed": "طريقة تسجيل الدخول هذي مقفلة. كلّم المنظم.",
+        "auth/missing-password": "اكتب كلمة المرور.",
+        "permission-denied": "ما عندك صلاحية لهذي العملية."
+    };
+    return m[c] || ("صار خطأ غير متوقع، جرّب مرة ثانية." + (c ? " (" + c + ")" : ""));
 }
 
 let players = [
@@ -3137,7 +3193,7 @@ if(!firebaseDB) return;
 usersRankingListener = firebaseDB.collection("users").onSnapshot(snapshot => {
 cachedUsersData = {};
 snapshot.forEach(doc => {
-cachedUsersData[doc.id] = doc.data();
+cachedUsersData[doc.id] = thumbUser(doc.data());
 });
 renderRankingUI();
 table();
@@ -3216,7 +3272,7 @@ let rank = index + 1;
 let rankClass = rank === 1 ? "rank-1" : (rank === 2 ? "rank-2" : (rank === 3 ? "rank-3" : ""));
 let rankBadge = rank === 1 ? ic("medal","m1") : (rank === 2 ? ic("medal","m2") : (rank === 3 ? ic("medal","m3") : rank));
 
-let avatarSrc = item.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=2563eb&color=fff&bold=true`;
+let avatarSrc = cdnThumb(item.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=2563eb&color=fff&bold=true`;
 
 html += `
 <div class="user-card ${isMe ? 'is-me' : ''}" onclick="openUserProfile('${item.uid}', '')">
@@ -3658,7 +3714,7 @@ if(userProfileDocListener) userProfileDocListener();
 
 userProfileDocListener = firebaseDB.collection("users").doc(uid).onSnapshot(doc => {
 if(doc.exists) {
-currentUserDocData = doc.data();
+currentUserDocData = thumbUser(doc.data());
 } else {
 currentUserDocData = { name: currentUser.displayName || "مستخدم جديد", email: currentUser.email };
 }
@@ -3835,7 +3891,7 @@ if(!email || !pass) return alert("يرجى ملء البريد وكلمة الم
 
 firebaseAuth.signInWithEmailAndPassword(email, pass)
 .then(() => alert("تم تسجيل الدخول بنجاح!"))
-.catch(err => alert("خطأ في تسجيل الدخول: " + err.message));
+.catch(err => alert("خطأ في تسجيل الدخول: " + authErrAr(err)));
 }
 
 function handleRegister() {
@@ -3854,7 +3910,7 @@ createdAt: firebase.firestore.FieldValue.serverTimestamp()
 });
 })
 .then(() => alert("تم إنشاء الحساب بنجاح!"))
-.catch(err => alert("خطأ في إنشاء الحساب: " + err.message));
+.catch(err => alert("خطأ في إنشاء الحساب: " + authErrAr(err)));
 }
 
 function handleLogout() {
@@ -4060,7 +4116,7 @@ syncMyMicWithState();
 
 /* أي شخص يفتح الغرفة وهي مباشرة ينضم تلقائيًا كمستمع في أجورا (بدون طلب
    إذن المايك)، حتى يسمع المتحدثين فعليًا لا كواجهة شكلية فقط. */
-if(roomState.isLive && !agoraJoined && Date.now() - agoraLastFail > 10000) {
+if(roomState.isLive && roomScreenOpen && !agoraJoined && Date.now() - agoraLastFail > 10000) {
 ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
 }
 if(!roomState.isLive && agoraJoined) {
@@ -4148,7 +4204,7 @@ function renderParticipantsModal() {
     let html = `<div class="ranking-cards-container">`;
     list.forEach(([id, p]) => {
         let isMe = id === myPresenceId();
-        let avatar = p.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent((p.name || "ض").charAt(0))}&background=2563eb&color=fff&bold=true`;
+        let avatar = cdnThumb(p.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent((p.name || "ض").charAt(0))}&background=2563eb&color=fff&bold=true`;
         html += `
 <div class="user-card ${isMe ? "is-me" : ""}">
 <div class="user-card-profile">
@@ -4233,7 +4289,7 @@ let clickAttr = isMine ? `onclick="toggleMyMic(${i})"` : (isAdmin ? `onclick="ad
 html += `
 <div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
 <div class="mic-slot-avatar-wrap ${m.muted ? '' : 'speaking'}" ${clickAttr} style="cursor:${isMine || isAdmin ? 'pointer' : 'default'};">
-<img src="${avatarUrl}" class="mic-slot-avatar" alt="">
+<img src="${cdnThumb(avatarUrl)}" class="mic-slot-avatar" alt="">
 ${m.muted ? '<div class="mic-slot-muted-icon">' + ic('mic-off') + '</div>' : ''}
 </div>
 <div class="mic-slot-name">${escapeHTML(m.name)}</div>
@@ -5120,7 +5176,7 @@ function renderRoomCard() {
     let avatars = "";
     seated.slice(0, 7).forEach(m => {
         const url = m.avatar || getPlayerAvatar(m.name).url;
-        avatars += `<img src="${escapeHTML(url)}" alt="">`;
+        avatars += `<img src="${escapeHTML(cdnThumb(url))}" alt="">`;
     });
     if (seated.length > 7) avatars += `<span class="more">+${seated.length - 7}</span>`;
     if (!avatars) avatars = `<span class="empty">${live ? "ما أحد على المايك حالياً" : "الغرفة فاضية"}</span>`;
@@ -5239,6 +5295,7 @@ function openRoomScreen(skipPush) {
     scr.classList.add("open");
     document.body.classList.add("room-open");
     joinRoomPresence();
+    if (roomState.isLive && !agoraJoined) ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
     enableRoomAudio();
     renderRoomUI();
     roomViewportSync();
@@ -5330,17 +5387,54 @@ let liveMatchesSig = "";
 let liveApplyTried = {};
 let livePrevView = null;
 let bcPrevKey = null;
+const bcEndedStale = {};
 
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
 function liveRef(id) { return liveCol().doc(id); }
 function bcId(r) { return "round_" + r; }
-function isLiveActive(d) { return !!d && (d.status === "live" || d.status === "scheduled"); }
+/* ===== وقت السيرفر: فرق ساعة الجوال عن السيرفر، عشان المؤقتات تكون عادلة للكل ===== */
+let bcClockOffset = 0, bcClockSynced = false;
+try { bcClockOffset = Number(sessionStorage.getItem("bcClockOffset")) || 0; } catch (e) {}
+function bcNow() { return Date.now() + bcClockOffset; }
+async function bcSyncClock() {
+    let best = null;
+    for (let i = 0; i < 3; i++) {
+        try {
+            const t0 = Date.now();
+            const r = await fetch("/time?_=" + t0, { cache: "no-store" });
+            const t1 = Date.now();
+            const j = await r.json();
+            if (!j || !j.t) continue;
+            const rtt = t1 - t0, off = j.t - (t0 + rtt / 2);
+            if (!best || rtt < best.rtt) best = { rtt, off };
+        } catch (e) {}
+    }
+    if (best && best.rtt < 3000) {
+        bcClockOffset = Math.round(best.off); bcClockSynced = true;
+        try { sessionStorage.setItem("bcClockOffset", String(bcClockOffset)); } catch (e) {}
+    }
+}
+bcSyncClock();
+setInterval(bcSyncClock, 5 * 60 * 1000);
+
+/* بث معلّق: أكثر من 3 ساعات بدون أي تحديث (أو مجدول فات موعده بـ 3 ساعات) */
+const BC_STALE_MS = 3 * 3600 * 1000;
+function bcTsMs(t) { try { return t ? (typeof t.toMillis === "function" ? t.toMillis() : Number(t) || 0) : 0; } catch (e) { return 0; } }
+function bcLastActivity(d) { return Math.max(bcTsMs(d.updatedAt), Number(d.sceneAt) || 0, Number(d.hostSeen) || 0, Number(d.startedAt) || 0, bcTsMs(d.createdAt)); }
+function bcIsStale(d) {
+    if (!d) return false;
+    const now = bcNow();
+    if (d.status === "scheduled") return now - (Number(d.startAt) || 0) > BC_STALE_MS;
+    if (d.status === "live") { const last = bcLastActivity(d); return !!last && now - last > BC_STALE_MS; }
+    return false;
+}
+function isLiveActive(d) { return !!d && (d.status === "live" || d.status === "scheduled") && !bcIsStale(d); }
 /* وقت بداية البث المجدول بصيغة "10:30 م" */
 function bcTimeLabel(ms) {
-    const t = new Date(ms);
+    const t = new Date(ms - bcClockOffset);
     let h = t.getHours(); const m = String(t.getMinutes()).padStart(2, "0");
     const pm = h >= 12; h = h % 12 || 12;
-    const day = new Date().toDateString() === t.toDateString() ? "" : " (بكرة)";
+    const day = new Date(bcNow() - bcClockOffset).toDateString() === t.toDateString() ? "" : " (بكرة)";
     return `${h}:${m} ${pm ? "م" : "ص"}${day}`;
 }
 function bcCur(d) { return (d && d.order && d.cur >= 0) ? (d.order[d.cur] || null) : null; }
@@ -5357,7 +5451,7 @@ function myLiveNum(d) {
 }
 function amBcHost(d) { return !!(currentUser && d && d.hostUid === currentUser.uid); }
 function livePlayerName(d, n) { const o = bcCur(d) || {}; return n === 1 ? (o.p1 || "") : (n === 2 ? (o.p2 || "") : ""); }
-function bcAv(o, n) { return (n === 1 ? o.av1 : o.av2) || getPlayerAvatar(n === 1 ? o.p1 : o.p2).url; }
+function bcAv(o, n) { return cdnThumb((n === 1 ? o.av1 : o.av2) || getPlayerAvatar(n === 1 ? o.p1 : o.p2).url); }
 
 function initLiveMatches() {
     if (!firebaseDB || liveListener) return;
@@ -5380,7 +5474,19 @@ function initLiveMatches() {
             renderLiveBars();
         }
         if (openLiveId) { renderLiveScreen(); bcSyncAudio(); }
+        if (bcDeepLink && next[bcDeepLink] && !openLiveId) {
+            const id = bcDeepLink; bcDeepLink = null;
+            try { history.replaceState(history.state, "", location.pathname); } catch (e) {}
+            openLiveScreen(id);
+        }
         Object.keys(next).forEach(id => bcApplyResults(id));
+        if (isAdmin) Object.keys(next).forEach(id => {
+            const x = next[id];
+            if ((x.status === "live" || x.status === "scheduled") && bcIsStale(x) && !bcEndedStale[id]) {
+                bcEndedStale[id] = 1;
+                liveTx(id, (y, now) => (y.status === "live" || y.status === "scheduled") && bcIsStale(y) ? { status: "ended", phase: "done", endedAt: now, endReason: "stale" } : null).catch(() => {});
+            }
+        });
     }, err => {
         console.log("liveMatches listener:", err);
     });
@@ -5474,7 +5580,7 @@ function bcQuizReset() {
         ready1: false, ready2: false, qIndex: 0, phase: "wait",
         buzzer: 0, answerer: 0, tried1: false, tried2: false, passed: false,
         lastAnswer: null, outcome: 0, deadline: 0, s1: 0, s2: 0,
-        log: Array(LIVE_Q_COUNT).fill(-1), fb1: 0, fb2: 0, bh1: 0, bh2: 0, qAt: 0
+        log: Array(LIVE_Q_COUNT).fill(-1), fb1: 0, fb2: 0, bh1: 0, bh2: 0, qAt: 0, golden: 0
     };
 }
 
@@ -5501,9 +5607,9 @@ async function bcStartRound(r) {
     }));
     const data = Object.assign(bcQuizReset(), {
         type: "round", round: r, status: choice.at ? "scheduled" : "live", scene: choice.at ? "waiting" : "opening", cur: -1, order: order,
-        startAt: choice.at || Date.now(),
+        startAt: choice.at || bcNow(),
         hostUid: currentUser.uid, hostName: myName, hostAv: myAv,
-        questions: [], usedQ: [], sceneAt: Date.now(), v: 1,
+        questions: [], usedQ: [], sceneAt: bcNow(), hostSeen: bcNow(), v: 1,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     try {
@@ -5526,7 +5632,7 @@ function liveTx(id, fn) {
         const snap = await tx.get(ref);
         if (!snap.exists) return null;
         const d = snap.data();
-        const upd = fn(d, Date.now());
+        const upd = fn(d, bcNow());
         if (upd) {
             upd.v = (d.v || 0) + 1;
             upd.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -5570,7 +5676,19 @@ function liveNextStep(d, now) {
     if (d.phase === "answer") return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
     if (d.phase === "reveal") {
         const next = (d.qIndex || 0) + 1;
-        if (next < (d.questions || []).length) return liveQuestionUpd(next, now);
+        const qs = d.questions || [];
+        if (next < qs.length) return liveQuestionUpd(next, now);
+        /* تعادل: سؤال ذهبي (لين 3 مرات)، واللي يجاوب صح أول يفوز */
+        if ((d.s1 || 0) === (d.s2 || 0) && (d.golden || 0) < 3) {
+            const extra = pickLiveQuestions((d.usedQ || []).concat(qs.map(q => q.text)))[0];
+            if (extra) {
+                const u = liveQuestionUpd(next, now);
+                u.questions = qs.concat([extra]);
+                u.golden = (d.golden || 0) + 1;
+                u.log = (d.log || []).concat([-1]);
+                return u;
+            }
+        }
         /* صافرة النهاية: نحفظ نتيجة المواجهة داخل البث وننتقل لمشهد النتيجة */
         const order = (d.order || []).map(o => Object.assign({}, o));
         if (order[d.cur]) Object.assign(order[d.cur], { s1: d.s1 || 0, s2: d.s2 || 0, state: "done", applied: false, fb1: d.fb1 || 0, fb2: d.fb2 || 0, bh1: d.bh1 || 0, bh2: d.bh2 || 0 });
@@ -5583,9 +5701,9 @@ function liveAdvanceIfDue() {
     const d = liveMatchesCache[openLiveId];
     if (!d || liveAdvanceBusy || d.status !== "live") return;
     if (!(d.scene === "countdown" || d.scene === "playing")) return;
-    if (Date.now() < (d.deadline || 0) + 250) return;
-    if (Date.now() - liveLastAdvanceTry < 900) return;
-    liveLastAdvanceTry = Date.now();
+    if (bcNow() < (d.deadline || 0) + 250) return;
+    if (bcNow() - liveLastAdvanceTry < 900) return;
+    liveLastAdvanceTry = bcNow();
     liveAdvanceBusy = true;
     liveTx(openLiveId, liveNextStep)
         .catch(err => console.log("advance:", err))
@@ -5598,32 +5716,28 @@ function bcNext(skip) {
     const d = liveMatchesCache[id];
     if (!d || !isAdmin) return;
     if (skip && !confirm(`تخطي مواجهة ${livePlayerName(d, 1)} ضد ${livePlayerName(d, 2)}؟\nما بتنسجل لها نتيجة وتقدرون تلعبونها بعدين.`)) return;
-    liveTx(id, (x, now) => {
-        if (x.status !== "live") return null;
-        const order = (x.order || []).map(o => Object.assign({}, o));
-        if (skip && order[x.cur] && order[x.cur].state === "pending") order[x.cur].state = "skipped";
-        let next = order.findIndex((o, i) => o.state === "pending" && i > x.cur);
-        if (next === -1) next = order.findIndex((o, i) => o.state === "pending" && i !== x.cur);
-        if (next === -1) return { scene: "closing", order: order, phase: "done", deadline: 0, sceneAt: now };
-        const used = (x.usedQ || []).concat((x.questions || []).map(q => q.text)).slice(-300);
-        return Object.assign(bcQuizReset(), {
-            scene: "intro", cur: next, order: order, sceneAt: now,
-            usedQ: used, questions: pickLiveQuestions(used)
-        });
-    }).catch(err => alert("تعذّر: " + err.message));
+    liveTx(id, (x, now) => bcNextUpd(x, now, skip)).catch(err => alert("تعذّر: " + err.message));
 }
 
 /* البث المجدول: يبدأ الافتتاح (المنظم يضغط "ابدأ الحين" أو لحاله أول ما يخلص العداد) */
 let bcGoLiveTry = 0;
 function bcGoLive(manual) {
-    const id = openLiveId;
-    const d = liveMatchesCache[id];
-    if (!d || !isAdmin || d.status !== "scheduled") return;
-    if (manual && !confirm("تبدأ البث الحين قبل الموعد؟")) return;
-    if (!manual && Date.now() - bcGoLiveTry < 6000) return;
-    bcGoLiveTry = Date.now();
-    liveTx(id, (x, now) => x.status === "scheduled" ? { status: "live", scene: "opening", sceneAt: now, startedAt: now, hostUid: currentUser.uid, hostName: (currentUserDocData && currentUserDocData.name) || x.hostName } : null)
-        .catch(err => roomToast("تعذّر بدء البث: " + err.message, "alert"));
+    const d = liveMatchesCache[openLiveId];
+    if (!d || d.status !== "scheduled") return;
+    if (manual) {
+        if (!isAdmin || !confirm("تبدأ البث الحين قبل الموعد؟")) return;
+        liveTx(openLiveId, (x, now) => x.status === "scheduled" ? { status: "live", scene: "opening", sceneAt: now, startedAt: now, hostUid: currentUser.uid, hostName: (currentUserDocData && currentUserDocData.name) || x.hostName } : null)
+            .catch(err => roomToast("تعذّر بدء البث: " + err.message, "alert"));
+        return;
+    }
+    bcGoLiveId(openLiveId);
+}
+/* يبدأ البث المجدول لحاله (يبقى المنظم الأصلي هو المنظم) */
+function bcGoLiveId(id) {
+    if (bcNow() - bcGoLiveTry < 6000) return;
+    bcGoLiveTry = bcNow();
+    liveTx(id, (x, now) => (x.status === "scheduled" && now >= (Number(x.startAt) || 0)) ? { status: "live", scene: "opening", sceneAt: now, startedAt: now } : null)
+        .catch(() => {});
 }
 
 /* نافذة اختيار وقت البث: الحين أو موعد محدد */
@@ -5639,6 +5753,7 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-card">
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
+${(() => { const have = (roomState.qbank || []).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} بنك الأسئلة فيه ${have} سؤال بس، والجولة تحتاج ${need}. البث بيكمّل من ${LIVE_FALLBACK_QUESTIONS.length} سؤال احتياطي وبتتكرر الأسئلة. الأفضل تضيف أسئلة من الغرفة الصوتية (بنك الأسئلة) قبل البث.</div>` : ""; })()}
 ${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.join("، "))} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مباراته وقت البث.</div>` : ""}
 <button class="bc-go" data-a="now">${ic("zap")} ابدأ البث الحين</button>
 <div class="bc-ask-or">أو حدد موعد، ويطلع للكل عداد لين يبدأ:</div>
@@ -5655,12 +5770,62 @@ ${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.
             const v = (box.querySelector("#bcAskTime").value || "").split(":");
             if (v.length < 2) return;
             const at = new Date(); at.setHours(+v[0], +v[1], 0, 0);
-            if (at.getTime() <= Date.now() + 30000) at.setDate(at.getDate() + 1);   /* وقت فات اليوم ← بكرة */
-            done({ at: at.getTime() });
+            if (at.getTime() <= bcNow() + 30000) at.setDate(at.getDate() + 1);   /* وقت فات اليوم ← بكرة */
+            done({ at: at.getTime() + bcClockOffset });   /* نحوّله لوقت السيرفر */
         });
         document.body.appendChild(box);
     });
 }
+
+/* الانتقال للمواجهة الجاية (أو الختام) — يقدر يسويه المنظم أو أي جهاز لو المنظم غايب */
+function bcNextUpd(x, now, skip) {
+    if (x.status !== "live") return null;
+    const order = (x.order || []).map(o => Object.assign({}, o));
+    if (skip && order[x.cur] && order[x.cur].state === "pending") order[x.cur].state = "skipped";
+    let next = order.findIndex((o, i) => o.state === "pending" && i > x.cur);
+    if (next === -1) next = order.findIndex((o, i) => o.state === "pending" && i !== x.cur);
+    if (next === -1) return { scene: "closing", order: order, phase: "done", deadline: 0, sceneAt: now };
+    const used = (x.usedQ || []).concat((x.questions || []).map(q => q.text)).slice(-300);
+    return Object.assign(bcQuizReset(), {
+        scene: "intro", cur: next, order: order, sceneAt: now,
+        usedQ: used, questions: pickLiveQuestions(used)
+    });
+}
+
+/* ===== لو المنظم غايب: البث يكمّل لحاله =====
+   جهاز المنظم يكتب "أنا موجود" كل 10 ثواني. ولو ما كتب لـ 25 ثانية، أي جهاز فاتح البث يكمّل:
+   الافتتاح 20 ث ← أول مواجهة، صفحة المتسابقين 60 ث ← تبدأ المواجهة، النتيجة 20 ث ← المواجهة الجاية، الختام 90 ث ← إنهاء البث */
+const BC_HOST_GONE_MS = 25000;
+const BC_AUTO_WAIT = { opening: 20000, intro: 60000, result: 20000, closing: 90000 };
+let bcLastBeat = 0, bcAutoTry = 0;
+function bcHostGone(d) { return !d.hostSeen || bcNow() - Number(d.hostSeen) > BC_HOST_GONE_MS; }
+function bcHostHeartbeat(d) {
+    if (!firebaseDB || !d || d.status !== "live" || !amBcHost(d) || bcNow() - bcLastBeat < 10000) return;
+    bcLastBeat = bcNow();
+    liveRef(openLiveId).update({ hostSeen: bcNow() }).catch(() => {});
+}
+function bcAutoPilot(d) {
+    if (!firebaseDB || !d || d.status !== "live" || !currentUser || !bcHostGone(d)) return;
+    const wait = BC_AUTO_WAIT[d.scene];
+    if (!wait || bcNow() - (Number(d.sceneAt) || 0) < wait || bcNow() - bcAutoTry < 4000) return;
+    bcAutoTry = bcNow();
+    const id = openLiveId, scene = d.scene, v = d.v;
+    liveTx(id, (x, now) => {
+        if (x.status !== "live" || x.scene !== scene || x.v !== v || !bcHostGone(x)) return null;
+        if (scene === "intro") return { scene: "countdown", deadline: now + LIVE_COUNT_MS, auto: true };
+        if (scene === "closing") return { status: "ended", phase: "done", endedAt: now, endReason: "auto" };
+        return bcNextUpd(x, now, false);
+    }).catch(() => {});
+}
+
+/* البث المجدول: أي جهاز فاتح الموقع يبدأه أول ما يجي الموعد (مو لازم المنظم) */
+setInterval(() => {
+    if (!firebaseDB || !currentUser) return;
+    Object.keys(liveMatchesCache).forEach(id => {
+        const x = liveMatchesCache[id];
+        if (x && x.status === "scheduled" && !bcIsStale(x) && bcNow() >= (Number(x.startAt) || 0)) bcGoLiveId(id);
+    });
+}, 3000);
 
 function bcForceStart() {
     if (!isAdmin) return;
@@ -5738,8 +5903,8 @@ function bcApplyResults(id) {
         if (o.state !== "done" || o.applied) return;
         if (!isAdmin && o.uid1 !== currentUser.uid && o.uid2 !== currentUser.uid) return;
         const key = id + "#" + i;
-        if (liveApplyTried[key] && Date.now() - liveApplyTried[key] < 15000) return;
-        liveApplyTried[key] = Date.now();
+        if (liveApplyTried[key] && bcNow() - liveApplyTried[key] < 15000) return;
+        liveApplyTried[key] = bcNow();
         const leagueRef = firebaseDB.collection("league").doc("current");
         firebaseDB.runTransaction(async tx => {
             const s = await tx.get(leagueRef);
@@ -6002,7 +6167,9 @@ function bcPreScores(d) {
     return [s1, s2];
 }
 /* سؤال الحسم: آخر سؤال والفرق نقطة أو تعادل */
+function bcIsGolden(d) { return !!d && d.status === "live" && d.scene === "playing" && (d.golden || 0) > 0 && d.qIndex >= LIVE_Q_COUNT; }
 function bcIsDecider(d) {
+    if (bcIsGolden(d)) return true;
     const n = (d.questions || []).length;
     if (!d || d.status !== "live" || d.scene !== "playing" || !n || d.qIndex !== n - 1) return false;
     const [a, b] = bcPreScores(d);
@@ -6043,6 +6210,7 @@ const BC_HOST = {
     introTail: ["مين بيكون الأسرع على الجرس؟", "خمسة أسئلة تفصل بين الفوز والخسارة.", "التركيز مطلوب من أول سؤال."],
     q: ["السؤال {ord}. {t}", "السؤال {ord}، ركزوا معي. {t}", "وهذا السؤال {ord}. {t}"],
     qTense: ["السؤال الجاي ممكن يغيّر كل شي. السؤال {ord}. {t}", "النتيجة متقاربة، والسؤال {ord} مهم جداً. {t}"],
+    golden: ["تعادل! وصلنا للسؤال الذهبي، واللي يجاوب صح أول يفوز بالمواجهة. {t}", "السؤال الذهبي! أول إجابة صحيحة تحسم المواجهة. {t}"],
     decider: ["سؤال الحسم! هذا السؤال يحدد مصير المواجهة. {t}", "وصلنا لسؤال الحسم، والإجابة الصحيحة تقرر كل شي. {t}"],
     reveal: ["والإجابة الصحيحة هي: {a}.", "الإجابة الصحيحة: {a}.", "والجواب الصحيح هو: {a}."],
     tieNow: ["وتعادل في النقاط!", "ورجعنا للتعادل!"],
@@ -6058,6 +6226,7 @@ function bcQText(d, i, plain) {
     if (!q) return "";
     const v = { ord: BC_AR_NUM[i] || (i + 1), t: q.text };
     const key = "q" + d.round + ":" + d.cur + ":" + i;
+    if (i >= LIVE_Q_COUNT) return bcFill(bcPick(BC_HOST.golden, key), v);
     if (!plain && d.qIndex === i && bcIsDecider(d)) return bcFill(bcPick(BC_HOST.decider, key), v);
     if (!plain && i >= 2 && d.qIndex === i) {
         const [a, b] = bcPreScores(d);
@@ -6095,7 +6264,8 @@ function bcCloseText(d) {
 function bcAirClock(d) {
     const el = document.getElementById("bcAirClock");
     if (!el || !d) return;
-    const s = Math.max(0, Math.floor((Date.now() - (d.startedAt || d.startAt || Date.now())) / 1000));
+    const start = Number(d.startedAt) || bcTsMs(d.createdAt) || Number(d.startAt) || Number(d.sceneAt) || bcNow();
+    const s = Math.max(0, Math.floor((bcNow() - start) / 1000));
     const p = n => String(n).padStart(2, "0");
     const t = s >= 3600 ? `${Math.floor(s / 3600)}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}` : `${p(Math.floor(s / 60))}:${p(s % 60)}`;
     if (el.textContent !== t) el.textContent = t;
@@ -6139,7 +6309,7 @@ function bcLowerThird(d) {
             /* أعلى صوت يتكلم الحين (مع مهلة عشان ما يرمش) */
             let best = null;
             bcSpeakers(d).forEach(sp => { const m = bcMicLevel(sp.uid); if (m.on && m.lvl > 0.06 && (!best || m.lvl > best.lvl)) best = Object.assign({ lvl: m.lvl }, sp); });
-            const now = Date.now();
+            const now = bcNow();
             if (best) { BC_L3.talkUid = best.uid; BC_L3.talkUntil = now + 1800; BC_L3.talk = best; }
             if (BC_L3.talk && now < BC_L3.talkUntil) want = { key: "t" + BC_L3.talk.uid, name: BC_L3.talk.name, sub: BC_L3.talk.role === "المنظم" ? "مقدم البرنامج" : "متسابق · على الهواء", av: BC_L3.talk.av };
         }
@@ -6184,6 +6354,65 @@ function bcDirector(d) {
     document.querySelectorAll("#stShots img").forEach(img => img.classList.toggle("on", img.dataset.shot === shot));
 }
 
+/* ===== توقّع الفائز (للمشاهدين، قبل بداية كل مواجهة) ===== */
+function bcPredMap(d, cur) { const p = (d && d.pred) || {}; return p["c" + cur] || {}; }
+function bcPredCounts(d, cur) {
+    const m = bcPredMap(d, cur); let a = 0, b = 0;
+    Object.keys(m).forEach(k => { if (m[k] && m[k].n === 1) a++; else if (m[k] && m[k].n === 2) b++; });
+    return { a, b, t: a + b };
+}
+function bcPredSig(d) { if (!d || !d.pred) return ""; const m = bcPredMap(d, d.cur); const c = bcPredCounts(d, d.cur); return c.a + "-" + c.b + "-" + (currentUser && m[currentUser.uid] ? m[currentUser.uid].n : 0); }
+function bcCanPredict(d) { return !!currentUser && !!d && d.status === "live" && d.scene === "intro" && !myLiveNum(d); }
+function bcPredict(n) {
+    const d = liveMatchesCache[openLiveId];
+    if (!bcCanPredict(d)) return;
+    const name = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "مشاهد";
+    liveRef(openLiveId).update({ ["pred.c" + d.cur + "." + currentUser.uid]: { n: n, name: name } })
+        .then(() => roomToast("انحفظ توقعك", "check"))
+        .catch(err => roomToast(err && err.code === "permission-denied" ? "ما قدرنا نحفظ توقعك (صلاحيات قاعدة البيانات)" : "تعذّر حفظ توقعك", "alert"));
+}
+function bcPredHTML(d, o) {
+    const c = bcPredCounts(d, d.cur);
+    const pa = c.t ? Math.round(c.a * 100 / c.t) : 50;
+    const mine = currentUser ? (bcPredMap(d, d.cur)[currentUser.uid] || {}).n : 0;
+    const bar = `<div class="st-predbar"><i style="width:${pa}%"></i></div><div class="st-predlbl"><span>${escapeHTML(o.p1)} ${c.t ? pa + "%" : ""}</span><span>${c.t} توقّع</span><span>${c.t ? (100 - pa) + "%" : ""} ${escapeHTML(o.p2)}</span></div>`;
+    if (!currentUser) return `<div class="st-pred"><div class="t">${ic("target")} توقّع الفائز</div>${bar}<div class="lv-muted">سجّل دخول عشان تتوقع</div></div>`;
+    if (myLiveNum(d)) return c.t ? `<div class="st-pred"><div class="t">${ic("target")} توقعات الجمهور</div>${bar}</div>` : "";
+    return `<div class="st-pred"><div class="t">${ic("target")} مين بيفوز؟ توقّع قبل البداية</div>
+<div class="st-predbtns"><button class="${mine === 1 ? "on" : ""}" onclick="bcPredict(1)">${escapeHTML(o.p1)}</button><button class="${mine === 2 ? "on" : ""}" onclick="bcPredict(2)">${escapeHTML(o.p2)}</button></div>${bar}</div>`;
+}
+/* ترتيب أفضل المتوقعين في الجولة */
+function bcPredBoard(d) {
+    const tally = {};
+    (d.order || []).forEach((o, i) => {
+        if (o.state !== "done" || (o.s1 || 0) === (o.s2 || 0)) return;
+        const w = (o.s1 || 0) > (o.s2 || 0) ? 1 : 2;
+        const m = bcPredMap(d, i);
+        Object.keys(m).forEach(uid => {
+            const x = m[uid]; if (!x) return;
+            const t = tally[uid] || (tally[uid] = { name: x.name || "مشاهد", ok: 0, all: 0 });
+            t.all++; if (x.n === w) t.ok++;
+        });
+    });
+    return Object.values(tally).sort((a, b) => b.ok - a.ok || a.all - b.all).slice(0, 5);
+}
+
+/* ===== رابط مباشر للبث (يتنسخ ويتفتح في الواتساب) ===== */
+function bcShareUrl(id) { return location.origin + "/?live=" + encodeURIComponent(id); }
+function bcShare(id) {
+    id = id || openLiveId;
+    const d = liveMatchesCache[id];
+    if (!d) return;
+    const url = bcShareUrl(id);
+    const when = d.status === "scheduled" ? ` يبدأ الساعة ${bcTimeLabel(d.startAt || 0)}` : " مباشر الحين";
+    const text = `🔴 بث الجولة ${d.round} من دوري بنو مسروح للنخبة${when}\nادخل من هنا:\n${url}`;
+    try { navigator.clipboard.writeText(url).then(() => roomToast("نسخت رابط البث", "check")).catch(() => {}); } catch (e) {}
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+}
+/* لو أحد فتح الموقع من رابط البث، نفتح له البث على طول */
+let bcDeepLink = (() => { try { return new URLSearchParams(location.search).get("live"); } catch (e) { return null; } })();
+
+
 /* ===== تفاعلات المشاهدين (بدون صوت) ===== */
 const BC_RX = ["👏", "🔥", "❤️"];
 let bcRxLastSend = 0, bcRxSeenN = null;
@@ -6202,10 +6431,10 @@ function bcReact(i) {
     const e = BC_RX[i];
     if (!e || !openLiveId) return;
     bcFloat(e, true);
-    if (Date.now() - bcRxLastSend < 700 || !firebaseDB) return;
-    bcRxLastSend = Date.now();
+    if (bcNow() - bcRxLastSend < 700 || !firebaseDB) return;
+    bcRxLastSend = bcNow();
     const by = currentUser ? currentUser.uid : "guest";
-    liveCol().doc("rx_" + openLiveId).set({ type: "rx", e: e, n: Date.now() + Math.random(), by: by }).catch(() => {});
+    liveCol().doc("rx_" + openLiveId).set({ type: "rx", e: e, n: bcNow() + Math.random(), by: by }).catch(() => {});
 }
 function bcOnRx(x) {
     if (!x || !x.n) return;
@@ -6249,17 +6478,35 @@ const CINE_FILES = {
     braam: { g: 0.4 }, riser: { g: 0.65 }, impact: { g: 0.53 }, whoosh: { g: 1 }, slam: { g: 0.57 },
     heartbeat: { g: 1 }, fireworks: { g: 0.7 },
     buzz: { g: 1.3 }, correct: { g: 1 }, wrong: { g: 0.78 }, tick: { g: 1.4 }, timeout: { g: 0.85 },
-    bed_epic: { g: 0.9 }, lobby: { g: 0.62 },
+    lobby: { g: 0.62 },
     /* طابع برامج المسابقات */
     show_intro: { g: 0.62 }, interlude: { g: 0.84 }, decider: { g: 0.79 }, reveal: { g: 0.83 },
     match_end: { g: 0.81 }, applause: { g: 1 }, think2: { g: 0.72 }, start_q: { g: 0.87 }, outro: { g: 0.89 }, big_win: { g: 0.63 }
 };
 const CINE_BUF = {};
 const CINE_LOADING = {};
-function cineLoadSamples() {
+/* الأصوات تتحمل حسب الحاجة: المؤثرات الصغيرة أول ما يفتح البث، والموسيقى (الملفات الكبيرة) لما يقرب مشهدها */
+const CINE_CORE = ["buzz", "correct", "wrong", "tick", "timeout", "heartbeat", "whoosh", "riser", "braam", "slam", "impact", "start_q", "reveal", "match_end", "applause"];
+function cineNeedFor(d) {
+    if (!d) return [];
+    if (d.status === "scheduled") return ["lobby", "show_intro"];
+    if (d.status !== "live") return [];
+    const left = (d.order || []).filter((o, i) => o.state === "pending" && i !== d.cur).length;
+    switch (d.scene) {
+        case "opening": return ["show_intro", "interlude"];
+        case "intro": return ["interlude", "think2", "big_win"];
+        case "countdown": return ["think2", "decider"];
+        case "playing": return ["think2", "decider", "interlude"];
+        case "result": return left ? ["interlude", "big_win"] : ["interlude", "outro", "fireworks"];
+        case "closing": return ["outro", "fireworks"];
+    }
+    return [];
+}
+function cineLoadSamples(ids) {
     let c;
     try { c = cineGraph().c; } catch (e) { return; }
-    Object.keys(CINE_FILES).forEach(id => {
+    (ids || CINE_CORE).forEach(id => {
+        if (!CINE_FILES[id]) return;
         if (CINE_BUF[id] || CINE_LOADING[id]) return;
         CINE_LOADING[id] = fetch("audio/" + id + ".mp3")
             .then(r => {
@@ -6514,13 +6761,13 @@ function cineResult(d) {
     cineReady();
     const it = d ? Object.assign({}, (d.order || [])[d.cur] || {}, { s1: d.s1 || 0, s2: d.s2 || 0, bh1: d.bh1, bh2: d.bh2 }) : {};
     const big = !!bcWinKind(it);
-    cinePlay("match_end", 0.8) || cinePlay("whistle", 0.7);
+    cinePlay("match_end", 0.8);
     const el = cineOverlay("fxonly", "", big ? 8000 : 6500);
     if (!el) return;
     if (big) bedHold(7);
     cineAt(el, 1.2, () => {
-        if (big) cinePlay("big_win", 0.85) || cinePlay("cheer", 0.45, { dur: 4.5 });
-        else cinePlay("applause", 0.55) || cinePlay("cheer", 0.35, { dur: 3.5 });
+        if (big) cinePlay("big_win", 0.85);
+        else cinePlay("applause", 0.55);
         cineFlash(el, big ? 0.8 : 0.5, 500, "#facc15"); cineShake(big ? 14 : 8);
         cpConfetti(big ? 260 : 150); cpSpark(CP.w / 2, CP.h * 0.35, big ? 160 : 80);
     });
@@ -6546,7 +6793,7 @@ const BEDS = { cur: null };
 /* لكل مود: [قائمة ملفات بالأفضلية، المستوى] */
 const BED_MIX = {
     lobby:   [[["lobby"], 0.6]],
-    epic:    [[["interlude", "bed_epic"], 0.5]],
+    epic:    [[["interlude"], 0.5]],
     tension: [[["think2"], 0.42]],   /* بدون تكتكة */
     decider: [[["decider"], 0.5]]
 };
@@ -6563,7 +6810,7 @@ function bedTarget() {
     let v = 0.8;
     if (bcTrack && !bcSelfMuted) v *= 0.5;   /* مايكك مفتوح: نخفضها عشان ما تدخل المايك */
     if (BED.duck) v *= 0.3;                   /* المذيع يتكلم */
-    if (Date.now() < (BED.holdUntil || 0)) v *= 0.15;   /* موسيقى مشهد خاصة شغالة */
+    if (bcNow() < (BED.holdUntil || 0)) v *= 0.15;   /* موسيقى مشهد خاصة شغالة */
     return v;
 }
 function bedApply() {
@@ -6574,7 +6821,7 @@ function bedApply() {
     } catch (e) {}
 }
 function bedHold(sec) {
-    BED.holdUntil = Date.now() + sec * 1000;
+    BED.holdUntil = bcNow() + sec * 1000;
     bedApply();
     setTimeout(bedApply, sec * 1000 + 60);
 }
@@ -6644,7 +6891,7 @@ function bcNumUid(uid) {
 }
 
 async function bcJoin() {
-    if (!window.AgoraRTC) throw new Error("مكتبة الصوت ما تحمّلت");
+    await loadAgora();
     if (!bcClient) {
         bcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         bcClient.on("user-published", async (user, mediaType) => {
@@ -6735,10 +6982,10 @@ function bcSyncAudio() {
                 if (!listen) { if (bcJoined || bcTrack) await bcLeave(); continue; }
                 await bcJoin();
                 const want = bcShouldPublish(d);
-                if (want && !bcTrack && Date.now() - bcMicFailAt > 10000) {
+                if (want && !bcTrack && bcNow() - bcMicFailAt > 10000) {
                     try { await bcPublish(); }
                     catch (e) {
-                        bcMicFailAt = Date.now();
+                        bcMicFailAt = bcNow();
                         bcMicErr = e && e.code === "PERMISSION_DENIED" ? "ارفض المتصفح إذن المايك، فعّله من إعدادات المتصفح" : ("تعذّر فتح المايك: " + (e.message || e.code || e));
                     }
                 } else if (!want && bcTrack) {
@@ -6866,7 +7113,8 @@ function openLiveScreen(id) {
     try { const v = document.getElementById("stVideo"); if (v && v.paused) v.play().catch(() => {}); } catch (e) {}
     document.body.classList.add("live-open");
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
-    cineLoadSamples();
+    cineLoadSamples(CINE_CORE);
+    cineLoadSamples(cineNeedFor(liveMatchesCache[id]));
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
@@ -6898,7 +7146,7 @@ function liveTick() {
     const d = liveMatchesCache[openLiveId];
     if (!d) return;
     if (d.status === "scheduled") { bcTickClock(d); return; }
-    const left = Math.max(0, (d.deadline || 0) - Date.now());
+    const left = Math.max(0, (d.deadline || 0) - bcNow());
     if (d.scene === "countdown") {
         const el = document.getElementById("lvCount");
         const n = Math.max(1, Math.ceil((left - 500) / 1000));
@@ -6918,9 +7166,11 @@ function liveTick() {
         }
         if (num) { const t = String(Math.ceil(left / 1000)); if (num.textContent !== t) num.textContent = t; }
         const rv = document.getElementById("stReveal");
-        if (rv && rv.classList.contains("hold") && Date.now() >= bcRevealAt(d)) rv.classList.remove("hold");
+        if (rv && rv.classList.contains("hold") && bcNow() >= bcRevealAt(d)) rv.classList.remove("hold");
     }
     bcAirClock(d);
+    bcHostHeartbeat(d);
+    bcAutoPilot(d);
     bcTickMics();
     bcLowerThird(d);
     liveAdvanceIfDue();
@@ -6929,7 +7179,7 @@ function liveTick() {
 /* عداد البث المجدول: ساعات:دقايق:ثواني، وآخر 10 ثواني تكتكة ونبض */
 let bcClockLast = -1;
 function bcTickClock(d) {
-    const left = Math.max(0, (d.startAt || 0) - Date.now());
+    const left = Math.max(0, (d.startAt || 0) - bcNow());
     const sec = Math.ceil(left / 1000);
     const el = document.getElementById("bcClock");
     if (el && sec !== bcClockLast) {
@@ -6942,10 +7192,10 @@ function bcTickClock(d) {
         if (sec === 0) {
             el.innerHTML = `<div class="now">الحين!</div>`;
             const lb = document.getElementById("bcWaitNote");
-            if (lb) lb.textContent = isAdmin ? "جاري بدء البث..." : "بانتظار المنظم يبدأ البث...";
+            if (lb) lb.textContent = "جاري بدء البث...";
         }
     }
-    if (left <= 0 && isAdmin) bcGoLive(false);
+    if (left <= 0 && currentUser) bcGoLive(false);
 }
 
 /* لقطة انتقالية بين المشاهد (ستينجر) */
@@ -6967,7 +7217,7 @@ function bcSceneEffects(d) {
     const prev = bcPrevKey;
     bcPrevKey = key;
     /* لو فتحت البث متأخر، نعرض المشهد السينمائي بس إذا بدأ قبل لحظات */
-    const fresh = ms => Math.abs(Date.now() - (d.sceneAt || 0)) < ms;
+    const fresh = ms => Math.abs(bcNow() - (d.sceneAt || 0)) < ms;
     if (prev === null) {
         if (d.status === "live" && d.scene === "opening") { if (fresh(8000)) cineOpening(d); }
         else if (d.status === "live" && d.scene === "intro" && fresh(5000)) cineMatchIntro(d);
@@ -7001,7 +7251,7 @@ function renderLiveScreen() {
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -7018,6 +7268,7 @@ function renderLiveScreen() {
         if (bcIsDecider(d)) scrEl.dataset.decider = "1"; else delete scrEl.dataset.decider;
     }
     bcDirector(d);
+    cineLoadSamples(cineNeedFor(d));
     bcTicker(d);
     bcClockLast = -1;
     bcSceneEffects(d);
@@ -7052,7 +7303,7 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
 <div class="st-desk"><b>${n === 1 ? (d.s1 || 0) : (d.s2 || 0)}</b><i>نقاط</i></div>
 </div>`;
-        const mid = d.scene === "playing" ? `السؤال ${d.qIndex + 1}<small>من ${nq}</small>` : (d.scene === "result" ? "النتيجة" : "استعدوا");
+        const mid = d.scene === "playing" ? (d.qIndex >= LIVE_Q_COUNT ? `ذهبي<small>سؤال الحسم</small>` : `السؤال ${d.qIndex + 1}<small>من ${LIVE_Q_COUNT}</small>`) : (d.scene === "result" ? "النتيجة" : "استعدوا");
         const mc = (d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
         html += `
 ${mc ? `<div class="st-microw">${mc}</div>` : ""}
@@ -7084,7 +7335,7 @@ function liveSoundsOnChange(d) {
     if (view.phase === "buzz" && p.phase !== "buzz" && view.q > 0) cinePlay("whoosh", 0.4);
     if (view.phase === "reveal" && p.phase !== "reveal") {
         /* طبول تشويق تخلص بالضبط لحظة الكشف، وبعدها صح + تصفيق أو غلط + "آه" */
-        const wait = Math.max(0, bcRevealAt(d) - Date.now());
+        const wait = Math.max(0, bcRevealAt(d) - bcNow());
         cinePlay("reveal", 0.75, { tail: Math.max(0.4, wait / 1000 + 0.15) });
         setTimeout(() => {
             if (view.out) { cinePlay("correct", 0.7); cinePlay("applause", 0.4, { dur: 3 }); }
@@ -7095,7 +7346,7 @@ function liveSoundsOnChange(d) {
 
 /* المنظم فوق (صورته واسمه)، والمتسابقين تحته في المشهد نفسه */
 function bcHostHTML(d) {
-    const av = d.hostAv || getPlayerAvatar(d.hostName || "م").url;
+    const av = cdnThumb(d.hostAv || getPlayerAvatar(d.hostName || "م").url);
     const micOn = d.scene === "countdown" || d.scene === "playing";
     return `
 <div class="st-host" ${d.hostUid ? `data-bcuid="${escapeHTML(d.hostUid)}"` : ""}>
@@ -7108,6 +7359,7 @@ function bcSideCtlHTML() {
     return `<div class="st-side">
 ${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">${e}</button>`).join("")}
 <i class="sep"></i>
+<button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
 <button class="${cineBgOn ? "" : "off"}" onclick="bcToggleBg()" aria-label="الموسيقى">${ic("music")}</button>
 </div>`;
@@ -7151,7 +7403,8 @@ function bcStageHTML(d, me) {
 <div class="bc-wait-t">يبدأ البث بعد</div>
 <div class="bc-clock" id="bcClock"></div>
 <div class="bc-wait-at">${ic("hourglass")} الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))}</div>
-<div class="lv-muted" id="bcWaitNote">${isAdmin ? "البث يبدأ لحاله أول ما يخلص العداد وأنت فاتح هالشاشة" : "خلك هنا، والبث يبدأ أول ما يخلص العداد"}</div>
+<div class="lv-muted" id="bcWaitNote">البث يبدأ لحاله أول ما يخلص العداد</div>
+<button class="bc-ghost" onclick="bcShare()">${ic("share")} أرسل رابط البث في الواتساب</button>
 </div>
 <div class="bc-fixtures">${bcFixturesHTML(d, false)}</div>
 ${isAdmin ? `<div class="bc-admin"><button class="bc-go" onclick="bcGoLive(true)">${ic("zap")} ابدأ البث الحين</button></div>` : ""}`;
@@ -7205,6 +7458,7 @@ ${uid ? `<div class="bc-st">المايك مقفل</div>` : `<div class="bc-st wa
 <div class="bc-mlabel big">المواجهة ${d.cur + 1} من ${total}</div>
 <div class="bc-vs">${side(1)}<div class="bc-vsx">VS</div>${side(2)}</div>
 ${ctx ? `<div class="st-ctx ${ctx.k}">${ic(ctx.k === "revenge" ? "zap" : "trophy")} ${escapeHTML(ctx.t)}</div>` : ""}
+${bcPredHTML(d, o)}
 <div class="bc-note">${ic("mic-off")} المايكات تفتح أول ما تبدأ المواجهة</div>
 ${action}
 <div class="lv-rules">${LIVE_Q_COUNT} أسئلة · أسرع واحد يضغط الجرس يجاوب · إذا غلط أو خلص وقته ينتقل السؤال للثاني</div>
@@ -7247,6 +7501,7 @@ ${wAv ? `<img class="bc-win-av" src="${escapeHTML(wAv)}" alt="">` : `<div class=
 <div><b>${pc(s1)}</b><span>نسبة النجاح</span><b>${pc(s2)}</b></div>
 <div><b class="${fastest === 1 ? "hi" : ""}">${fb(fb1)}</b><span>أسرع ضغطة جرس</span><b class="${fastest === 2 ? "hi" : ""}">${fb(fb2)}</b></div>
 </div>
+${(() => { const c = bcPredCounts(d, d.cur); if (!c.t || !winner) return ""; const wn = s1 > s2 ? c.a : c.b; return `<div class="lv-muted">${ic("target")} ${wn} من ${c.t} توقعوا فوز ${escapeHTML(winner)}</div>`; })()}
 <div class="lv-applied ${it.applied ? "" : "wait"}">${it.applied ? ic("check-circle") + " تم تسجيل النتيجة في جدول الدوري" : ic("hourglass") + " جاري تسجيل النتيجة في الجدول..."}</div>
 <div class="lv-sum">${sum}</div>
 ${nx ? `<div class="bc-next">التالي: <b>${escapeHTML(nx.p1)}</b> ضد <b>${escapeHTML(nx.p2)}</b></div>` : `<div class="bc-next">هذي كانت آخر مواجهة في الجولة</div>`}
@@ -7266,6 +7521,7 @@ ${(() => {
     if (!bm.fast && !bm.big) return "";
     return `<div class="st-best"><div class="t">${ic("zap")} أفضل لحظات الجولة</div>${bm.fast ? `<div>أسرع ضغطة جرس: <b>${escapeHTML(bm.fast.name)}</b> في ${bcSec(bm.fast.ms)} ثانية</div>` : ""}${bm.big ? `<div>أكبر فوز: <b>${escapeHTML(bm.big.w)}</b> ${bm.big.a} - ${bm.big.b}</div>` : ""}</div>`;
 })()}
+${(() => { const b = bcPredBoard(d); if (!b.length) return ""; return `<div class="st-best"><div class="t">${ic("target")} أفضل المتوقعين</div>${b.map((x, i) => `<div>${i + 1}. <b>${escapeHTML(x.name)}</b> · ${x.ok} من ${x.all} صح</div>`).join("")}</div>`; })()}
 <div class="bc-fixtures">${bcFixturesHTML(d, true)}</div>
 ${isAdmin ? "" : `<div class="lv-muted">شكراً لمتابعتكم، المنظم يختم البث...</div>`}
 ${adminBar(`<button class="bc-go" onclick="bcEnd()">${ic("power")} إنهاء البث</button>`)}`;
@@ -7289,9 +7545,9 @@ function bcQuizHTML(d, me) {
     const ring = d.phase === "reveal" ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
     let html = `
 <div class="lv-dots">${dots}</div>
-${decider ? `<div class="st-decider">${ic("zap")} سؤال الحسم</div>` : ""}
+${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
-<div class="st-qhead"><span>السؤال ${d.qIndex + 1} من ${(d.questions || []).length}</span>${ring}</div>
+<div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
 <div class="lv-qtext">${escapeHTML(q.text)}</div>
 </div>`;
 
@@ -7322,7 +7578,7 @@ ${lastHTML}
     } else if (d.phase === "reveal") {
         /* لحظة تشويق قبل كشف الإجابة */
         const w = d.outcome;
-        const hold = Date.now() < bcRevealAt(d);
+        const hold = bcNow() < bcRevealAt(d);
         const okLast = last && last.correct ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : lastHTML;
         html += `
 <div class="st-reveal ${hold ? "hold" : ""}" id="stReveal">
