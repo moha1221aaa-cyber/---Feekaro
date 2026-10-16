@@ -74,6 +74,9 @@ z-index: 10;
 transition: transform 0.2s ease, background 0.2s ease;
 }
 
+.notif-bell-btn .notif-dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:#64748b;border:2px solid #0f172a;}
+.notif-bell-btn.on .notif-dot{background:#22c55e;}
+.notif-bell-btn.off{color:#64748b;}
 .notif-bell-btn:active {
 transform: scale(0.92);
 background: #1e293b;
@@ -92,6 +95,8 @@ justify-content: center;
 width: 100%;
 height: 100%;
 object-fit: contain;
+border-radius: 24px;
+box-shadow: 0 0 0 1px rgba(147,197,253,.25), 0 10px 30px rgba(37,99,235,.35);
 }
 
 .league-name {
@@ -1483,7 +1488,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .shake{animation:ridShake .35s;}
 @keyframes ridShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
-/* ===================== البث المباشر للمباريات ===================== */
+/* ===================== البث المباشر للمواجهات ===================== */
 @keyframes lvPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 .live-bar{display:flex;align-items:center;gap:8px;max-width:420px;margin:10px auto;padding:10px 12px;background:linear-gradient(90deg,#450a0a,#1e293b);border:1px solid #dc2626;border-radius:12px;cursor:pointer;font-size:13px;box-sizing:border-box;}
 .live-bar .dot,.lv-badge .dot,.live-watch-btn .dot{width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:lvPulse 1.2s infinite;display:inline-block;}
@@ -1509,7 +1514,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .bc-open{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
 .bc-open .tro .ic{width:64px;height:64px;}
 .bc-onair-tag{font-size:11px;font-weight:bold;letter-spacing:3px;color:#fff;background:#dc2626;padding:3px 10px;border-radius:4px;animation:lvPulse 1.4s infinite;}
-.bc-logo{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 0 22px rgba(250,204,21,.45));animation:bcLogo 1.1s cubic-bezier(.2,.9,.3,1.3) both;}
+.bc-logo{width:84px;height:84px;object-fit:contain;border-radius:22%;filter:drop-shadow(0 0 22px rgba(59,130,246,.55));animation:bcLogo 1.1s cubic-bezier(.2,.9,.3,1.3) both;}
 @keyframes bcLogo{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
 .bc-title{font-size:26px;font-weight:bold;background:linear-gradient(90deg,#fde68a,#facc15,#fff7d6,#facc15,#fde68a);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:bcShine 3s linear infinite;}
 @keyframes bcShine{to{background-position:200% center}}
@@ -1602,7 +1607,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .bc-wavebg .w3{fill:rgba(124,58,237,.22);height:16%;animation:bcWave 7s linear infinite;}
 @keyframes bcWave{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .bc-wait{display:flex;flex-direction:column;align-items:center;gap:6px;}
-.bc-wait-logo{width:74px;height:74px;object-fit:contain;filter:drop-shadow(0 0 24px rgba(250,204,21,.6));animation:bcFloat 3.5s ease-in-out infinite;}
+.bc-wait-logo{width:74px;height:74px;object-fit:contain;border-radius:22%;filter:drop-shadow(0 0 24px rgba(59,130,246,.65));animation:bcFloat 3.5s ease-in-out infinite;}
 @keyframes bcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .bc-wait-k{color:#fde68a;font-size:12px;font-weight:bold;letter-spacing:2px;}
 .bc-wait-t{color:#e2e8f0;font-size:14px;margin-top:6px;}
@@ -1861,7 +1866,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 @keyframes stSw{to{left:110%}}
 @media (prefers-reduced-motion: reduce){.lv-stage.enter>*,.lv-stage.soft>*,.st-pods.enter>*,.st-trans *{animation:none!important;}}
 
-/* ===== المشاهد السينمائية بين المباريات ===== */
+/* ===== المشاهد السينمائية بين المواجهات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .cine.fxonly{background:none;pointer-events:none;cursor:default;}
 .cine.out{animation:cineOut .6s ease forwards;}
@@ -1916,7 +1921,7 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .cine-of.on{animation:cineUp .6s ease both;}
 @keyframes cineUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .cine-skip{position:absolute;bottom:3%;left:0;right:0;text-align:center;z-index:7;color:rgba(255,255,255,.45);font-size:11px;opacity:0;animation:cineUp .5s 1s ease both;}
-.cine-logo{position:absolute;left:50%;top:30%;width:clamp(96px,30vw,140px);margin-left:calc(clamp(96px,30vw,140px) / -2);z-index:5;opacity:0;filter:drop-shadow(0 0 30px rgba(250,204,21,.7));}
+.cine-logo{position:absolute;left:50%;top:30%;width:clamp(96px,30vw,140px);margin-left:calc(clamp(96px,30vw,140px) / -2);z-index:5;opacity:0;border-radius:22%;filter:drop-shadow(0 0 30px rgba(59,130,246,.75));}
 .cine-logo.on{animation:cineLogo 1.2s cubic-bezier(.2,.9,.3,1.2) both;}
 @keyframes cineLogo{0%{opacity:0;transform:scale(.2) rotate(-25deg);filter:brightness(4) drop-shadow(0 0 30px #fff)}60%{opacity:1;filter:brightness(1.6) drop-shadow(0 0 40px rgba(250,204,21,.9))}100%{opacity:1;transform:none;filter:drop-shadow(0 0 30px rgba(250,204,21,.7))}}
 .cine-onair{position:absolute;top:68%;left:0;right:0;text-align:center;z-index:5;opacity:0;}
@@ -2048,7 +2053,7 @@ async function installPwa() {
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
 <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
-<symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m12 7 4.5 3.3-1.7 5.2H9.2L7.5 10.3z"/><path d="M12 7V2.2M16.5 10.3l4.8-1.5M14.8 15.5l3 4M9.2 15.5l-3 4M7.5 10.3 2.7 8.8"/></symbol>
+<symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
 <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
 <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M2 2l20 20"/><path d="M18.9 13.2A7.1 7.1 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.3V5a3 3 0 0 0-5.7-1.3"/><path d="M9 9v3a3 3 0 0 0 5.1 2.1"/><path d="M12 19v3"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -2103,7 +2108,7 @@ async function installPwa() {
 
 
 <header id="mainHeader">
-<button class="notif-bell-btn" onclick="enableNotifications()" title="تفعيل الإشعارات"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
+<button class="notif-bell-btn" id="notifBellBtn" onclick="enableNotifications()" title="الإشعارات"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><i class="notif-dot"></i></button>
 <button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:15px; right:auto;"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
 <div class="header-branding" id="headerBranding">
 <div class="logo-box">
@@ -2127,18 +2132,18 @@ async function installPwa() {
 <div id="adminControls" class="admin-controls-box" style="display:none;">
 <h4><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> أدوات التحكم بالدوري (خاص بالمسؤول)</h4>
 <div class="admin-btn-group">
-<button onclick="addNewPlayerPrompt()" style="background:#059669; margin:3px;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة لاعب جديد</button>
+<button onclick="addNewPlayerPrompt()" style="background:#059669; margin:3px;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة متسابق جديد</button>
 <button onclick="reDrawMatches()" style="background:#d97706; margin:3px;"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg> إعادة القرعة</button>
 </div>
 </div>
 <div id="homeUpcoming"></div>
 <div id="videosSection" class="videos-container">
 <div class="video-section-header">
-<h3><svg class="ic" aria-hidden="true"><use href="#i-clapper"/></svg> التغطيات وملخصات المباريات</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-clapper"/></svg> التغطيات وملخصات المواجهات</h3>
 <button id="addVideoBtn" class="add-video-btn" onclick="toggleVideoUploadForm()" style="display:none;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة فيديو</button>
 </div>
 <div id="videoUploadForm" class="video-upload-form" style="display:none;">
-<input type="text" id="videoTitleInput" placeholder="عنوان الفيديو / التغطية (مثال: ملخص مباراة أحمد وعبدالملك)">
+<input type="text" id="videoTitleInput" placeholder="عنوان الفيديو / التغطية (مثال: ملخص مواجهة أحمد وعبدالملك)">
 <input type="file" id="videoFileInput" accept="video/mp4,video/webm">
 <div id="uploadProgressBar" class="upload-progress" style="display:none;">جاري الرفع...</div>
 <button onclick="uploadVideoHandler()" style="width:100%; font-weight:bold;">رفع الفيديو <svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></button>
@@ -2153,7 +2158,7 @@ async function installPwa() {
 <thead>
 <tr>
 <th>#</th>
-<th>اللاعب</th>
+<th>المتسابق</th>
 <th>ف</th>
 <th>ت</th>
 <th>خ</th>
@@ -2174,7 +2179,7 @@ async function installPwa() {
 </div>
 
 <div class="match-filter-box">
-<input type="text" id="matchSearchInput" placeholder="بحث باسم اللاعب..." oninput="renderMatches()">
+<input type="text" id="matchSearchInput" placeholder="بحث باسم المتسابق..." oninput="renderMatches()">
 </div>
 
 <div id="upcoming"></div>
@@ -2183,7 +2188,7 @@ async function installPwa() {
 
 <div id="predictions" class="section">
 <div class="prediction-tabs">
-<div class="prediction-tab active" onclick="switchPredictionTab('predict')"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> توقع المباريات</div>
+<div class="prediction-tab active" onclick="switchPredictionTab('predict')"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> توقع المواجهات</div>
 <div class="prediction-tab" onclick="switchPredictionTab('ranking')"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg> جدول الترتيب</div>
 </div>
 
@@ -2234,7 +2239,7 @@ async function installPwa() {
 
 <button onclick="resetLeague()" id="resetButton" style="display:none; background:#dc2626; margin:15px auto;"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg> إعادة ضبط الدوري</button>
 
-<!-- مودال الملف الشخصي للالاعب/المستخدم -->
+<!-- مودال الملف الشخصي للمتسابق/المستخدم -->
 <div id="viewProfileModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
@@ -2256,22 +2261,22 @@ async function installPwa() {
 </div>
 </div>
 
-<!-- مودال توثيق اللاعب -->
+<!-- مودال توثيق المتسابق -->
 <div id="linkPlayerModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق لاعب بالحساب</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق متسابق بالحساب</h3>
 <button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="linkPlayerModalBody"></div>
 </div>
 </div>
 
-<!-- مودال اختيار لاعبي المباراة -->
+<!-- مودال اختيار متسابقي المواجهة -->
 <div id="roomPlayerPickerModal" class="modal-overlay">
 <div class="modal-content">
 <div class="modal-header">
-<h3><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> اختيار اللاعب</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg> اختيار المتسابق</h3>
 <button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
 </div>
 <div id="roomPlayerPickerModalBody"></div>
@@ -2288,7 +2293,7 @@ async function installPwa() {
 <div id="qbankListBox"></div>
 <div class="qbank-add-form" style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
 <input type="text" id="qbankNewText" placeholder="نص السؤال">
-<input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن اللاعبين)">
+<input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن المتسابقين)">
 <button onclick="addQuestionToBank()" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة سؤال جديد</button>
 </div>
 </div>
@@ -2351,7 +2356,7 @@ async function installPwa() {
 </div>
 <div class="tab" onclick="showTab(event,'matches')">
 <div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg></div>
-<div>المباريات</div>
+<div>المواجهات</div>
 </div>
 <div class="tab" onclick="showTab(event,'predictions')">
 <div class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg></div>
@@ -2951,12 +2956,12 @@ function generateMatches() {
 
 function addNewPlayerPrompt() {
 if(!isAdmin) return;
-let name = prompt("أدخل اسم اللاعب الجديد:");
+let name = prompt("أدخل اسم المتسابق الجديد:");
 if(!name || !name.trim()) return;
 
 name = name.trim();
 if(players.some(p => p.name === name)) {
-return alert("اللاعب موجود بالفعل بنفس الاسم!");
+return alert("المتسابق موجود بالفعل بنفس الاسم!");
 }
 
 players.push({ name: name, w:0, d:0, l:0, gf:0, ga:0, pts:0 });
@@ -2964,7 +2969,7 @@ generateMatches();
 table();
 renderMatches();
 save();
-alert(`تم إضافة اللاعب "${name}" وإعادة بناء جدول المباريات بنجاح!`);
+alert(`تم إضافة المتسابق "${name}" وإعادة بناء جدول المواجهات بنجاح!`);
 }
 
 function reDrawMatches() {
@@ -2992,9 +2997,6 @@ if(!firebaseReady || !firebaseDB) return;
 firebaseDB.collection("league").doc("current").onSnapshot(doc => {
 if(doc.exists) {
 let data = doc.data();
-if(!isInitialLoad) {
-showNotification("تم تحديث نتائج المباريات في الدوري!");
-}
 isInitialLoad = false;
 
 if(data.playersList && Array.isArray(data.playersList)) {
@@ -3017,6 +3019,7 @@ renderMatches();
 renderPredictions();
 renderFullAccountPage();
 renderLeagueSummary();
+notifScoresCheck();
 });
 
 listenToVideos();
@@ -3045,22 +3048,69 @@ save();
 alert("تم إعادة ضبط الدوري بنجاح");
 }
 
+/* ===== الإشعارات =====
+   تشتغل على جوالات أندرويد عن طريق Service Worker (new Notification ما يشتغل في كروم الجوال).
+   تطلع لما الموقع مفتوح أو بالخلفية: نتيجة مواجهة جديدة، بداية بث، موعد بث، دورك في البث، الغرفة الصوتية مباشرة */
+function notifOn() {
+    try { return ("Notification" in window) && Notification.permission === "granted" && localStorage.getItem("notifOff") !== "1"; } catch (e) { return false; }
+}
+function renderNotifBell() {
+    const b = document.getElementById("notifBellBtn");
+    if (!b) return;
+    const on = notifOn();
+    b.classList.toggle("on", on);
+    b.classList.toggle("off", !on);
+    b.title = on ? "الإشعارات مفعّلة (اضغط للإيقاف)" : "تفعيل الإشعارات";
+}
 function enableNotifications() {
-if(!("Notification" in window)) return alert("المتصفح لا يدعم الإشعارات");
-Notification.requestPermission().then(permission => {
-if(permission === "granted") {
-notifyEnabled = true;
-alert("تم تفعيل الإشعارات بنجاح");
-} else {
-alert("لم يتم تفعيل الإشعارات");
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return alert("المتصفح هذا ما يدعم الإشعارات. جرّب من متصفح Chrome، أو ثبّت الموقع كتطبيق.");
+    if (notifOn()) {
+        if (confirm("الإشعارات مفعّلة. تبي توقفها؟")) { try { localStorage.setItem("notifOff", "1"); } catch (e) {} renderNotifBell(); }
+        return;
+    }
+    if (Notification.permission === "denied") {
+        return alert("الإشعارات مقفلة من المتصفح.\n\nعشان تفتحها:\n1. اضغط القفل 🔒 جنب رابط الموقع فوق\n2. اختر الأذونات (Permissions)\n3. خلّ الإشعارات (Notifications) مسموحة\n4. حدّث الصفحة واضغط الجرس مرة ثانية");
+    }
+    Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+            try { localStorage.removeItem("notifOff"); } catch (e) {}
+            renderNotifBell();
+            notify("تم تفعيل الإشعارات ✅", "بيوصلك إشعار لما تنسجل نتيجة، أو يبدأ بث، أو يجي دورك.", "welcome", "/", true);
+        } else {
+            alert("ما تم تفعيل الإشعارات.");
+        }
+        renderNotifBell();
+    });
 }
-});
+const notifSeen = {};
+function notify(title, body, tag, url, force) {
+    if (!notifOn()) return;
+    if (tag && notifSeen[tag] && !force) return;
+    if (tag) notifSeen[tag] = 1;
+    const opt = { body: body, tag: tag || undefined, icon: "logo.png", badge: "logo.png", lang: "ar", dir: "rtl", data: { url: url || "/" }, vibrate: [120, 60, 120] };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(reg => reg.showNotification(title, opt)).catch(() => { try { new Notification(title, opt); } catch (e) {} });
+    } else { try { new Notification(title, opt); } catch (e) {} }
 }
+/* توافق مع الكود القديم */
+function showNotification(message) { notify("MASRO7 LEAGUE", message, "", "/"); }
+document.addEventListener("DOMContentLoaded", renderNotifBell);
+setTimeout(renderNotifBell, 1500);
 
-function showNotification(message) {
-if(notifyEnabled && Notification.permission === "granted") {
-new Notification("MASRO7 LEAGUE", { body: message });
-}
+/* نتيجة جديدة في الجدول */
+let notifPrevScores = null;
+function notifScoresCheck() {
+    const cur = {};
+    matches.forEach(m => { if (m.s1 !== "" && m.s2 !== "") cur[getMatchId(m)] = m; });
+    if (notifPrevScores) {
+        Object.keys(cur).forEach(k => {
+            if (notifPrevScores[k]) return;
+            const m = cur[k];
+            notify("نتيجة جديدة 🏆", `${m.p1.name} ${m.s1} - ${m.s2} ${m.p2.name} · الجولة ${m.round}`, "res_" + k, "/");
+        });
+    }
+    notifPrevScores = {};
+    Object.keys(cur).forEach(k => notifPrevScores[k] = 1);
 }
 
 function loadPredictions() {
@@ -3125,7 +3175,7 @@ if(!container) return;
 if(!currentUser) {
 container.innerHTML = `
 <div class="account-box">
-<h3><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> توقع نتائج المباريات</h3>
+<h3><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> توقع نتائج المواجهات</h3>
 <p class="login-message">يرجى تسجيل الدخول من تبويب "الحساب" لتشترك في التوقعات وتكسب النقاط!</p>
 <button onclick="showTab(null, 'accountTab')"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> الذهاب لتسجيل الدخول</button>
 </div>
@@ -3139,7 +3189,7 @@ let completedMatches = matches.filter(m => m.s1 !== "" && m.s2 !== "");
 let html = "";
 
 if(upcomingMatches.length > 0) {
-html += `<h3 style="text-align:center; color:#60a5fa; margin:10px 0;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> المباريات القادمة للتوقع</h3>`;
+html += `<h3 style="text-align:center; color:#60a5fa; margin:10px 0;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> المواجهات القادمة للتوقع</h3>`;
 upcomingMatches.forEach(m => {
 let matchId = getMatchId(m);
 let pred = predictions[matchId] || { s1: "", s2: "" };
@@ -3171,7 +3221,7 @@ html += `
 `;
 });
 } else {
-html += `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مباريات قادمة للتوقع حالياً</div>`;
+html += `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مواجهات قادمة للتوقع حالياً</div>`;
 }
 
 if(completedMatches.length > 0) {
@@ -3382,7 +3432,7 @@ userData = cachedUsersData[playerLinks[playerName]];
 uid = playerLinks[playerName];
 }
 
-let displayName = playerName || (userData ? (userData.name || userData.displayName) : "لاعب");
+let displayName = playerName || (userData ? (userData.name || userData.displayName) : "متسابق");
 let userEmail = userData ? userData.email : "";
 let av = getPlayerAvatar(displayName);
 let photoUrl = (userData && userData.photoURL) ? userData.photoURL : av.url;
@@ -3396,14 +3446,14 @@ let statsHTML = "";
 if(pStat) {
 statsHTML = `
 <div style="margin-top:15px; text-align:right;">
-<div style="font-size:13px; font-weight:bold; color:#60a5fa; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> إحصائيات الدوري (كالاعب)</div>
+<div style="font-size:13px; font-weight:bold; color:#60a5fa; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg> إحصائيات الدوري (كمتسابق)</div>
 <div class="stats-grid-box">
 <div class="stat-box-item"><div class="stat-box-value">#${pRank}</div><div class="stat-box-label">الترتيب في الدوري</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#60a5fa;">${pStat.pts}</div><div class="stat-box-label">النقاط</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#4ade80;">${pStat.w}</div><div class="stat-box-label">الفوز</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#facc15;">${pStat.d}</div><div class="stat-box-label">التعادل</div></div>
 <div class="stat-box-item"><div class="stat-box-value" style="color:#f87171;">${pStat.l}</div><div class="stat-box-label">الخسارة</div></div>
-<div class="stat-box-item"><div class="stat-box-value">${pStat.gf} / ${pStat.ga}</div><div class="stat-box-label">له / عليه</div></div>
+<div class="stat-box-item"><div class="stat-box-value">${pStat.gf} / ${pStat.ga}</div><div class="stat-box-label">أجوبته / أجوبة خصومه</div></div>
 </div>
 </div>
 `;
@@ -3426,7 +3476,7 @@ if(displayName) {
 let pMatches = matches.filter(m => m.p1.name === displayName || m.p2.name === displayName);
 if(pMatches.length > 0) {
 playerMatchesHTML = `<div style="margin-top:18px; text-align:right;">
-<div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> مباريات اللاعب (${pMatches.length})</div>`;
+<div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> مواجهات المتسابق (${pMatches.length})</div>`;
 pMatches.forEach(m => {
 let isP1 = (m.p1.name === displayName);
 let oppName = isP1 ? m.p2.name : m.p1.name;
@@ -3455,7 +3505,7 @@ playerMatchesHTML += `</div>`;
 }
 }
 
-let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal('${escapeHTML(displayName)}')" style="margin-top:12px; background:#0284c7; width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق اللاعب بالحساب</button>` : '';
+let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal('${escapeHTML(displayName)}')" style="margin-top:12px; background:#0284c7; width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق المتسابق بالحساب</button>` : '';
 
 body.innerHTML = `
 <div style="text-align:center;">
@@ -3530,11 +3580,11 @@ let leader = players[0] ? players[0].name : "-";
 container.innerHTML = `
 <div class="summary-card">
 <div class="summary-card-val">${playedMatches} / ${totalMatches}</div>
-<div class="summary-card-lbl">المباريات المكتملة</div>
+<div class="summary-card-lbl">المواجهات المكتملة</div>
 </div>
 <div class="summary-card">
 <div class="summary-card-val" style="color:#facc15;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> ${totalGoals}</div>
-<div class="summary-card-lbl">إجمالي الأهداف</div>
+<div class="summary-card-lbl">إجمالي الأجوبة الصحيحة</div>
 </div>
 <div class="summary-card">
 <div class="summary-card-val" style="color:#4ade80;"><svg class="ic" aria-hidden="true"><use href="#i-crown"/></svg> ${escapeHTML(leader)}</div>
@@ -3549,7 +3599,7 @@ players.forEach((p, idx) => {
 let medal = idx === 0 ? "🥇" : (idx === 1 ? "🥈" : (idx === 2 ? "🥉" : `${idx + 1}.`));
 text += `${medal} *${p.name}* - ${p.pts} نقطة (ف:${p.w} | ت:${p.d} | خ:${p.l} | له:${p.gf})\n`;
 });
-text += `\n⚽ لمتابعة نتائج الدوري وتوقعات المباريات عبر التطبيق!`;
+text += `\n🏆 لمتابعة نتائج الدوري وتوقعات المواجهات عبر التطبيق!`;
 let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
 window.open(url, '_blank');
 }
@@ -3654,7 +3704,7 @@ pastGroup[m.round].push(m);
 
 let upRounds = Object.keys(upcomingGroup).map(Number).sort((a,b) => a - b);
 if(upRounds.length === 0) {
-upDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مباريات قادمة</div>`;
+upDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مواجهات قادمة</div>`;
 } else {
 upRounds.forEach(r => {
 let rHeader = document.createElement("h3");
@@ -3672,7 +3722,7 @@ upDiv.appendChild(createMatchCard(m));
 
 let pastRounds = Object.keys(pastGroup).map(Number).sort((a,b) => b - a);
 if(pastRounds.length === 0) {
-pastDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مباريات سابقة</div>`;
+pastDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مواجهات سابقة</div>`;
 } else {
 pastRounds.forEach(r => {
 let rHeader = document.createElement("h3");
@@ -3690,7 +3740,7 @@ if(homeUpDiv && upRounds.length > 0) {
 let nextRound = upRounds[0];
 let rHeader = document.createElement("h3");
 rHeader.style.cssText = "text-align:center; color:#60a5fa; margin:15px 0 10px; font-size:16px;";
-rHeader.innerHTML = ic("ball") + ` المباريات القادمة (الجولة ${nextRound})`;
+rHeader.innerHTML = ic("ball") + ` المواجهات القادمة (الجولة ${nextRound})`;
 homeUpDiv.appendChild(rHeader);
 let hLive = buildRoundLiveRow(nextRound);
 if (hLive) homeUpDiv.appendChild(hLive);
@@ -3979,7 +4029,7 @@ optionsHTML += `<option value="${u.uid}" ${selected}>${escapeHTML(u.name)} (${es
 
 body.innerHTML = `
 <div style="text-align:right;">
-<p style="font-size:13px; color:#94a3b8;">ربط اللاعب <strong>${escapeHTML(playerName)}</strong> بحساب مستخدم مسجل:</p>
+<p style="font-size:13px; color:#94a3b8;">ربط المتسابق <strong>${escapeHTML(playerName)}</strong> بحساب مستخدم مسجل:</p>
 <select id="linkUserSelect" style="width:100%; padding:10px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px;">
 ${optionsHTML}
 </select>
@@ -4004,7 +4054,7 @@ delete playerLinks[playerName];
 save();
 table();
 renderMatches();
-alert("تم تحديث ربط اللاعب بنجاح!");
+alert("تم تحديث ربط المتسابق بنجاح!");
 closeAllModalsDirectly();
 }
 
@@ -4139,7 +4189,9 @@ function initRoomFeature() {
 if(!firebaseDB) return;
 roomListener = firebaseDB.collection("room").doc("main").onSnapshot(doc => {
 if(doc.exists) {
+const wasLive = !!(roomState && roomState.isLive);
 roomState = doc.data();
+if (roomStateLoaded && !wasLive && roomState.isLive && !(currentUser && roomState.hostUid === currentUser.uid)) notify("الغرفة الصوتية مباشرة 🎙️", (roomState.hostName ? roomState.hostName + " فتح الغرفة" : "الغرفة الصوتية فتحت") + "، ادخل وشارك", "room_" + (roomState.startedAt || Date.now()), "/");
 } else {
 roomState = {
 isLive: false, hostName: "", hostUid: "", hostAvatar: "",
@@ -4771,7 +4823,7 @@ function adminToolsAction(action) {
 
 /* قائمة الألعاب: لإضافة لعبة جديدة مستقبلاً أضف عنصراً هنا بنفس الشكل { id, icon, name, desc, start } */
 const ROOM_GAMES = [
-    { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين لاعبين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
+    { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين متسابقين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
 ];
 
 function openRoomGamesModal() {
@@ -4944,11 +4996,11 @@ body.innerHTML = `
 ${qOptions}
 </select>
 
-<h4 style="color:#60a5fa;">اختر اللاعب الأول (أو اكتب اسماً)</h4>
-<input type="text" id="gameP1NameInput" placeholder="اسم اللاعب الأول (مثال: أحمد)" style="width:100%; padding:9px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+<h4 style="color:#60a5fa;">اختر المتسابق الأول (أو اكتب اسماً)</h4>
+<input type="text" id="gameP1NameInput" placeholder="اسم المتسابق الأول (مثال: أحمد)" style="width:100%; padding:9px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
 
-<h4 style="color:#60a5fa;">اختر اللاعب الثاني</h4>
-<input type="text" id="gameP2NameInput" placeholder="اسم اللاعب الثاني (مثال: سعود)" style="width:100%; padding:9px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+<h4 style="color:#60a5fa;">اختر المتسابق الثاني</h4>
+<input type="text" id="gameP2NameInput" placeholder="اسم المتسابق الثاني (مثال: سعود)" style="width:100%; padding:9px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
 
 <button onclick="launchGameFromModal()" style="width:100%; background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg> بدء التحدي الآن</button>
 </div>
@@ -4967,8 +5019,8 @@ let qIdx = Number(qSelect.value);
 let qObj = roomState.qbank[qIdx];
 if(!qObj) return alert("السؤال غير موجود");
 
-let p1Name = p1Input.value.trim() || "اللاعب 1";
-let p2Name = p2Input.value.trim() || "اللاعب 2";
+let p1Name = p1Input.value.trim() || "المتسابق 1";
+let p2Name = p2Input.value.trim() || "المتسابق 2";
 
 let av1 = getPlayerAvatar(p1Name);
 let av2 = getPlayerAvatar(p2Name);
@@ -5044,10 +5096,10 @@ ${isAdmin ? `
 <div class="admin-game-dock">
 <h4><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg> تحكم المسؤول باللعبة</h4>
 <div class="admin-btn-group">
-<button onclick="judgeGameAnswer(1, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للاعب 1</button>
-<button onclick="judgeGameAnswer(1, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للاعب 1</button>
-<button onclick="judgeGameAnswer(2, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للاعب 2</button>
-<button onclick="judgeGameAnswer(2, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للاعب 2</button>
+<button onclick="judgeGameAnswer(1, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للمتسابق 1</button>
+<button onclick="judgeGameAnswer(1, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للمتسابق 1</button>
+<button onclick="judgeGameAnswer(2, true)" style="background:#059669;"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> صح للمتسابق 2</button>
+<button onclick="judgeGameAnswer(2, false)" style="background:#dc2626;"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg> خطأ للمتسابق 2</button>
 <button onclick="endActiveGame()" style="background:#7f1d1d; width:100%; margin-top:6px;"><svg class="ic" aria-hidden="true"><use href="#i-power"/></svg> إنهاء المسابقة وإعلان النتيجة</button>
 </div>
 </div>
@@ -5374,7 +5426,7 @@ function leaveRoomPresence() {
 /* =====================================================================
    بث الجولة المباشر — بث صوتي واحد لكل مواجهات الجولة
    - المنظم (المسؤول) يبدأ بث الجولة، ومايكه مفتوح طول البث
-   - أول ما تبدأ أي مواجهة ينفتح مايك اللمتسابقين الاثنين تلقائياً
+   - أول ما تبدأ أي مواجهة ينفتح مايك للمتسابقين الاثنين تلقائياً
    - مشاهد وانتقالات: افتتاح ← تقديم المواجهة ← الأسئلة ← النتيجة ← المواجهة التالية ← ختام الجولة
    - المواجهة نفسها: 5 أسئلة بنظام الجرس
    ===================================================================== */
@@ -5501,6 +5553,7 @@ function initLiveMatches() {
             if (x && x.type === "round") next[doc.id] = x;
             else if (x && x.type === "rx" && openLiveId && doc.id === "rx_" + openLiveId) bcOnRx(x);
         });
+        bcNotifyChanges(liveMatchesCache, next);
         liveMatchesCache = next;
 
         const sig = Object.keys(next).sort().map(k => {
@@ -5528,6 +5581,26 @@ function initLiveMatches() {
         });
     }, err => {
         console.log("liveMatches listener:", err);
+    });
+}
+
+/* إشعارات البث: بدأ، مجدول، دورك */
+let bcNotifReady = false;
+function bcNotifyChanges(prev, next) {
+    if (!bcNotifReady) { bcNotifReady = true; return; }   /* أول تحميل: ما نرسل شي قديم */
+    Object.keys(next).forEach(id => {
+        const x = next[id], p = prev[id];
+        if (!x || bcIsStale(x)) return;
+        const mine = currentUser && x.hostUid === currentUser.uid;
+        const url = "/?live=" + encodeURIComponent(id);
+        if (x.status === "scheduled" && (!p || p.status !== "scheduled") && !mine)
+            notify("بث جديد مجدول 📅", `بث الجولة ${x.round} يبدأ الساعة ${bcTimeLabel(x.startAt || 0)}`, "sch_" + id + "_" + x.startAt, url);
+        if (x.status === "live" && (!p || p.status !== "live") && !mine)
+            notify("البث بدأ 🔴", `بث الجولة ${x.round} من دوري بنو مسروح للنخبة مباشر الحين`, "live_" + id + "_" + (x.startedAt || x.sceneAt || ""), url);
+        /* دورك: مواجهتك صارت الحالية في البث */
+        const o = bcCur(x);
+        if (currentUser && o && x.status === "live" && (o.uid1 === currentUser.uid || o.uid2 === currentUser.uid) && x.scene === "intro" && (!p || p.cur !== x.cur || p.scene !== "intro") && openLiveId !== id)
+            notify("دورك الحين! 🎯", `مواجهتك ضد ${o.uid1 === currentUser.uid ? o.p2 : o.p1} بدأت في البث. ادخل واضغط جاهز`, "turn_" + id + "_" + x.cur, url);
     });
 }
 
@@ -5697,7 +5770,7 @@ function liveRevealUpd(d, winner, now, last) {
     u.bh2 = Math.max(d.bh2 || 0, s1 - s2);
     return u;
 }
-/* الجواب ينتقل للاعب الثاني، وإذا الثاني جرّب قبل ينتهي السؤال وتظهر الإجابة */
+/* الجواب ينتقل للمتسابق الثاني، وإذا الثاني جرّب قبل ينتهي السؤال وتظهر الإجابة */
 function livePassUpd(d, n, now, last) {
     const o = n === 1 ? 2 : 1;
     if (!d["tried" + o]) {
@@ -5793,7 +5866,7 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
 ${(() => { const have = (roomState.qbank || []).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} بنك الأسئلة فيه ${have} سؤال بس، والجولة تحتاج ${need}. البث بيكمّل من ${LIVE_FALLBACK_QUESTIONS.length} سؤال احتياطي وبتتكرر الأسئلة. الأفضل تضيف أسئلة من الغرفة الصوتية (بنك الأسئلة) قبل البث.</div>` : ""; })()}
-${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.join("، "))} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مباراته وقت البث.</div>` : ""}
+${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.join("، "))} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مواجهته وقت البث.</div>` : ""}
 <button class="bc-go" data-a="now">${ic("zap")} ابدأ البث الحين</button>
 <div class="bc-ask-or">أو حدد موعد، ويطلع للكل عداد لين يبدأ:</div>
 <div class="bc-ask-row"><input type="time" id="bcAskTime" value="${hh}:${mm}"><button class="bc-ghost" data-a="at">${ic("hourglass")} جدولة البث</button></div>
@@ -6762,7 +6835,7 @@ function cineOpening(d) {
 }
 
 /* ===== المشهد السينمائي بين كل مواجهة ومواجهة =====
-   ترتيب الأصوات (صوت واحد بكل لحظة): تصاعد ← براام ← ووش لكل لاعب ← رعد VS ← ووش للمشهد */
+   ترتيب الأصوات (صوت واحد بكل لحظة): تصاعد ← براام ← ووش لكل متسابق ← رعد VS ← ووش للمشهد */
 function cineMatchIntro(d) {
     const o = bcCur(d);
     if (!o) return;
@@ -7011,7 +7084,7 @@ async function bcLeave() {
     bcMyUid = null;
 }
 
-/* هل لازم مايكي يكون مفتوح الحين؟ المنظم دايماً، واللمتسابقين أول ما تبدأ مباراتهم */
+/* هل لازم مايكي يكون مفتوح الحين؟ المنظم دايماً، وللمتسابقين أول ما تبدأ مواجهتهم */
 function bcShouldPublish(d) {
     /* المايك يفتح بس وقت اللعب: من بداية المواجهة (العد التنازلي والأسئلة)، ويتقفل أول ما تنتهي */
     if (!currentUser || !d || d.status !== "live" || !(d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") || !bcCur(d)) return false;
@@ -7064,7 +7137,7 @@ document.addEventListener("click", () => {
     bcClient.remoteUsers.forEach(u => { try { if (u.audioTrack && !u.audioTrack.isPlaying) u.audioTrack.play(); } catch (e) {} });
 }, true);
 
-/* المتكلمين على الهواء: المنظم + لاعبي المواجهة الحالية */
+/* المتكلمين على الهواء: المنظم + متسابقي المواجهة الحالية */
 function bcSpeakers(d) {
     const list = [];
     if (d.hostUid) list.push({ uid: d.hostUid, name: d.hostName || "المنظم", av: d.hostAv || getPlayerAvatar(d.hostName || "م").url, role: "المنظم" });
@@ -7515,7 +7588,7 @@ ${isAdmin ? `<div class="bc-admin"><button class="bc-go" onclick="bcGoLive(true)
 <div class="bc-title" style="color:#94a3b8;">انتهى بث الجولة ${escapeHTML(String(d.round))}</div>
 <div class="lv-muted">تلعبت ${done} من ${total} مواجهات</div>
 <div class="bc-fixtures">${bcFixturesHTML(d, true)}</div>
-<button onclick="closeLiveScreen()" style="width:min(280px,100%);">رجوع للمباريات</button>`;
+<button onclick="closeLiveScreen()" style="width:min(280px,100%);">رجوع للمواجهات</button>`;
     }
 
     if (d.scene === "opening") {

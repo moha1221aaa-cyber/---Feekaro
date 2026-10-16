@@ -2,7 +2,7 @@
    - يخزن الصفحة الرئيسية والشعار مؤقتاً ليفتح الموقع بسرعة حتى مع نت ضعيف.
    - لا يخزن بيانات الدوري نفسها (النتائج، الشات، الغرفة)، فهذي دائماً تجي محدثة من الإنترنت.
    - رقم الإصدار CACHE_NAME: لازم يتغيّر مع كل تحديث كبير للموقع حتى يحمّل الأجهزة النسخة الجديدة. */
-const CACHE_NAME = "masro7-shell-v16";
+const CACHE_NAME = "masro7-shell-v17";
 const SHELL_FILES = ["/", "/index.html", "/logo.png", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -49,5 +49,21 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(req).then((cached) => cached || caches.match("/index.html")))
+  );
+});
+
+/* الضغط على الإشعار: يفتح الموقع (أو البث) ويرجع للتبويب المفتوح لو موجود */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.startsWith(self.location.origin)) {
+          return c.focus().then(() => (c.navigate && url !== c.url ? c.navigate(url) : c));
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });
