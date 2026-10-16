@@ -1792,6 +1792,10 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .st-l3{bottom:44px;}
 .st-float{bottom:80px;}
 
+.st-microw{flex-shrink:0;margin-top:6px;}
+.st-microw .bc-mybtn{padding:6px;font-size:12px;border-radius:20px;}
+.st-pod.talk img{border-color:#4ade80!important;box-shadow:0 0 0 4px rgba(74,222,128,.25),0 0 22px rgba(74,222,128,.6)!important;}
+
 /* ===== المشاهد السينمائية بين المباريات ===== */
 .cine{position:absolute;inset:0;z-index:8;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0c1d55 0%,#030a24 55%,#000 100%);animation:cineIn .35s ease both;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .cine.fxonly{background:none;pointer-events:none;cursor:default;}
@@ -6706,8 +6710,8 @@ async function bcLeave() {
 
 /* هل لازم مايكي يكون مفتوح الحين؟ المنظم دايماً، واللمتسابقين أول ما تبدأ مباراتهم */
 function bcShouldPublish(d) {
-    /* المايك يفتح بس في صفحة بداية المواجهة (انضمام المتسابقين)، ويتقفل أول ما تبدأ الأسئلة */
-    if (!currentUser || !d || d.status !== "live" || d.scene !== "intro" || !bcCur(d)) return false;
+    /* المايك يفتح بس وقت اللعب: من بداية المواجهة (العد التنازلي والأسئلة)، ويتقفل أول ما تنتهي */
+    if (!currentUser || !d || d.status !== "live" || !(d.scene === "countdown" || d.scene === "playing") || !bcCur(d)) return false;
     if (amBcHost(d)) return true;
     return !!myLiveNum(d);
 }
@@ -6762,7 +6766,7 @@ function bcSpeakers(d) {
     const list = [];
     if (d.hostUid) list.push({ uid: d.hostUid, name: d.hostName || "المنظم", av: d.hostAv || getPlayerAvatar(d.hostName || "م").url, role: "المنظم" });
     const o = bcCur(d);
-    if (o && d.scene === "intro") {
+    if (o && (d.scene === "countdown" || d.scene === "playing")) {
         [1, 2].forEach(n => {
             const uid = n === 1 ? o.uid1 : o.uid2;
             if (!uid || uid === d.hostUid) return;
@@ -7035,14 +7039,16 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
         const lit = (d.scene === "playing" && d.phase === "answer") ? d.answerer : 0;
         const nq = (d.questions || []).length || LIVE_Q_COUNT;
         const pod = n => `
-<div class="st-pod ${lit === n ? "lit" : ""} ${me === n ? "me" : ""} ${lit && lit !== n ? "dim" : ""}">
+<div class="st-pod ${lit === n ? "lit" : ""} ${me === n ? "me" : ""} ${lit && lit !== n ? "dim" : ""}" ${(n === 1 ? o.uid1 : o.uid2) ? `data-bcuid="${escapeHTML(n === 1 ? o.uid1 : o.uid2)}"` : ""}>
 <i class="st-cone"></i>
 <img src="${escapeHTML(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
 <div class="st-desk"><b>${n === 1 ? (d.s1 || 0) : (d.s2 || 0)}</b><i>نقاط</i></div>
 </div>`;
         const mid = d.scene === "playing" ? `السؤال ${d.qIndex + 1}<small>من ${nq}</small>` : (d.scene === "result" ? "النتيجة" : "استعدوا");
+        const mc = (d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
         html += `
+${mc ? `<div class="st-microw">${mc}</div>` : ""}
 <div class="st-pods">
 ${pod(1)}
 <div class="st-mid"><div class="st-qn">${mid}</div><div class="st-ml">المواجهة ${d.cur + 1} من ${total}</div></div>
@@ -7083,7 +7089,7 @@ function liveSoundsOnChange(d) {
 /* المنظم فوق (صورته واسمه)، والمتسابقين تحته في المشهد نفسه */
 function bcHostHTML(d) {
     const av = d.hostAv || getPlayerAvatar(d.hostName || "م").url;
-    const micOn = d.scene === "intro";
+    const micOn = d.scene === "countdown" || d.scene === "playing";
     return `
 <div class="st-host" ${d.hostUid ? `data-bcuid="${escapeHTML(d.hostUid)}"` : ""}>
 <div class="ring"><img src="${escapeHTML(av)}" alt=""><span class="mi">${ic("mic")}</span></div>
@@ -7187,12 +7193,12 @@ ${uid ? `<div class="bc-st">المايك مقفل</div>` : `<div class="bc-st wa
         let action;
         if (me && !d["ready" + me]) action = `<button class="lv-ready-btn" onclick="liveSetReady()">${ic("check-circle")} جاهز</button>`;
         else if (me) action = `<div class="lv-muted">${ic("hourglass")} أنت جاهز، بانتظار خصمك...</div>`;
-        else action = `<div class="lv-muted">المايكات مفتوحة الحين للمنظم والمتسابقين، وتتقفل أول ما تبدأ الأسئلة</div>`;
+        else action = `<div class="lv-muted">بانتظار المتسابقين يضغطون "جاهز"، والمايكات تفتح أول ما تبدأ المواجهة</div>`;
         return `
 <div class="bc-mlabel big">المواجهة ${d.cur + 1} من ${total}</div>
 <div class="bc-vs">${side(1)}<div class="bc-vsx">VS</div>${side(2)}</div>
 ${ctx ? `<div class="st-ctx ${ctx.k}">${ic(ctx.k === "revenge" ? "zap" : "trophy")} ${escapeHTML(ctx.t)}</div>` : ""}
-${bcMicCtlHTML(d)}
+<div class="bc-note">${ic("mic-off")} المايكات تفتح أول ما تبدأ المواجهة</div>
 ${action}
 <div class="lv-rules">${LIVE_Q_COUNT} أسئلة · أسرع واحد يضغط الجرس يجاوب · إذا غلط أو خلص وقته ينتقل السؤال للثاني</div>
 ${adminBar(`<button class="bc-go" onclick="bcForceStart()">${ic("rocket")} انطلاق الأسئلة الحين</button><button class="bc-ghost" onclick="bcNext(true)">تخطي المواجهة</button>`)}`;
