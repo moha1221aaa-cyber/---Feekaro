@@ -1736,7 +1736,8 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .st-shots img.on{opacity:1;animation:stPush 16s ease-in-out infinite alternate;}
 @keyframes stPush{from{transform:scale(1.04) translateY(0)}to{transform:scale(1.16) translateY(-1.5%)}}
 #liveScreen[data-scene="playing"] .st-shots img{filter:brightness(.5) saturate(1.05);}
-#liveScreen[data-decider] .st-shots img{filter:brightness(.4) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
+#liveScreen[data-decider] .st-shots img[data-shot="podium"]{filter:brightness(.4) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
+#liveScreen[data-scene="waiting"] .st-shots img.on{opacity:.5;}
 @media (prefers-reduced-motion: reduce){.st-shots img.on{animation:none;}}
 #liveScreen:not([data-scene="waiting"]):not([data-scene="ended"])::before{opacity:0;}
 /* المشاهد السينمائية: الاستوديو الحقيقي يبان من وراها بدل خلفية مرسومة */
@@ -6157,15 +6158,21 @@ function bcLowerThird(d) {
 let bcLastQAnim = "";
 
 /* ===== المخرج: يقطع بين لقطات الاستوديو حسب اللحظة ===== */
-const BC_SHOTS = ["screen", "ident", "wide", "podium"];
+/* لقطات Flow + لقطات مولّدة بالذكاء الاصطناعي (Cloudflare Workers AI) */
+const BC_SHOTS = ["screen", "ident", "wide", "podium", "countdown", "decider", "winner", "closing", "lobby"];
 function bcShotFor(d) {
-    if (!d || d.status !== "live") return "";
+    if (!d) return "";
+    if (d.status === "scheduled") return "lobby";                            /* الانتظار قبل البث */
+    if (d.status !== "live") return "";
+    if (bcIsDecider(d)) return d.phase === "answer" ? "podium" : "decider";  /* سؤال الحسم: الاستوديو الأحمر */
     switch (d.scene) {
         case "opening": return "ident";                                      /* فاصل الافتتاح */
         case "intro": return "wide";                                         /* لقطة علوية بين المواجهات */
+        case "countdown": return "countdown";                                /* ضوء واحد قبل البداية */
         case "playing": return d.phase === "answer" ? "podium" : "screen";   /* المنصة لما أحد يضغط الجرس، وشاشة السؤال غير كذا */
-        case "closing": return "wide";
-        default: return "studio";                                            /* الفيديو الأساسي */
+        case "result": return (d.s1 || 0) !== (d.s2 || 0) ? "winner" : "studio";   /* قصاصات ذهبية للفائز */
+        case "closing": return "closing";                                    /* ألعاب نارية */
+        default: return "studio";
     }
 }
 function bcDirector(d) {
