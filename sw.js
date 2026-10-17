@@ -8,7 +8,7 @@ const SHELL_FILES = ["/", "/index.html", "/logo.png", "/manifest.json", "/css/ma
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES)).catch(() => {})
+    caches.open(CACHE_NAME).then((cache) => Promise.all(SHELL_FILES.map((f) => cache.add(f).catch(() => {}))))
   );
   self.skipWaiting();
 });
@@ -49,7 +49,7 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match("/index.html")))
+      .catch(() => caches.match(req).then((cached) => cached || (req.mode === "navigate" ? caches.match("/index.html") : undefined)))
   );
 });
 
