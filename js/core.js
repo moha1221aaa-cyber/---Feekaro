@@ -1,6 +1,15 @@
 /* أدوات أساسية تتحمل أول شي: أيقونات SVG، وتحميل مكتبة الصوت (أجورا) وقت الحاجة */
 function ic(n, c) { return '<svg class="ic' + (c ? " " + c : "") + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }
 
+/* هيدر تسجيل الدخول لدوال السيرفر (tts و ai و agora-token): توكن Firebase لو المستخدم داخل */
+async function authHeaders() {
+    try {
+        const u = typeof firebaseAuth !== "undefined" && firebaseAuth && firebaseAuth.currentUser;
+        if (u) return { Authorization: "Bearer " + await u.getIdToken() };
+    } catch (e) {}
+    return {};
+}
+
 /* مكتبة الصوت (أجورا) تتحمل بس لما أحد يدخل الغرفة أو البث، عشان الموقع يفتح أسرع */
 let agoraLoading = null;
 function loadAgora() {
