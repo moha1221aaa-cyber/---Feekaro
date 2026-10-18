@@ -89,7 +89,7 @@ let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerMod
 body.innerHTML = `
 <div style="text-align:center;">
 <div style="width:85px; height:85px; margin:0 auto 10px; border-radius:50%; border:3px solid #2563eb; overflow:hidden; background:#0f172a; box-shadow:0 4px 12px rgba(37,99,235,0.4);">
-<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;" alt="">
+<img src="${safeSrc(photoUrl)}" style="width:100%; height:100%; object-fit:cover;" alt="">
 </div>
 <div style="font-size:18px; font-weight:bold; color:white; display:flex; align-items:center; justify-content:center; gap:5px;">
 ${escapeHTML(displayName)} ${av.isVerified ? '<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>' : ''}
@@ -135,7 +135,7 @@ let verifiedBadge = avatarData.isVerified ? `<span class="verified-badge" title=
 
 let playerCellHTML = `
 <div class="table-player-cell clickable-profile" onclick="openUserProfile('${playerLinks[p.name] || ''}', '${escapeHTML(p.name)}')">
-<img src="${avatarData.url}" class="table-player-img" alt="${escapeHTML(p.name)}">
+<img src="${safeSrc(avatarData.url)}" class="table-player-img" alt="${escapeHTML(p.name)}">
 <span style="font-weight:bold;">${escapeHTML(p.name)}</span>${verifiedBadge}
 </div>
 `;
@@ -194,7 +194,7 @@ let player1Div = document.createElement("div");
 player1Div.className = "match-player clickable-profile";
 player1Div.onclick = () => openUserProfile(playerLinks[m.p1.name] || '', m.p1.name);
 player1Div.innerHTML = `
-<img src="${av1.url}" class="match-player-img" alt="${escapeHTML(m.p1.name)}">
+<img src="${safeSrc(av1.url)}" class="match-player-img" alt="${escapeHTML(m.p1.name)}">
 <div class="match-player-name">${escapeHTML(m.p1.name)}</div>
 `;
 
@@ -235,7 +235,7 @@ let player2Div = document.createElement("div");
 player2Div.className = "match-player clickable-profile";
 player2Div.onclick = () => openUserProfile(playerLinks[m.p2.name] || '', m.p2.name);
 player2Div.innerHTML = `
-<img src="${av2.url}" class="match-player-img" alt="${escapeHTML(m.p2.name)}">
+<img src="${safeSrc(av2.url)}" class="match-player-img" alt="${escapeHTML(m.p2.name)}">
 <div class="match-player-name">${escapeHTML(m.p2.name)}</div>
 `;
 

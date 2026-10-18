@@ -79,7 +79,7 @@ let dateStr = v.createdAt ? new Date(v.createdAt.toDate()).toLocaleDateString('a
 
 html += `
 <div class="video-card">
-<video controls preload="metadata" src="${v.videoUrl}"></video>
+<video controls preload="metadata" src="${safeSrc(v.videoUrl)}"></video>
 <div class="video-info">
 <div class="video-title">${escapeHTML(v.title)}</div>
 <div class="video-date">

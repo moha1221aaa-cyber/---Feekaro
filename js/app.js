@@ -130,6 +130,13 @@ return String(value || "")
 .replace(/"/g,"&quot;")
 .replace(/'/g,"&#039;");
 }
+/* رابط صورة أو فيديو داخل src="...": يقبل https و http والروابط الداخلية و blob بس، ويرجعه محمي */
+function safeSrc(url) {
+let u = String(url == null ? "" : url).trim();
+if (!u) return "";
+if (!/^(https?:\/\/|\/(?!\/)|blob:|data:image\/(png|jpe?g|gif|webp);)/i.test(u)) return "";
+return escapeHTML(u);
+}
 
 function adminClick() {
 adminClicks++;

@@ -600,12 +600,12 @@ return `
 
 <div class="vs-box">
 <div class="player-circle-wrap">
-<img src="${g.p1Avatar}" class="player-circle" alt="">
+<img src="${safeSrc(g.p1Avatar)}" class="player-circle" alt="">
 <div class="player-circle-name">${escapeHTML(g.p1Name)}</div>
 </div>
-<div class="score-box">${g.s1} - ${g.s2}</div>
+<div class="score-box">${escapeHTML(String(g.s1))} - ${escapeHTML(String(g.s2))}</div>
 <div class="player-circle-wrap">
-<img src="${g.p2Avatar}" class="player-circle" alt="">
+<img src="${safeSrc(g.p2Avatar)}" class="player-circle" alt="">
 <div class="player-circle-name">${escapeHTML(g.p2Name)}</div>
 </div>
 </div>
