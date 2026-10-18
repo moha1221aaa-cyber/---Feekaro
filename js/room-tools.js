@@ -142,6 +142,7 @@ async function fxEnsurePublished() {
         fxPublishPromise = (async () => {
             fxInit();
             await ensureAgoraJoined();
+            await agoraUpgradeToken(agoraClient);
             const track = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: fxDest.stream.getAudioTracks()[0] });
             try { await agoraClient.publish([track]); }
             catch (e) { track.close(); throw e; }

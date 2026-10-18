@@ -1,6 +1,8 @@
 /* توليد Token أجورا على Cloudflare Pages (بديل دالة Netlify)
    نفس صيغة مكتبة agora-token الرسمية (AccessToken2 / 007) لكن بأدوات Cloudflare نفسها */
 
+import { verifyFirebaseToken, bearer } from "../lib/firebase-auth.js";
+
 const CHANNELS = ["masro7_main_room", "masro7_live_round"];
 const DEFAULT_APP_ID = "6affdf8140bb4004b2ec1ba75d202bbc";
 const TTL_SECONDS = 60 * 60 * 24;
@@ -40,8 +42,10 @@ function b64(u8) {
   return btoa(s);
 }
 
-/* مثل RtcTokenBuilder.buildTokenWithUid(appId, cert, channel, 0, PUBLISHER, ttl, ttl) */
-export async function buildRtcToken(appId, appCertificate, channel, ttl, issueTs, salt) {
+/* مثل RtcTokenBuilder.buildTokenWithUid(appId, cert, channel, 0, PUBLISHER أو SUBSCRIBER, ttl, ttl)
+   publisher=false: دخول بس (استماع)، وهذا اللي ياخذه الضيف */
+export async function buildRtcToken(appId, appCertificate, channel, ttl, issueTs, salt, publisher) {
+  if (publisher === undefined) publisher = true;
   issueTs = issueTs || Math.floor(Date.now() / 1000);
   salt = salt || (Math.floor(Math.random() * 99999999) + 1);
 
@@ -49,7 +53,9 @@ export async function buildRtcToken(appId, appCertificate, channel, ttl, issueTs
   signing = await hmac(u32(salt), signing);
 
   /* خدمة RTC: النوع 1 + الصلاحيات (دخول، صوت، فيديو، بيانات) + القناة + uid فاضي (= أي رقم) */
-  const privileges = cat(u16(4), u16(1), u32(ttl), u16(2), u32(ttl), u16(3), u32(ttl), u16(4), u32(ttl));
+  const privileges = publisher
+    ? cat(u16(4), u16(1), u32(ttl), u16(2), u32(ttl), u16(3), u32(ttl), u16(4), u32(ttl))
+    : cat(u16(1), u16(1), u32(ttl));
   const service = cat(u16(1), privileges, str(channel), str(""));
 
   const signingInfo = cat(str(appId), u32(issueTs), u32(ttl), u32(salt), u16(1), service);
@@ -72,8 +78,10 @@ export async function onRequest(context) {
   if (!HEX32.test(appCertificate)) return json(500, { error: "قيمة AGORA_APP_CERTIFICATE غير صحيحة: طولها " + appCertificate.length + " والمطلوب 32" });
 
   try {
-    const token = await buildRtcToken(appId, appCertificate, channel, TTL_SECONDS);
-    return json(200, { token });
+    /* المسجّل دخول (توكن Firebase سليم) ياخذ صلاحية المايك، والضيف استماع بس */
+    const user = await verifyFirebaseToken(bearer(context.request));
+    const token = await buildRtcToken(appId, appCertificate, channel, TTL_SECONDS, 0, 0, !!user);
+    return json(200, { token, role: user ? "publisher" : "subscriber" });
   } catch (err) {
     return json(500, { error: String((err && err.message) || err) });
   }

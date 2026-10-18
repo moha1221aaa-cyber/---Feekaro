@@ -4,13 +4,20 @@
 let agoraJoinPromise = null;
 async function fetchAgoraToken(channel) {
     const base = location.hostname.endsWith("netlify.app") ? "/.netlify/functions/agora-token" : "/agora-token";
-    const res = await fetch(base + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { cache: "no-store" });
+    const res = await fetch(base + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { cache: "no-store", headers: await authHeaders() });
     let data = null;
     try { data = await res.json(); } catch (e) {}
     if (!res.ok || !data || !data.token) {
         throw new Error((data && data.error) || ("تعذّر جلب Token من السيرفر (" + res.status + ")"));
     }
     return data.token;
+}
+
+/* قبل فتح المايك: نجدد التوكن بتوكن فيه صلاحية المايك، لأن الجهاز ممكن دخل كمستمع قبل ما يخلص تسجيل الدخول */
+async function agoraUpgradeToken(client, channel) {
+    if (!client || typeof currentUser === "undefined" || !currentUser) return;
+    try { await client.renewToken(await fetchAgoraToken(channel)); }
+    catch (e) { console.warn("تجديد توكن المايك:", e); }
 }
 
 let agoraClient = null;
@@ -137,6 +144,7 @@ async function publishMyMic() {
     if (localAudioTrack) return; // المايك مفعّل مسبقًا
     if (!publishPromise) {
         publishPromise = (async () => {
+            await agoraUpgradeToken(agoraClient);
             const track = await AgoraRTC.createMicrophoneAudioTrack(micOptions());
             try { await agoraClient.publish([track]); }
             catch (e) { track.close(); throw e; }

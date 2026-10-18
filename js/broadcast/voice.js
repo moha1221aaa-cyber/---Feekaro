@@ -62,6 +62,7 @@ async function bcPublish() {
     if (bcTrack) return;
     if (!bcPubPromise) {
         bcPubPromise = (async () => {
+            await agoraUpgradeToken(bcClient, BC_CHANNEL);
             const track = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
             try { await bcClient.publish([track]); } catch (e) { track.close(); throw e; }
             if (bcSelfMuted) await track.setMuted(true).catch(() => {});
