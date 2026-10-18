@@ -1,6 +1,8 @@
 # MASRO7 LEAGUE: تعليمات Claude
 
 التعليمات الكاملة (صاحب المشروع، النشر، القواعد) في CLAUDE.md حق مستودع Feekaro-Web-Studio، والهيكل في README.md هنا.
+
+نتايج الفحص الأمني للدوري (17 أكتوبر 2026) وخطة التصليح في قسم "الفحص الأمني" بنفس ملف Feekaro-Web-Studio. أهمها: photoURL و onclick بدون حماية، الأجوبة مكشوفة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة، agora-token و tts بدون تحقق.
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
