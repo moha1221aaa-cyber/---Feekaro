@@ -6,7 +6,9 @@
    - chat:      مساعد الموقع                         { messages: [{ role, content }], context }
    الحماية: بس صفحات موقع الدوري، وحد للطلبات لكل جهاز بالدقيقة، وكل المدخلات مقصوصة */
 
+/* FAST: سريع (التصحيح وجمل المقدم). SMART: أدق في المعلومات (الأسئلة ومراجعتها والمساعد) */
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const SMART = "@cf/openai/gpt-oss-120b";
 const LIMIT_PER_MIN = { questions: 4, grade: 40, host: 4, chat: 12 };
 const CATEGORIES = ["علوم", "ثقافة عامة", "دين", "تاريخ", "رياضة", "جغرافيا"];
 
@@ -28,13 +30,34 @@ async function overLimit(request, url, task) {
   return false;
 }
 
-async function run(env, system, user, maxTokens, temperature) {
-  const out = await env.AI.run(MODEL, {
-    messages: [{ role: "system", content: system }].concat(Array.isArray(user) ? user : [{ role: "user", content: user }]),
-    max_tokens: maxTokens, temperature
-  });
-  const r = out && out.response;
-  return typeof r === "string" ? r : JSON.stringify(r || "");
+/* نص الرد من أي شكل يرجّعه Workers AI (llama: response، gpt-oss: choices أو output) */
+function outText(out) {
+  if (!out) return "";
+  if (typeof out === "string") return out;
+  if (typeof out.response === "string") return out.response;
+  if (out.response && typeof out.response === "object") return JSON.stringify(out.response);
+  const c = out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content;
+  if (typeof c === "string") return c;
+  if (typeof out.output_text === "string") return out.output_text;
+  if (Array.isArray(out.output)) {
+    return out.output.filter(o => o && o.type === "message")
+      .map(o => (o.content || []).map(x => x && (x.text || "")).join("")).join("");
+  }
+  return "";
+}
+
+async function run(env, system, user, maxTokens, temperature, model) {
+  const messages = [{ role: "system", content: system }].concat(Array.isArray(user) ? user : [{ role: "user", content: user }]);
+  const out = await env.AI.run(model || MODEL, { messages, max_tokens: maxTokens, temperature });
+  const t = outText(out);
+  if (!t) throw new Error("empty reply");
+  return t;
+}
+
+/* الموديل الذكي أول، ولو تعطّل نرجع للسريع */
+async function runSmart(env, system, user, maxTokens, temperature) {
+  try { return await run(env, system, user, maxTokens, temperature, SMART); }
+  catch (e) { return run(env, system, user, Math.min(maxTokens, 1800), temperature, MODEL); }
 }
 
 /* يطلّع أول JSON من رد الموديل حتى لو كتب كلام قبله أو بعده */
@@ -52,22 +75,46 @@ async function taskQuestions(env, b) {
   const system = [
     "أنت معدّ أسئلة لمسابقة ثقافية عربية سعودية بنظام الجرس (أول واحد يضغط يجاوب كتابة).",
     "اكتب أسئلة بالعربية الفصحى، قصيرة وواضحة، ولها إجابة وحدة محددة وقصيرة (كلمة أو كلمتين أو رقم).",
-    "الدقة أهم شي: اختر بس معلومات مشهورة ومؤكدة ومتفق عليها. لا تكتب أي سؤال تشك في إجابته أو فيه خلاف.",
-    "في أسئلة الدين: بس الثوابت المتفق عليها عند أهل السنة (أركان، سور، أنبياء، غزوات مشهورة، صحابة)، بدون مسائل فقهية خلافية.",
+    "الدقة أهم شي: اختر بس معلومات مشهورة جداً ومؤكدة ومتفق عليها، من اللي تلقاها في أي موسوعة. لا تكتب أي سؤال تشك في إجابته أو فيه خلاف.",
+    "في أسئلة الدين: بس الثوابت المتفق عليها عند أهل السنة (أركان، سور، أنبياء ثابتة قصصهم بالقرآن، غزوات مشهورة، صحابة)، بدون مسائل فقهية خلافية ولا أشياء فيها أقوال.",
+    "تجنب التفاصيل الصغيرة اللي سهل تغلط فيها: أعداد المحافظات والمراكز، الأرقام الدقيقة جداً، المدن الصغيرة، الأرقام القياسية اللي تتغير.",
     "لا تكتب أسئلة عن أحداث بعد سنة 2023، ولا أسئلة سياسية حساسة.",
     "في حقل answer حط الإجابة الصحيحة، وبعدها صيغ مقبولة ثانية مفصولة بعلامة | (مثل: 7|سبع|سبعة أو أبو بكر الصديق|ابو بكر).",
     "رد بـ JSON بس بهالشكل بالضبط، بدون أي كلام ثاني: {\"questions\":[{\"text\":\"...؟\",\"answer\":\"...\"}]}"
   ].join("\n");
-  const user = `اكتب ${count} أسئلة جديدة في تصنيف: ${category}. مستوى متوسط.` +
+  const ask = Math.min(14, count + 4);
+  const user = `اكتب ${ask} أسئلة جديدة في تصنيف: ${category}. مستوى متوسط.` +
     (avoid.length ? `\nلا تكرر هذي الأسئلة ولا تسأل نفس المعلومة:\n- ${avoid.join("\n- ")}` : "");
-  const raw = await run(env, system, user, 1400, 0.7);
-  const arr = (pickJSON(raw, "{").questions || []);
+  let arr = null;
+  for (let i = 0; i < 2 && !arr; i++) {
+    try { arr = pickJSON(await runSmart(env, system, user, 4000, 0.6), "{").questions || []; }
+    catch (e) { if (i === 1) throw e; }
+  }
   const seen = new Set(avoid);
-  const qs = arr.map(q => ({ text: clip(q && q.text, 160), answer: clip(q && q.answer, 120) }))
+  const drafts = arr.map(q => ({ text: clip(q && q.text, 160), answer: clip(q && q.answer, 120) }))
     .filter(q => q.text.length > 5 && q.answer && !seen.has(q.text))
-    .map(q => (/[؟?]$/.test(q.text) ? q : { text: q.text + "؟", answer: q.answer }))
-    .slice(0, count);
-  return { questions: qs, category };
+    .map(q => (/[؟?]$/.test(q.text) ? q : { text: q.text + "؟", answer: q.answer }));
+  const checked = await verifyQuestions(env, drafts);
+  return { questions: checked.slice(0, count), category, dropped: drafts.length - checked.length };
+}
+
+/* المراجعة: مدقق ثاني يحكم على كل سؤال، ويشيل أي سؤال إجابته غلط أو فيه خلاف أو أكثر من إجابة */
+async function verifyQuestions(env, qs) {
+  if (!qs.length) return [];
+  const system = [
+    "أنت مدقق معلومات صارم لمسابقة ثقافية. قدامك أسئلة وإجاباتها.",
+    "لكل سؤال: هل الإجابة الأولى (قبل علامة |) صحيحة 100% ومتفق عليها، والسؤال له إجابة وحدة بس؟",
+    "لو فيه أي شك أو خلاف بين العلماء أو المصادر، أو المعلومة تتغير مع الوقت، أو السؤال يحتمل أكثر من إجابة: احكم بـ false.",
+    "رد بـ JSON بس: {\"results\":[{\"i\":0,\"ok\":true}]}"
+  ].join("\n");
+  const user = qs.map((q, i) => `${i}. السؤال: ${q.text} | الإجابة: ${q.answer}`).join("\n");
+  let res = null;
+  for (let k = 0; k < 2 && !res; k++) {
+    try { res = pickJSON(await runSmart(env, system, user, 2500, 0), "{").results; } catch (e) {}
+  }
+  if (!Array.isArray(res)) return [];          /* لو المراجعة فشلت ما نرجّع أسئلة ما انراجعت */
+  const okSet = new Set(res.filter(r => r && r.ok === true).map(r => Number(r.i)));
+  return qs.filter((q, i) => okSet.has(i));
 }
 
 async function taskGrade(env, b) {
@@ -122,7 +169,7 @@ async function taskChat(env, b) {
     "لا تساعد أحد يغش: لو أحد سألك عن إجابة سؤال وهو في نص مواجهة، اعتذر بلطف.",
     "سياق الدوري الحالي:\n" + clip(b.context, 2500)
   ].join("\n");
-  const reply = await run(env, system, msgs, 500, 0.5);
+  const reply = await runSmart(env, system, msgs, 1500, 0.5);
   return { reply: clip(reply, 1500) };
 }
 

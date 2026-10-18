@@ -33,9 +33,10 @@ function aiGenQuestions() {
     box.innerHTML = "";
     const avoid = (roomState.qbank || []).map(q => q && q.text).filter(Boolean)
         .concat((typeof LIVE_FALLBACK_QUESTIONS !== "undefined" ? LIVE_FALLBACK_QUESTIONS : []).map(q => q.text));
-    aiCall("questions", { category: cat, count, avoid }, 45000).then(d => {
+    btn.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg> يكتب الأسئلة ويراجعها (دقيقة تقريباً)...`;
+    aiCall("questions", { category: cat, count, avoid }, 120000).then(d => {
         aiGenList = (d.questions || []).filter(q => q.text && q.answer);
-        aiRenderGen();
+        aiRenderGen(d.dropped || 0);
     }).catch(e => {
         box.innerHTML = `<div class="ai-note ai-err">ما قدرت أولّد أسئلة الحين (${escapeHTML(e.message === "The user aborted a request." ? "تأخر الرد" : e.message)}). جرّب بعد شوي.</div>`;
     }).finally(() => {
@@ -44,11 +45,11 @@ function aiGenQuestions() {
     });
 }
 
-function aiRenderGen() {
+function aiRenderGen(dropped) {
     const box = document.getElementById("aiGenBox");
     if (!box) return;
-    if (!aiGenList.length) { box.innerHTML = `<div class="ai-note">ما طلع شي جديد، جرّب تصنيف ثاني.</div>`; return; }
-    box.innerHTML = `<div class="ai-note">راجع الأسئلة قبل الإضافة، وشيل الصح عن أي سؤال تشك في إجابته.</div>` +
+    if (!aiGenList.length) { box.innerHTML = `<div class="ai-note">ما طلع شي متأكد منه هالمرة، جرّب مرة ثانية أو تصنيف ثاني.</div>`; return; }
+    box.innerHTML = `<div class="ai-note">كل سؤال انراجع مرتين${dropped ? `، وانشال ${dropped} سؤال ما تأكد منه المراجع` : ""}. برضو راجعها بنفسك، وشيل الصح عن أي سؤال تشك فيه.</div>` +
         aiGenList.map((q, i) => `
 <label class="ai-gen-item">
 <input type="checkbox" class="ai-gen-chk" data-i="${i}" checked>
