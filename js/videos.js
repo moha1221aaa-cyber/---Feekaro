@@ -84,7 +84,7 @@ html += `
 <div class="video-title">${escapeHTML(v.title)}</div>
 <div class="video-date">
 <span>${dateStr}</span>
-${isAdmin ? `<button class="video-delete-btn" onclick="deleteVideo('${docId}')">حذف</button>` : ''}
+${isAdmin ? `<button class="video-delete-btn" onclick="deleteVideo(${jsArg(docId)})">حذف</button>` : ''}
 </div>
 </div>
 </div>

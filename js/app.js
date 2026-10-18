@@ -130,6 +130,11 @@ return String(value || "")
 .replace(/"/g,"&quot;")
 .replace(/'/g,"&#039;");
 }
+/* قيمة داخل onclick="fn(...)": JSON يحمي النص داخل JS، و escapeHTML يحميه داخل الخاصية.
+   escapeHTML بروحه ما يكفي لأن المتصفح يفك &#039; قبل ما يشغّل الكود. */
+function jsArg(value) {
+return escapeHTML(JSON.stringify(String(value == null ? "" : value)));
+}
 /* رابط صورة أو فيديو داخل src="...": يقبل https و http والروابط الداخلية و blob بس، ويرجعه محمي */
 function safeSrc(url) {
 let u = String(url == null ? "" : url).trim();

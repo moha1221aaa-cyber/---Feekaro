@@ -102,7 +102,7 @@ html += `
 <div class="prediction-player-name">${escapeHTML(m.p2.name)}</div>
 </div>
 </div>
-<button class="prediction-save" onclick="savePrediction('${matchId}', '${p1InputId}', '${p2InputId}')"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ التوقع</button>
+<button class="prediction-save" onclick="savePrediction(${jsArg(matchId)}, ${jsArg(p1InputId)}, ${jsArg(p2InputId)})"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ التوقع</button>
 </div>
 `;
 });
@@ -250,7 +250,7 @@ let rankBadge = rank === 1 ? ic("medal","m1") : (rank === 2 ? ic("medal","m2") :
 let avatarSrc = cdnThumb(item.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=2563eb&color=fff&bold=true`;
 
 html += `
-<div class="user-card ${isMe ? 'is-me' : ''}" onclick="openUserProfile('${item.uid}', '')">
+<div class="user-card ${isMe ? 'is-me' : ''}" onclick="openUserProfile(${jsArg(item.uid)}, '')">
 <div class="user-card-rank ${rankClass}">${rankBadge}</div>
 <div class="user-card-profile">
 <div class="user-card-avatar">

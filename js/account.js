@@ -235,7 +235,7 @@ body.innerHTML = `
 <select id="linkUserSelect" style="width:100%; padding:10px; background:#334155; border:1px solid #475569; color:white; border-radius:8px; margin-bottom:12px;">
 ${optionsHTML}
 </select>
-<button onclick="savePlayerLink('${escapeHTML(playerName)}')" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الربط</button>
+<button onclick="savePlayerLink(${jsArg(playerName)})" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> حفظ الربط</button>
 </div>
 `;
 

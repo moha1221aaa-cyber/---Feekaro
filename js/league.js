@@ -84,7 +84,7 @@ playerMatchesHTML += `</div>`;
 }
 }
 
-let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal('${escapeHTML(displayName)}')" style="margin-top:12px; background:#0284c7; width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق المتسابق بالحساب</button>` : '';
+let adminButton = (isAdmin && displayName) ? `<button onclick="openLinkPlayerModal(${jsArg(displayName)})" style="margin-top:12px; background:#0284c7; width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> توثيق المتسابق بالحساب</button>` : '';
 
 body.innerHTML = `
 <div style="text-align:center;">
@@ -134,7 +134,7 @@ let avatarData = getPlayerAvatar(p.name);
 let verifiedBadge = avatarData.isVerified ? `<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>` : '';
 
 let playerCellHTML = `
-<div class="table-player-cell clickable-profile" onclick="openUserProfile('${playerLinks[p.name] || ''}', '${escapeHTML(p.name)}')">
+<div class="table-player-cell clickable-profile" onclick="openUserProfile(${jsArg(playerLinks[p.name] || '')}, ${jsArg(p.name)})">
 <img src="${safeSrc(avatarData.url)}" class="table-player-img" alt="${escapeHTML(p.name)}">
 <span style="font-weight:bold;">${escapeHTML(p.name)}</span>${verifiedBadge}
 </div>
