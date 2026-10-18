@@ -2,7 +2,9 @@
 
 التعليمات الكاملة (صاحب المشروع، النشر، القواعد) في CLAUDE.md حق مستودع Feekaro-Web-Studio، والهيكل في README.md هنا.
 
-نتايج الفحص الأمني للدوري (17 أكتوبر 2026) وخطة التصليح في قسم "الفحص الأمني" بنفس ملف Feekaro-Web-Studio. أهمها: photoURL و onclick بدون حماية، الأجوبة مكشوفة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة، agora-token و tts بدون تحقق.
+الفحص الأمني: المرحلة 1 انصلحت (18 أكتوبر 2026): safeSrc للصور، jsArg لـ onclick، tts و ai بتوكن Firebase (lib/firebase-auth.js)، وتوكن استماع للضيف في أجورا. الباقي (الأجوبة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة) خطته في SECURITY-PLAN.md وينتظر موافقة محمد.
+- أي قيمة داخل onclick="fn(...)": استخدم jsArg(قيمة). وأي رابط داخل src: safeSrc(رابط). escapeHTML بروحه ما يكفي داخل JS.
+- أي دالة سيرفر جديدة تصرف رصيد أو حصة: تحقق بـ verifyFirebaseToken(bearer(request)) والمتصفح يرسل authHeaders().
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
