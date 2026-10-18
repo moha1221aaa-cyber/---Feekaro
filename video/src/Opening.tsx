@@ -1,9 +1,28 @@
 import { Audio } from "@remotion/media";
-import { AbsoluteFill, interpolate, Sequence, staticFile, Track, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  Sequence,
+  staticFile,
+  Track,
+  useVideoConfig,
+} from "remotion";
 import { CLAMP, COLORS } from "./theme";
-import { Countdown, Finale, Ignition, LogoReveal, Symbols, Tagline } from "./scenes/Scenes";
+import {
+  Countdown,
+  Finale,
+  Ignition,
+  LogoReveal,
+  Symbols,
+  Tagline,
+} from "./scenes/Scenes";
 
-const Sfx: React.FC<{ at: number; file: string; volume?: number; name: string }> = ({ at, file, volume = 0.8, name }) => (
+const Sfx: React.FC<{
+  at: number;
+  file: string;
+  volume?: number;
+  name: string;
+}> = ({ at, file, volume = 0.8, name }) => (
   <Sequence from={at} name={name} layout="none">
     <Audio src={staticFile(`audio/${file}`)} volume={volume} />
   </Sequence>
@@ -17,7 +36,11 @@ export const Opening = () => {
         <Ignition name="1 Ignition" durationInFrames={4 * fps} />
         <Tagline name="2 Tagline" from={4 * fps} durationInFrames={5 * fps} />
         <Symbols name="3 Symbols" from={9 * fps} durationInFrames={6 * fps} />
-        <Countdown name="4 Countdown" from={15 * fps} durationInFrames={6 * fps} />
+        <Countdown
+          name="4 Countdown"
+          from={15 * fps}
+          durationInFrames={6 * fps}
+        />
         <LogoReveal name="5 Logo" from={21 * fps} durationInFrames={6 * fps} />
         <Finale name="6 Finale" from={27 * fps} durationInFrames={3 * fps} />
       </Track>
@@ -26,13 +49,32 @@ export const Opening = () => {
       <Sequence name="Suspense bed" durationInFrames={21 * fps} layout="none">
         <Audio
           src={staticFile("audio/decider.mp3")}
-          volume={(f) => interpolate(f, [0, 2 * fps, 19.5 * fps, 21 * fps], [0, 0.55, 0.55, 0], CLAMP)}
+          volume={(f) =>
+            interpolate(
+              f,
+              [0, 2 * fps, 19.5 * fps, 21 * fps],
+              [0, 0.55, 0.55, 0],
+              CLAMP,
+            )
+          }
         />
       </Sequence>
-      <Sequence name="Logo theme" from={21 * fps} durationInFrames={9 * fps} layout="none">
+      <Sequence
+        name="Logo theme"
+        from={21 * fps}
+        durationInFrames={9 * fps}
+        layout="none"
+      >
         <Audio
           src={staticFile("audio/show_intro.mp3")}
-          volume={(f) => interpolate(f, [0, 0.3 * fps, 7.5 * fps, 9 * fps], [0, 0.75, 0.75, 0], CLAMP)}
+          volume={(f) =>
+            interpolate(
+              f,
+              [0, 0.3 * fps, 7.5 * fps, 9 * fps],
+              [0, 0.75, 0.75, 0],
+              CLAMP,
+            )
+          }
         />
       </Sequence>
 

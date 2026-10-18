@@ -35,9 +35,7 @@ export const goldText: React.CSSProperties = {
   filter: `drop-shadow(0 0 18px rgba(212,175,55,0.55))`,
 };
 
-export const RoyalBackground: React.FC<{ glow?: number }> = ({
-  glow = 1,
-}) => (
+export const RoyalBackground: React.FC<{ glow?: number }> = ({ glow = 1 }) => (
   <AbsoluteFill
     style={{
       background: `radial-gradient(ellipse 70% 45% at 50% 50%, rgba(14,42,122,${0.9 * glow}) 0%, ${COLORS.navy} 55%, ${COLORS.night} 100%)`,
@@ -56,7 +54,7 @@ export const GoldDust: React.FC<{ count?: number; opacity?: number }> = ({
       {new Array(count).fill(0).map((_, i) => {
         const x = random(`x${i}`) * 1080;
         const speed = 0.4 + random(`s${i}`) * 1.4;
-        const y = (random(`y${i}`) * 2100 - frame * speed + 4000) % 2100 - 90;
+        const y = ((random(`y${i}`) * 2100 - frame * speed + 4000) % 2100) - 90;
         const size = 2 + random(`r${i}`) * 6;
         const tw = 0.35 + 0.65 * Math.abs(Math.sin(frame / 14 + i));
         return (
