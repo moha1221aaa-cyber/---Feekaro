@@ -8,12 +8,12 @@
 function aiCall(task, body, timeoutMs) {
     const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
     const t = ctl ? setTimeout(() => ctl.abort(), timeoutMs || 20000) : null;
-    return fetch("/ai", {
+    return authHeaders().then(h => fetch("/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: Object.assign({ "Content-Type": "application/json" }, h),
         body: JSON.stringify(Object.assign({ task }, body || {})),
         signal: ctl ? ctl.signal : undefined
-    }).then(r => r.json().catch(() => ({})).then(d => {
+    })).then(r => r.json().catch(() => ({})).then(d => {
         if (!r.ok) throw new Error(d.error || ("AI " + r.status));
         return d;
     })).finally(() => { if (t) clearTimeout(t); });

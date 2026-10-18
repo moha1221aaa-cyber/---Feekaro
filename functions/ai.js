@@ -6,6 +6,8 @@
    - chat:      مساعد الموقع                         { messages: [{ role, content }], context }
    الحماية: بس صفحات موقع الدوري، وحد للطلبات لكل جهاز بالدقيقة، وكل المدخلات مقصوصة */
 
+import { verifyFirebaseToken, bearer, jwksCount } from "../lib/firebase-auth.js";
+
 /* FAST: سريع (التصحيح وجمل المقدم). SMART: أدق في المعلومات (الأسئلة ومراجعتها والمساعد) */
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const SMART = "@cf/openai/gpt-oss-120b";
@@ -187,6 +189,8 @@ export async function onRequestPost(context) {
   const from = request.headers.get("Origin") || request.headers.get("Referer") || "";
   try { if (!from || new URL(from).host !== url.host) return json(403, { error: "forbidden" }); } catch (e) { return json(403, { error: "forbidden" }); }
   if (!env.AI) return json(503, { error: "AI not configured" });
+  /* بس المستخدمين المسجلين (توكن Firebase)، لأن فحص Origin ينتجاوز ويخلص الحصة المجانية */
+  if (!(await verifyFirebaseToken(bearer(request)))) return json(401, { error: "سجّل دخول عشان تستخدم الذكاء الاصطناعي" });
 
   let b;
   try { b = await request.json(); } catch (e) { return json(400, { error: "bad body" }); }
@@ -203,5 +207,6 @@ export async function onRequestPost(context) {
 
 /* فحص سريع إن الخدمة شغالة (بدون ما يصرف شي) */
 export async function onRequestGet(context) {
-  return json(200, { ok: !!context.env.AI, model: MODEL });
+  /* authKeys: عدد مفاتيح Firebase العامة اللي يتحقق فيها من تسجيل الدخول (لازم أكثر من 0) */
+  return json(200, { ok: !!context.env.AI, model: MODEL, authKeys: await jwksCount() });
 }
