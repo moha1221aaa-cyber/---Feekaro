@@ -3,6 +3,8 @@
    - احتياط: Google Text-to-Speech لو انضاف سر TTS_KEY
    - كل جملة تنحفظ في كاش Cloudflare 30 يوم، فنفس السؤال ما ينحسب من الرصيد مرتين */
 
+import { verifyFirebaseToken, bearer } from "../lib/firebase-auth.js";
+
 const MAX_CHARS = 300;
 const DEFAULT_ELEVEN_VOICE = "nPczCjzI2devNBz1zQrb"; /* Brian: اختاره محمد مذيع للدوري */
 const ELEVEN_MODEL = "eleven_multilingual_v2";
@@ -59,6 +61,10 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(url.origin + "/tts-cache?e=" + encodeURIComponent(engine) + "&t=" + encodeURIComponent(text));
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
+
+  /* جملة جديدة تصرف من رصيد ElevenLabs: لازم مستخدم مسجّل دخول (توكن Firebase).
+     فحص Origin بروحه ينتجاوز بأي أداة، والجمل المحفوظة في الكاش مجانية فتطلع للكل */
+  if (!(await verifyFirebaseToken(bearer(request)))) return err(401, "login required");
 
   try {
     const audio = env.ELEVEN_KEY ? await eleven(env, text) : await google(env, text, url.origin);

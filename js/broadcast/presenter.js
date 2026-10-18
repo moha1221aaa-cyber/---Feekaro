@@ -18,7 +18,7 @@ function bcTtsUrl(text) { return "/tts?t=" + encodeURIComponent(text); }
 function bcTtsLoad(text) {
     if (!text || !bcTtsServerOk) return Promise.reject(new Error("off"));
     if (!bcTtsBuf[text]) {
-        bcTtsBuf[text] = fetch(bcTtsUrl(text))
+        bcTtsBuf[text] = authHeaders().then(h => fetch(bcTtsUrl(text), { headers: h }))
             .then(r => {
                 if (r.status === 503) bcTtsServerOk = false;
                 if (!r.ok || (r.headers.get("Content-Type") || "").indexOf("audio") === -1) throw new Error("tts " + r.status);
