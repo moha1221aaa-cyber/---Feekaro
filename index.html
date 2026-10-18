@@ -268,8 +268,33 @@
 <input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن المتسابقين)">
 <button onclick="addQuestionToBank()" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة سؤال جديد</button>
 </div>
+<div class="ai-gen">
+<div class="ai-gen-title"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> أسئلة جديدة بالذكاء الاصطناعي</div>
+<div class="ai-gen-row">
+<select id="aiGenCat"><option>ثقافة عامة</option><option>علوم</option><option>دين</option><option>تاريخ</option><option>رياضة</option><option>جغرافيا</option></select>
+<select id="aiGenCount"><option value="5">5 أسئلة</option><option value="10">10 أسئلة</option></select>
+</div>
+<button id="aiGenBtn" onclick="aiGenQuestions()" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> ولّد أسئلة بالذكاء الاصطناعي</button>
+<div id="aiGenBox"></div>
 </div>
 </div>
+</div>
+
+<!-- مودال مساعد الدوري (ذكاء اصطناعي) -->
+<div id="aiChatModal" class="modal-overlay">
+<div class="modal-content ai-chat-content">
+<div class="modal-header">
+<h3><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg> مساعد الدوري</h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
+</div>
+<div id="aiChatLog" class="ai-chat-log"></div>
+<div class="ai-chat-bar">
+<input type="text" id="aiChatInput" placeholder="اكتب سؤالك..." maxlength="600" onkeydown="if(event.key==='Enter')aiSendChat()">
+<button onclick="aiSendChat()" aria-label="إرسال"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></button>
+</div>
+</div>
+</div>
+<button class="ai-fab" onclick="aiOpenChat()" aria-label="مساعد الدوري"><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg></button>
 
 <!-- مودال أدوات المسؤول -->
 <div id="roomAdminToolsModal" class="modal-overlay">
@@ -366,6 +391,7 @@
 <script src="js/broadcast/cinema.js"></script>
 <script src="js/broadcast/voice.js"></script>
 <script src="js/broadcast/screen.js"></script>
+<script src="js/ai.js"></script>
 </body>
 
 </html>

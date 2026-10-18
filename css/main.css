@@ -1145,4 +1145,33 @@ flex-wrap: wrap;
 .game-note.live .ic{color:#f87171;width:.7em;height:.7em;}
 .agora-status .ic{width:15px;height:15px;vertical-align:-3px;}
 .room-toast .ic{width:16px;height:16px;vertical-align:-3px;}
+
+/* ===== الذكاء الاصطناعي: توليد الأسئلة + مساعد الدوري ===== */
+.ai-gen{margin-top:14px;border-top:1px solid #334155;padding-top:12px;}
+.ai-gen-title{font-size:13px;font-weight:bold;color:#facc15;margin-bottom:8px;}
+.ai-gen-title .ic{width:15px;height:15px;vertical-align:-3px;}
+.ai-gen-row{display:flex;gap:6px;margin-bottom:6px;}
+.ai-gen-row select{flex:1;padding:9px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:8px;font-size:13px;font-family:inherit;}
+#aiGenBtn{background:linear-gradient(135deg,#1e40af,#7c3aed);}
+#aiGenBtn:disabled{opacity:.7;}
+#aiGenBox{margin-top:8px;}
+.ai-note{font-size:12px;color:#94a3b8;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin-bottom:6px;line-height:1.6;}
+.ai-note.ai-err{color:#fca5a5;border-color:#7f1d1d;}
+.ai-note.ai-ok{color:#86efac;border-color:#14532d;}
+.ai-gen-item{display:flex;gap:8px;align-items:flex-start;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px;text-align:right;cursor:pointer;}
+.ai-gen-item input{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:#3b82f6;}
+.ai-gen-item span{display:flex;flex-direction:column;gap:2px;}
+.ai-gen-item small{color:#4ade80;font-size:11px;}
+.ai-fab{position:fixed;left:14px;bottom:calc(74px + env(safe-area-inset-bottom,0px));z-index:999998;width:52px;height:52px;margin:0;padding:0;border-radius:50%;border:2px solid #facc15;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.45);}
+.ai-fab .ic{width:24px;height:24px;}
+.ai-chat-content{display:flex;flex-direction:column;height:min(560px,82vh);overflow:hidden;padding-bottom:12px;}
+.ai-chat-log{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px;}
+.ai-msg{max-width:86%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.7;word-wrap:break-word;}
+.ai-msg.ai-bot{align-self:flex-end;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-bottom-left-radius:4px;}
+.ai-msg.ai-me{align-self:flex-start;background:#1d4ed8;color:#fff;border-bottom-right-radius:4px;}
+.ai-typing{color:#94a3b8;font-style:italic;}
+.ai-chat-bar{display:flex;gap:6px;margin-top:10px;}
+.ai-chat-bar input{flex:1;min-width:0;padding:11px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:10px;font-size:14px;font-family:inherit;}
+.ai-chat-bar button{margin:0;width:46px;flex-shrink:0;padding:0;display:flex;align-items:center;justify-content:center;}
+.ai-chat-bar button .ic{width:18px;height:18px;transform:scaleX(-1);}
 #matchSearchInput{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}

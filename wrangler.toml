@@ -1,0 +1,9 @@
+# إعدادات Cloudflare Pages لموقع الدوري (النشر من league.yml في مستودع Feekaro-Web-Studio)
+# الربط AI يعطي functions/ai.js ذكاء اصطناعي مجاني من Workers AI بدون مفتاح
+# الأسرار (AGORA_APP_CERTIFICATE و ELEVEN_KEY) ما تنكتب هنا، تنحط بـ wrangler pages secret put
+name = "masro7-league"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"
+
+[ai]
+binding = "AI"

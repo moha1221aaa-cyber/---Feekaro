@@ -163,6 +163,8 @@ function bcResultText(d) {
 function bcCloseText(d) {
     const bm = bcBestMoment(d);
     const best = bm.fast ? `أفضل لحظة الليلة: أسرع ضغطة جرس كانت لـ ${bm.fast.name} في ${bcSec(bm.fast.ms)} ثانية.` : "";
+    const ai = (d.aiLines || {}).close;   /* جملة ختام من الذكاء الاصطناعي (js/ai.js) */
+    if (ai) return `${ai} ${best} شكراً لمتابعتكم، ونلقاكم في الجولة الجاية.`.replace(/\s+/g, " ");
     return bcFill(bcPick(BC_HOST.close, "c" + d.round), { r: d.round, best });
 }
 

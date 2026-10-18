@@ -33,7 +33,9 @@ js/
     cinema.js           المشاهد السينمائية والأصوات والموسيقى
     voice.js            صوت البث (قناة أجورا مستقلة)
     screen.js           شاشة البث: الرسم والمشاهد والانتقالات
-functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs)، time
+  ai.js                 الذكاء الاصطناعي: توليد الأسئلة، التصحيح الذكي، جمل المقدم (aiLines)، مساعد الدوري
+functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs)، time، ai (Workers AI مجاني)
+wrangler.toml           إعدادات Pages: ربط Workers AI باسم AI (بدون مفتاح)
 audio/                  أصوات البث الحقيقية (mp3)
 media/                  فيديو وصور الاستوديو
 sw.js                   Service Worker (غيّر CACHE_NAME مع كل تحديث)

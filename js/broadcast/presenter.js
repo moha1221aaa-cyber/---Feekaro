@@ -95,11 +95,14 @@ function bcAnnouncer(d) {
     let key = "", text = "", delay = 150;
     if (d.scene === "opening") {
         key = "open"; delay = 2500;
-        text = bcFill(bcPick(BC_HOST.open, "o" + d.round), { r: d.round, n: (d.order || []).length });
+        /* aiLines: جمل جديدة كتبها الذكاء الاصطناعي لهذي الجولة (js/ai.js)، وإذا ما فيه نرجع للثابتة */
+        const ai = d.aiLines || {};
+        text = ai.open || bcFill(bcPick(BC_HOST.open, "o" + d.round), { r: d.round, n: (d.order || []).length });
     } else if (d.scene === "intro" && o) {
         key = "intro" + d.cur; delay = 4400;
         const ctx = bcMatchContext(d), k = "i" + d.round + ":" + d.cur;
-        text = bcFill(bcPick(BC_HOST.intro, k), { ord: BC_AR_NUM_F[d.cur] || (d.cur + 1), p1: o.p1, p2: o.p2 }) + " " + (ctx ? ctx.t : bcPick(BC_HOST.introTail, k + "t"));
+        const aiTail = ((d.aiLines || {}).intros || [])[d.cur];
+        text = bcFill(bcPick(BC_HOST.intro, k), { ord: BC_AR_NUM_F[d.cur] || (d.cur + 1), p1: o.p1, p2: o.p2 }) + " " + (aiTail || (ctx ? ctx.t : bcPick(BC_HOST.introTail, k + "t")));
         bcPrefetchVoice(d);
     } else if (d.scene === "playing" && d.phase === "buzz") {
         key = "q" + d.cur + "_" + d.qIndex; text = bcQText(d, d.qIndex);

@@ -293,7 +293,10 @@ async function bcStartRound(r) {
         av1: getPlayerAvatar(m.p1.name).url, av2: getPlayerAvatar(m.p2.name).url,
         s1: 0, s2: 0, state: "pending", applied: false
     }));
+    /* جمل جديدة للمقدم في هذي الجولة (js/ai.js)، ولو تأخرت أو فشلت يرجع للجمل الثابتة */
+    const aiLines = typeof aiHostLines === "function" ? await aiHostLines(r, order) : null;
     const data = Object.assign(bcQuizReset(), {
+        aiLines: aiLines || null,
         type: "round", round: r, status: choice.at ? "scheduled" : "live", scene: choice.at ? "waiting" : "opening", cur: -1, order: order,
         startAt: choice.at || bcNow(),
         hostUid: currentUser.uid, hostName: myName, hostAv: myAv,
@@ -574,18 +577,30 @@ function liveBuzz() {
     }).catch(err => console.log("buzz:", err));
 }
 
-function liveSubmitAnswer() {
+async function liveSubmitAnswer() {
     const id = openLiveId;
     const inp = document.getElementById("lvAnswerInput");
     if (!id || !inp) return;
     const text = inp.value.trim();
     if (!text) { inp.focus(); return; }
     inp.disabled = true;
+    /* التصحيح الذكي (js/ai.js): لو المطابقة العادية رفضت، نسأل الذكاء الاصطناعي قبل ما ينتهي الوقت */
+    const d0 = liveMatchesCache[id] || {};
+    const q0 = (d0.questions || [])[d0.qIndex] || {};
+    let aiOk = false;
+    if (q0.text && !liveAnswerMatches(text, q0.answer || "") && typeof aiGrade === "function") {
+        const left = (d0.deadline || 0) - bcNow();
+        if (left > 1500) {
+            inp.value = "يتحقق من إجابتك...";
+            aiOk = await aiGrade(q0.text, q0.answer || "", text, Math.min(4000, left - 800));
+            inp.value = text;
+        }
+    }
     liveTx(id, (d, now) => {
         const n = myLiveNum(d);
         if (d.status !== "live" || d.scene !== "playing" || d.phase !== "answer" || d.answerer !== n || now > d.deadline + 2000) return null;
         const q = (d.questions || [])[d.qIndex] || {};
-        const ok = liveAnswerMatches(text, q.answer || "");
+        const ok = liveAnswerMatches(text, q.answer || "") || (aiOk && q.text === q0.text);
         const last = { by: n, text: text.slice(0, 80), correct: ok };
         return ok ? liveRevealUpd(d, n, now, last) : livePassUpd(d, n, now, last);
     }).catch(err => { console.log("answer:", err); inp.disabled = false; });
