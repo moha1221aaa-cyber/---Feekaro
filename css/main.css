@@ -1196,3 +1196,13 @@ button:focus-visible,a:focus-visible,[role="button"]:focus-visible{outline:2px s
 .pred-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .pred-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#facc15;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.35);border-radius:10px;padding:1px 7px;}
 .pred-badge .ic{width:11px;height:11px;}
+
+/* ملخص بث الجولة (المواجهات السابقة) */
+.round-summary{max-width:420px;margin:6px auto 10px;background:#0f172a;border:1px solid #334155;border-radius:12px;font-size:13px;}
+.round-summary summary{cursor:pointer;padding:10px 12px;font-weight:800;color:#facc15;display:flex;align-items:center;gap:6px;min-height:24px;}
+.round-summary summary .ic{width:16px;height:16px;}
+.round-summary .rs-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px;}
+.round-summary .rs-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center;background:#1e293b;border-radius:8px;padding:6px;}
+.round-summary .rs-row b{color:#fff;direction:ltr;}
+.round-summary .rs-line{color:#cbd5e1;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.round-summary .rs-line .ic{width:14px;height:14px;color:#60a5fa;}

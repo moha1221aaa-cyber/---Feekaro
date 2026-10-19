@@ -325,6 +325,26 @@ if (m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null) {
 return div;
 }
 
+/* ملخص بث الجولة بعد ما يخلص: النتائج اللي انلعبت في البث، أسرع جرس، أكبر فوز، وأفضل المتوقعين (من وثيقة البث نفسها) */
+function buildRoundSummary(r) {
+if (typeof liveMatchesCache === "undefined" || typeof bcBestMoment !== "function") return null;
+const d = liveMatchesCache[bcId(r)];
+if (!d || d.status !== "ended") return null;
+const done = (d.order || []).filter(o => o.state === "done");
+if (!done.length) return null;
+const bm = bcBestMoment(d), board = bcPredBoard(d);
+const box = document.createElement("details");
+box.className = "round-summary";
+box.innerHTML = `<summary>${ic("clapper")} ملخص بث الجولة ${escapeHTML(String(r))}</summary>
+<div class="rs-body">
+${done.map(o => `<div class="rs-row"><span>${escapeHTML(o.p1)}</span><b>${o.s2 || 0} - ${o.s1 || 0}</b><span>${escapeHTML(o.p2)}</span></div>`).join("")}
+${bm.fast ? `<div class="rs-line">${ic("zap")} أسرع ضغطة جرس: <b>${escapeHTML(bm.fast.name)}</b> في ${bcSec(bm.fast.ms)} ثانية</div>` : ""}
+${bm.big ? `<div class="rs-line">${ic("trophy")} أكبر فوز: <b>${escapeHTML(bm.big.w)}</b> ${bm.big.a} - ${bm.big.b}</div>` : ""}
+${board.length ? `<div class="rs-line">${ic("target")} أفضل المتوقعين: ${board.slice(0, 3).map(x => `<b>${escapeHTML(x.name)}</b> (${x.ok}/${x.all})`).join("، ")}</div>` : ""}
+</div>`;
+return box;
+}
+
 function renderMatches() {
 let upDiv = document.getElementById("upcoming");
 let pastDiv = document.getElementById("past");
@@ -384,6 +404,8 @@ let rHeader = document.createElement("h3");
 rHeader.style.cssText = "text-align:center; color:#facc15; margin:15px 0 5px; font-size:15px;";
 rHeader.textContent = `الجولة ${r}`;
 pastDiv.appendChild(rHeader);
+let rSum = buildRoundSummary(r);
+if (rSum) pastDiv.appendChild(rSum);
 
 pastGroup[r].forEach(m => {
 pastDiv.appendChild(createMatchCard(m));
