@@ -1,4 +1,5 @@
 /* التوقعات: الحفظ، الحساب (5/3 نقاط)، ترتيب المتوقعين */
+
 function loadPredictions() {
 if(!firebaseDB || !currentUser) return;
 if(predictionListener) predictionListener();
@@ -196,6 +197,22 @@ predsRankingWaiters.splice(0).forEach(f => f());
 return false;
 }
 
+/* أوسمة المتوقعين: قنّاص (3 توقعات دقيقة أو أكثر)، سلسلة (3 توقعات صحيحة ورا بعض)، نجم الجولة (أعلى نقاط في آخر جولة انلعبت) */
+function addPredictionBadges(list) {
+let lastRound = 0;
+list.forEach(u => (u.scored || []).forEach(g => { if(g.round > lastRound) lastRound = g.round; }));
+let roundPts = list.map(u => (u.scored || []).filter(g => g.round === lastRound).reduce((t, g) => t + g.pts, 0));
+let topRound = Math.max(0, ...roundPts);
+list.forEach((u, i) => {
+u.badges = [];
+if(u.exactCount >= 3) u.badges.push({ icon: "target", t: "قنّاص" });
+let run = 0, best = 0;
+(u.scored || []).sort((a, b) => a.idx - b.idx).forEach(g => { run = g.pts > 0 ? run + 1 : 0; best = Math.max(best, run); });
+if(best >= 3) u.badges.push({ icon: "zap", t: "سلسلة " + best });
+if(topRound > 0 && roundPts[i] === topRound) u.badges.push({ icon: "crown", t: "نجم الجولة " + lastRound });
+});
+}
+
 function getPredictionRankingList() {
 let userScores = {};
 
@@ -227,17 +244,20 @@ correctCount: 0
 };
 }
 
-let match = matches.find(m => getMatchId(m) === pred.matchId);
+let idx = matches.findIndex(m => getMatchId(m) === pred.matchId);
+let match = matches[idx];
 if(match && match.s1 !== "" && match.s2 !== "") {
 let pts = calculatePredictionPoints(pred, match);
 userScores[uid].points += pts;
 if(pts === 5) userScores[uid].exactCount++;
 else if(pts === 3) userScores[uid].correctCount++;
+(userScores[uid].scored = userScores[uid].scored || []).push({ idx: idx, round: match.round, pts: pts });
 }
 });
 
 let list = Object.values(userScores);
 list.sort((a,b) => b.points - a.points || b.exactCount - a.exactCount || b.correctCount - a.correctCount);
+addPredictionBadges(list);
 return list;
 }
 
@@ -274,6 +294,7 @@ html += `
 ${escapeHTML(item.name)} ${isMe ? '<span class="user-me-badge">أنت</span>' : ''}
 </div>
 <div class="user-card-stats">توقع صحيح: ${item.exactCount + item.correctCount}</div>
+${item.badges && item.badges.length ? `<div class="pred-badges">${item.badges.map(b => `<span class="pred-badge">${ic(b.icon)}${escapeHTML(b.t)}</span>`).join("")}</div>` : ""}
 </div>
 </div>
 <div class="user-card-score">
