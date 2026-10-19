@@ -9,7 +9,7 @@
 const LIVE_Q_COUNT = 5;
 const LIVE_COUNT_MS = 3500;   /* العد التنازلي قبل البداية */
 const LIVE_BUZZ_MS = 15000;   /* وقت ضغط الجرس */
-const LIVE_ANSWER_MS = 15000; /* وقت كتابة الإجابة */
+const LIVE_ANSWER_MS = 15000; /* وقت الإجابة (بالصوت، أو كتابة لو الصوت ما اشتغل) */
 const LIVE_REVEAL_MS = 6500;  /* عرض الإجابة قبل السؤال التالي */
 const BC_CHANNEL = "masro7_live_round"; /* قناة صوت البث (منفصلة عن الغرفة الصوتية) */
 const BC_MATCH_SCENES = ["intro", "talk", "countdown", "playing", "result"];
@@ -564,6 +564,8 @@ function liveBuzz() {
     if (!d || d.scene !== "playing" || d.phase !== "buzz" || !myLiveNum(d)) return;
     const bell = document.getElementById("lvBell");
     if (bell) bell.classList.add("rung");
+    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال لو فزت بالجرس */
+    if (typeof vaPrime === "function") vaPrime();
     liveTx(id, (x, now) => {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
@@ -596,14 +598,19 @@ async function liveSubmitAnswer() {
             inp.value = text;
         }
     }
-    liveTx(id, (d, now) => {
+    liveCommitAnswer(id, text, aiOk, q0).catch(err => { console.log("answer:", err); inp.disabled = false; });
+}
+
+/* تسجيل الإجابة (كتابة أو صوت js/broadcast/voice-answer.js): صح ← كشف الإجابة، غلط ← السؤال ينتقل للثاني */
+function liveCommitAnswer(id, text, aiOk, q0) {
+    return liveTx(id, (d, now) => {
         const n = myLiveNum(d);
         if (d.status !== "live" || d.scene !== "playing" || d.phase !== "answer" || d.answerer !== n || now > d.deadline + 2000) return null;
         const q = (d.questions || [])[d.qIndex] || {};
-        const ok = liveAnswerMatches(text, q.answer || "") || (aiOk && q.text === q0.text);
-        const last = { by: n, text: text.slice(0, 80), correct: ok };
+        const ok = (!!text && liveAnswerMatches(text, q.answer || "")) || (aiOk && q.text === q0.text);
+        const last = { by: n, text: (text || "ما انسمع جواب").slice(0, 80), correct: ok };
         return ok ? liveRevealUpd(d, n, now, last) : livePassUpd(d, n, now, last);
-    }).catch(err => { console.log("answer:", err); inp.disabled = false; });
+    });
 }
 
 /* تسجيل نتائج مواجهات البث في جدول الدوري تلقائياً */

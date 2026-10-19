@@ -551,15 +551,15 @@ ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGol
 ${lastHTML}
 <div class="lv-turn">${d.passed ? ic("chevron-right") + " انتقل السؤال إلى " + nm : ic("bell") + " " + nm + " ضغط الجرس أول"}</div>`;
         if (me && me === d.answerer) {
-            html += `
-<div class="lv-ans-row">
-<input type="text" id="lvAnswerInput" placeholder="اكتب إجابتك..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();liveSubmitAnswer();}">
-<button onclick="liveSubmitAnswer()">إرسال</button>
-</div>`;
+            /* الجواب بالصوت (js/broadcast/voice-answer.js)، والكتابة احتياط */
+            vaSync(d);
+            html += vaHTML();
         } else {
-            html += `<div class="lv-muted">${nm} يكتب الإجابة الحين...</div>`;
+            vaStop(false);
+            html += `<div class="lv-muted">${nm} يجاوب الحين...</div>`;
         }
     } else if (d.phase === "reveal") {
+        vaStop(false);
         /* لحظة تشويق قبل كشف الإجابة */
         const w = d.outcome;
         const hold = bcNow() < bcRevealAt(d);
