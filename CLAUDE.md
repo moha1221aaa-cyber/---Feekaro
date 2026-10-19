@@ -10,6 +10,8 @@
 - **الجواب بالصوت (19 أكتوبر 2026):** بعد الجرس، js/broadcast/voice-answer.js يسجّل من مايك البث (bcTrack.getMediaStreamTrack، ما يفتح مايك ثاني) ويوقف لحاله لما يسكت المتسابق 0.8 ث (بدون أي أزرار)، وأول جواب هو اللي ينحسب (التغيير ما ينقبل)، ويرسل WAV 16k لـ /ai task voice: Whisper (whisper-large-v3-turbo، ar، ونص السؤال initial_prompt) ← خطوة تطلّع أول جواب بدون الإجابة الصحيحة ← مطابقة عادية (answerMatches نسخة liveAnswerMatches) ولو ما طابقت taskGrade بـ voice:true (يقبل غلط سمع بحرف). الوقت يتمدد 10 ث وقت التحقق. لو فشل أي شي يطلع مربع الكتابة. التجربة الحية: league-voice-test.yml في Feekaro-Web-Studio (فرع league-voice-test).
 - التجربة المحلية بالبيانات الحقيقية مشروحة آخر README.md (Firebase من npm بدل gstatic).
 - الهيدر (19 أكتوبر 2026): في الصفحات غير الرئيسية ينضاف كلاس hdr-compact (showTab في league.js) يعطي العنوان مسافة عن الجرس. الجرس يسار وزر تثبيت التطبيق يمين، لا تحطهم بنفس المكان.
+- **صوت المتسابقين (19 أكتوبر 2026):** لو المتصفح حجب التشغيل التلقائي (AgoraRTC.onAudioAutoplayFailed ← onAgoraAutoplayBlocked في core.js) يطلع زر أصفر #bcUnlock فوق شاشة البث (z-index أعلى من live-screen 1000001) يشغّل الصوت بضغطة. المايك speech_standard، والموسيقى الخلفية تنزل لـ 35% لما أحد يتكلم (bcRemoteTalk). وقبل البث تحذير أحمر لأي متسابق مو مربوط بحساب (ما له مايك ولا جرس) مع زر ربط.
+- **صوت المذيع (19 أكتوبر 2026):** functions/tts.js يجرب بالترتيب: Azure Speech (ar-SA-HamedNeural، سر AZURE_TTS_KEY و AZURE_TTS_REGION، الباقة المجانية F0) ← ElevenLabs ← Google ← صوت الجوال. كل محرك كاشه لحاله، والهيدر X-TTS-Engine يقول مين اللي رد. league.yml يحط سرّي Azure من GitHub Secrets ويجرب المفتاح مباشرة.
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
