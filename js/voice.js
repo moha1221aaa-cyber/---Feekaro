@@ -77,10 +77,7 @@ async function ensureAgoraJoined() {
         agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
         /* المتصفح قد يمنع تشغيل الصوت قبل أي ضغطة من المستخدم؛ نعرض شريط تنبيه ويكفي ضغطة واحدة */
-        AgoraRTC.onAudioAutoplayFailed = () => {
-            agoraAudioBlocked = true;
-            refreshAgoraStatus();
-        };
+        AgoraRTC.onAudioAutoplayFailed = AgoraRTC.onAutoplayFailed = onAgoraAutoplayBlocked;
 
         agoraClient.on("user-published", async (user, mediaType) => {
             try {

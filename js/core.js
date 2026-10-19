@@ -10,6 +10,12 @@ async function authHeaders() {
     return {};
 }
 
+/* أجورا: المتصفح حجب الصوت. الغرفة تعرض شريطها، والبث يعرض زر كبير "اضغط عشان تسمع" (js/broadcast/voice.js) */
+function onAgoraAutoplayBlocked() {
+    try { if (typeof agoraAudioBlocked !== "undefined") { agoraAudioBlocked = true; if (typeof refreshAgoraStatus === "function") refreshAgoraStatus(); } } catch (e) {}
+    try { if (typeof bcShowAudioUnlock === "function") bcShowAudioUnlock(); } catch (e) {}
+}
+
 /* مكتبة الصوت (أجورا) تتحمل بس لما أحد يدخل الغرفة أو البث، عشان الموقع يفتح أسرع */
 let agoraLoading = null;
 function loadAgora() {
@@ -17,7 +23,12 @@ function loadAgora() {
     if (!agoraLoading) agoraLoading = new Promise((res, rej) => {
         const sc = document.createElement("script");
         sc.src = "https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js";
-        sc.onload = () => window.AgoraRTC ? res(window.AgoraRTC) : rej(new Error("مكتبة الصوت ما تحمّلت"));
+        sc.onload = () => {
+            if (!window.AgoraRTC) return rej(new Error("مكتبة الصوت ما تحمّلت"));
+            /* المتصفح منع تشغيل الصوت قبل أي ضغطة: نخبر الغرفة والبث (الاسم القديم والجديد في أجورا) */
+            window.AgoraRTC.onAudioAutoplayFailed = window.AgoraRTC.onAutoplayFailed = onAgoraAutoplayBlocked;
+            res(window.AgoraRTC);
+        };
         sc.onerror = () => { agoraLoading = null; rej(new Error("مكتبة الصوت ما تحمّلت، تأكد من النت")); };
         document.head.appendChild(sc);
     });

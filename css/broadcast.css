@@ -548,3 +548,7 @@
 .va-spin{width:34px;height:34px;border-radius:50%;border:4px solid #334155;border-top-color:#facc15;animation:vaSpin .8s linear infinite;}
 @keyframes vaSpin{to{transform:rotate(360deg);}}
 @media (prefers-reduced-motion:reduce){.va-mic,.va-spin{animation:none;}}
+
+/* المتصفح حجب صوت البث */
+.bc-unlock{position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:1000010;margin:0;min-height:56px;font-size:16px;font-weight:900;border-radius:14px;background:#facc15;color:#0f172a;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:vaPulse 1.4s ease-in-out infinite;}
+.bc-unlock .ic{width:22px;height:22px;}

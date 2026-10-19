@@ -63,7 +63,8 @@ async function bcPublish() {
     if (!bcPubPromise) {
         bcPubPromise = (async () => {
             await agoraUpgradeToken(bcClient, BC_CHANNEL);
-            const track = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true });
+            /* speech_standard: مخصص للكلام وأثبت على النت الضعيف من الافتراضي (مخصص للموسيقى) */
+            const track = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true, encoderConfig: "speech_standard" });
             try { await bcClient.publish([track]); } catch (e) { track.close(); throw e; }
             if (bcSelfMuted) await track.setMuted(true).catch(() => {});
             bcTrack = track;
@@ -135,6 +136,22 @@ function bcToggleSelfMute() {
     liveLastSig = ""; renderLiveScreen();
 }
 
+/* المتصفح حجب صوت البث (أجورا قالت autoplay-failed): زر كبير ثابت فوق أي مشهد، ضغطة وحدة تشغّل الكل */
+function bcShowAudioUnlock() {
+    if (!openLiveId || document.getElementById("bcUnlock")) return;
+    const b = document.createElement("button");
+    b.id = "bcUnlock"; b.className = "bc-unlock";
+    b.innerHTML = ic("volume-x") + " الصوت موقف من المتصفح · اضغط هنا عشان تسمع";
+    b.onclick = bcUnlockAudio;
+    document.body.appendChild(b);
+}
+function bcUnlockAudio() {
+    const b = document.getElementById("bcUnlock"); if (b) b.remove();
+    try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
+    if (bcClient) bcClient.remoteUsers.forEach(u => { try { if (u.audioTrack) { u.audioTrack.stop(); u.audioTrack.play(); } } catch (e) {} });
+    try { if (typeof enableRoomAudio === "function" && agoraAudioBlocked) enableRoomAudio(); } catch (e) {}
+}
+
 /* أي ضغطة على شاشة البث تشغّل الصوت لو المتصفح حجبه */
 document.addEventListener("click", () => {
     try { if (liveAudioCtx && liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
@@ -170,12 +187,15 @@ function bcMicLevel(uid) {
     return { on: true, lvl: u.audioTrack ? u.audioTrack.getVolumeLevel() : 0 };
 }
 
+let bcRemoteTalk = false;   /* أحد غيري يتكلم الحين (cinema.js تخفض الموسيقى عشان صوته يوضح) */
 function bcTickMics() {
     const d = liveMatchesCache[openLiveId];
     if (!d) return;
+    let anyTalk = false;
     document.querySelectorAll("[data-bcuid]").forEach(el => {
         const st = bcMicLevel(el.dataset.bcuid);
         const talk = st.on && st.lvl > 0.04;
+        if (talk && !(currentUser && el.dataset.bcuid === currentUser.uid)) anyTalk = true;
         el.classList.toggle("on", st.on);
         el.classList.toggle("talk", talk);
         const s = el.querySelector(".bc-st");
@@ -184,6 +204,7 @@ function bcTickMics() {
             if (s.textContent !== txt) s.textContent = txt;
         }
     });
+    if (anyTalk !== bcRemoteTalk) { bcRemoteTalk = anyTalk; if (typeof bedApply === "function") bedApply(); }
     const ls = document.getElementById("bcListeners");
     if (ls) {
         const n = bcJoined && bcClient ? bcClient.remoteUsers.length + 1 : 0;

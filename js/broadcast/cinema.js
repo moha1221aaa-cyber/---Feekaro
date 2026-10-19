@@ -365,6 +365,7 @@ function bedTarget() {
     let v = 0.8;
     if (bcTrack && !bcSelfMuted) v *= 0.5;   /* مايكك مفتوح: نخفضها عشان ما تدخل المايك */
     if (BED.duck) v *= 0.3;                   /* المذيع يتكلم */
+    if (typeof bcRemoteTalk !== "undefined" && bcRemoteTalk) v *= 0.35;   /* متسابق أو المنظم يتكلم: صوته أوضح من الموسيقى */
     if (bcNow() < (BED.holdUntil || 0)) v *= 0.15;   /* موسيقى مشهد خاصة شغالة */
     return v;
 }
