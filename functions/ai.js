@@ -128,9 +128,12 @@ async function taskGrade(env, b) {
     "أنت حكم مسابقة ثقافية. تحكم هل إجابة المتسابق تعني نفس الإجابة الصحيحة.",
     "اقبل: الأخطاء الإملائية، الكتابة بالعامية أو بالإنجليزي، الأرقام بالكلمات، الاسم المختصر المعروف لنفس الشي.",
     "ارفض: إجابة مختلفة، إجابة ناقصة تغيّر المعنى، أكثر من إجابة مع بعض، أو كلام عام.",
-    "الإجابات الصحيحة البديلة مفصولة بعلامة |.",
+    "الإجابات الصحيحة البديلة مفصولة بعلامة |."
+  ].concat(b.voice ? [
+    "الإجابة جت بالصوت وانكتبت آلياً، فاقبل لو الفرق حرف أو حرفين من غلط السمع (مثل: الرياضة بدل الرياض، المشتريه بدل المشتري)، طالما واضح إنه ما قصد جواب ثاني منطقي للسؤال."
+  ] : []).concat([
     "رد بـ JSON بس: {\"ok\":true} أو {\"ok\":false}"
-  ].join("\n");
+  ]).join("\n");
   const user = `السؤال: ${q}\nالإجابة الصحيحة: ${answer}\nإجابة المتسابق: ${given}`;
   const raw = await run(env, system, user, 20, 0);
   let ok = false;
@@ -160,7 +163,7 @@ async function taskVoice(env, b) {
   let said = "";
   try { said = clip(pickJSON(raw, "{").said, 80); } catch (e) { said = ""; }
   if (!said) return { ok: false, heard, said: "" };
-  const g = await taskGrade(env, { q, answer, given: said });
+  const g = await taskGrade(env, { q, answer, given: said, voice: true });
   return { ok: g.ok === true, heard, said };
 }
 async function taskHost(env, b) {
