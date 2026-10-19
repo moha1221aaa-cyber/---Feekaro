@@ -55,6 +55,8 @@ function renderRoomCard() {
 
     const live = !!roomState.isLive;
     const canEnter = live || isAdmin;
+    /* المنظم ممكن يطلع وما يسكّر الغرفة: لو مفتوحة وما فيها أحد خلال آخر 45 ث ما نكتب "مباشر الآن" */
+    const empty = live && presenceLoaded && presentCount() === 0;
     const access = hasRoomAccess();
     const seated = (roomState.mics || []).filter(m => m);
     let avatars = "";
@@ -76,9 +78,9 @@ function renderRoomCard() {
     else cta = `دخول الغرفة ${ic("chevron-right")}`;
 
     let html = `
-<div class="room-card ${live ? "live" : ""} ${canEnter ? "" : "closed"}" onclick="onRoomCardClick()">
+<div class="room-card ${live && !empty ? "live" : ""} ${canEnter ? "" : "closed"}" onclick="onRoomCardClick()">
 <div class="rcd-top">
-<span class="rcd-badge"><span class="dot"></span>${live ? "مباشر الآن" : "مغلقة"}</span>
+<span class="rcd-badge"><span class="dot"></span>${live ? (empty ? "مفتوحة، ما فيها أحد" : "مباشر الآن") : "مغلقة"}</span>
 ${lockHTML}
 </div>
 <div class="rcd-main">

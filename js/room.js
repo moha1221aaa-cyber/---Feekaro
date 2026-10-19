@@ -89,12 +89,15 @@ function sendPresenceHeartbeat() {
     }, { merge: true }).catch(() => {});
 }
 
+let presenceLoaded = false;
 function startPresenceListener() {
     if (!firebaseDB || presenceListener) return;
     presenceListener = firebaseDB.collection("room").doc("main").collection("presence").onSnapshot(snap => {
         cachedPresence = {};
         snap.forEach(d => { cachedPresence[d.id] = d.data(); });
+        presenceLoaded = true;
         renderRoomUI();
+        if (typeof renderRoomCard === "function") renderRoomCard();
         renderParticipantsModalIfOpen();
     });
 }
