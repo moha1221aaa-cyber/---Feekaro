@@ -1,17 +1,18 @@
 /* جواب المتسابق بالصوت: بعد ما يفوز بالجرس يقول جوابه بدل ما يكتبه.
    - التسجيل من نفس مايك البث (bcTrack في voice.js) عشان ما ينفتح المايك مرتين (الآيفون يكتم الأول).
-   - يوقف لحاله بعد ما يسكت المتسابق شوي، أو لما يضغط "خلصت"، أو قبل نهاية الوقت بـ 1.5 ث، وبعدها الوقت يتمدد 10 ث للتحقق.
+   - يوقف لحاله أول ما يسكت المتسابق بعد جوابه (0.8 ث)، أو قبل نهاية الوقت بـ 1.5 ث، وبعدها الوقت يتمدد للتحقق.
+   - أول جواب هو اللي ينحسب (ما فيه تغيير)، وما فيه أزرار: كل شي تلقائي.
    - الصوت يروح لـ /ai (task: voice): Whisper يحوّله نص، والموديل يطلّع الجواب من كلامه ويحكم.
    - لو الصوت ما اشتغل (ما فيه مايك، ما سمع شي، السيرفر تعطل) يطلع مربع الكتابة احتياط. */
 
 const VA_RATE = 16000;           /* Whisper يشتغل على 16 كيلوهرتز */
-const VA_SILENCE_MS = 1300;      /* سكوت بعد الكلام = خلص جوابه */
+const VA_SILENCE_MS = 800;       /* سكوت بعد الكلام = خلص جوابه (أول جواب ينحسب، فما نستنى) */
 const VA_MIN_SPEECH_MS = 400;    /* أقل كلام نعتبره جواب */
 const VA_STOP_BEFORE_MS = 1500;  /* نوقف قبل نهاية الوقت بشوي */
 const VA_EXTEND_MS = 10000;      /* وقت التحقق من الصوت (الوقت يتمدد له أول ما يخلص المتسابق) */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
-const VA = { key: "", st: "", msg: "", heard: "", said: "", ctx: null, rec: null };
+const VA = { key: "", st: "", msg: "", heard: "", said: "", ok: false, ctx: null, rec: null };
 
 function vaPrime() {
     try {
@@ -30,7 +31,7 @@ function vaSync(d) {
     const k = vaTurnKey(d);
     if (VA.key === k) return;
     vaStop(false);
-    Object.assign(VA, { key: k, st: "", msg: "", heard: "", said: "" });
+    Object.assign(VA, { key: k, st: "", msg: "", heard: "", said: "", ok: false });
     if (!currentUser || !(window.AudioContext || window.webkitAudioContext)) { vaToType("المتصفح ما يدعم التسجيل، اكتب جوابك"); return; }
     vaStart(d, k);
 }
@@ -97,8 +98,6 @@ async function vaStart(d, key) {
     src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
 }
 
-/* المتسابق ضغط "خلصت" */
-function vaDone() { if (VA.rec && VA.rec.stop) VA.rec.stop(true); }
 function vaStop(send) { if (VA.rec && VA.rec.stop) VA.rec.stop(send); }
 
 /* WAV أحادي 16 كيلوهرتز (16 بت)، كل الموديلات تقراه */
@@ -138,7 +137,7 @@ async function vaSend(key, chunks, rate) {
     } catch (e) { res = null; }
     if (VA.key !== key) return;
     if (!res || (!res.said && !res.heard)) { vaToType(res ? "ما فهمت الجواب، اكتبه بسرعة" : "تعذّر التحقق من صوتك، اكتب جوابك"); return; }
-    VA.heard = res.heard || ""; VA.said = res.said || "";
+    VA.heard = res.heard || ""; VA.said = res.said || ""; VA.ok = res.ok === true;
     VA.st = "done"; vaRefresh();
     liveCommitAnswer(id, VA.said || VA.heard, res.ok === true, q0)
         .catch(err => { console.log("voice answer:", err); if (VA.key === key) vaToType("ما انحفظ جوابك، اكتبه"); });
@@ -158,10 +157,9 @@ function vaHTML() {
 <div class="va-mic">${ic("mic")}</div>
 <div class="va-t">قل جوابك الحين</div>
 <div class="va-meter"><i id="vaLevel"></i></div>
-<button class="va-done" onclick="vaDone()">${ic("check")} خلصت</button>
-<button class="va-type" onclick="vaStop(false);vaToType('')">أبي أكتب</button>
+<div class="va-sub">أول جواب تقوله هو اللي ينحسب</div>
 </div>`;
     }
-    if (VA.st === "think") return `<div class="va-box"><div class="va-spin"></div><div class="va-t">يتحقق من جوابك...</div></div>`;
-    return `<div class="va-box"><div class="va-t">سمعتك تقول: «${escapeHTML(VA.said || VA.heard)}»</div></div>`;
+    if (VA.st === "think") return `<div class="va-box"><div class="va-spin"></div></div>`;
+    return `<div class="va-box ${VA.ok ? "ok" : "no"}"><div class="va-res">${ic(VA.ok ? "check-circle" : "x-circle")} ${VA.ok ? "صح" : "غلط"}</div><div class="va-t">«${escapeHTML(VA.said || VA.heard)}»</div></div>`;
 }
