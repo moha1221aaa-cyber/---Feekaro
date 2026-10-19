@@ -1,13 +1,14 @@
 /* جواب المتسابق بالصوت: بعد ما يفوز بالجرس يقول جوابه بدل ما يكتبه.
    - التسجيل من نفس مايك البث (bcTrack في voice.js) عشان ما ينفتح المايك مرتين (الآيفون يكتم الأول).
-   - يوقف لحاله بعد ما يسكت المتسابق شوي، أو لما يضغط "خلصت"، أو قبل نهاية الوقت بـ 4.5 ث.
+   - يوقف لحاله بعد ما يسكت المتسابق شوي، أو لما يضغط "خلصت"، أو قبل نهاية الوقت بـ 1.5 ث، وبعدها الوقت يتمدد 10 ث للتحقق.
    - الصوت يروح لـ /ai (task: voice): Whisper يحوّله نص، والموديل يطلّع الجواب من كلامه ويحكم.
    - لو الصوت ما اشتغل (ما فيه مايك، ما سمع شي، السيرفر تعطل) يطلع مربع الكتابة احتياط. */
 
 const VA_RATE = 16000;           /* Whisper يشتغل على 16 كيلوهرتز */
 const VA_SILENCE_MS = 1300;      /* سكوت بعد الكلام = خلص جوابه */
 const VA_MIN_SPEECH_MS = 400;    /* أقل كلام نعتبره جواب */
-const VA_STOP_BEFORE_MS = 4500;  /* نوقف قبل نهاية الوقت، عشان التحويل والتصحيح يلحقون */
+const VA_STOP_BEFORE_MS = 1500;  /* نوقف قبل نهاية الوقت بشوي */
+const VA_EXTEND_MS = 10000;      /* وقت التحقق من الصوت (الوقت يتمدد له أول ما يخلص المتسابق) */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
 const VA = { key: "", st: "", msg: "", heard: "", said: "", ctx: null, rec: null };
@@ -21,7 +22,8 @@ function vaPrime() {
     } catch (e) {}
 }
 
-function vaTurnKey(d) { return [openLiveId, d.qIndex, d.answerer, d.passed ? 1 : 0, d.deadline].join("|"); }
+/* بدون deadline لأن الوقت يتمدد وقت التحقق، والدور نفسه ما تغيّر */
+function vaTurnKey(d) { return [openLiveId, d.qIndex, d.answerer, d.passed ? 1 : 0].join("|"); }
 
 /* تنادى من رسم الشاشة لما يكون الدور على هالجهاز */
 function vaSync(d) {
@@ -127,10 +129,12 @@ async function vaSend(key, chunks, rate) {
     const id = openLiveId, d0 = liveMatchesCache[id] || {};
     const q0 = (d0.questions || [])[d0.qIndex] || {};
     VA.st = "think"; vaRefresh();
+    /* المتسابق خلص كلامه: نمدد الوقت لين يجي الحكم (التحويل والتصحيح ياخذون من 2 إلى 8 ث)، مرة وحدة بالدور */
+    liveTx(id, (d, now) => (d.status === "live" && d.phase === "answer" && d.answerer === myLiveNum(d) && d.qIndex === d0.qIndex && d.deadline - now < VA_EXTEND_MS)
+        ? { deadline: now + VA_EXTEND_MS } : null).catch(() => {});
     let res = null;
     try {
-        const left = (d0.deadline || 0) - bcNow();
-        res = await aiCall("voice", { q: q0.text || "", answer: q0.answer || "", audio: vaB64(vaWav(chunks, rate)) }, Math.max(2500, Math.min(9000, left + 1200)));
+        res = await aiCall("voice", { q: q0.text || "", answer: q0.answer || "", audio: vaB64(vaWav(chunks, rate)) }, VA_EXTEND_MS - 800);
     } catch (e) { res = null; }
     if (VA.key !== key) return;
     if (!res || (!res.said && !res.heard)) { vaToType(res ? "ما فهمت الجواب، اكتبه بسرعة" : "تعذّر التحقق من صوتك، اكتب جوابك"); return; }
