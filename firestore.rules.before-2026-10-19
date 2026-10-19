@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================
+    // الدوري الأساسي
+    // =========================
+    match /league/current {
+      allow read, write: if true;
+    }
+
+    // =========================
+    // حسابات التوقعات
+    // =========================
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // =========================
+    // التوقعات ورفع الفيديوهات
+    // =========================
+    match /predictions/{predictionId} {
+      allow read, write: if true;
+    }
+    
+    // =========================
+    // أي مجموعات أو مستندات أخرى
+    // =========================
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+} 
+
