@@ -144,7 +144,8 @@ async function taskVoice(env, b) {
   const q = clip(b.q, 200), answer = clip(b.answer, 160);
   const audio = typeof b.audio === "string" ? b.audio.replace(/^data:[^,]*,/, "") : "";
   if (!q || !answer || audio.length < 2000 || audio.length > 1200000 || !/^[A-Za-z0-9+/=]+$/.test(audio.slice(0, 200))) return { ok: false, heard: "", said: "" };
-  const stt = await env.AI.run(STT, { audio, language: "ar", task: "transcribe" });
+  /* نص السؤال (مو الجواب) كسياق يساعد Whisper في الأجوبة القصيرة (كلمة وحدة) */
+  const stt = await env.AI.run(STT, { audio, language: "ar", task: "transcribe", initial_prompt: "مسابقة ثقافية. " + q });
   const heard = clip(stt && stt.text, 300);
   if (!heard) return { ok: false, heard: "", said: "" };
   const system = [
