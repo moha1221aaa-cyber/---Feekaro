@@ -16,7 +16,8 @@
 - الإظهار (reveal): الدالة تكتب الجواب في الوثيقة العامة بعد ما ينتهي السؤال بس.
 - يحتاج: حساب خدمة لمشروع masro7league في Cloudflare (سر FIREBASE_SA_KEY)، ومحمد يحطه من لوحة Cloudflare بنفسه.
 
-### 2. قواعد Firestore لمشروع masro7league
+### 2. قواعد Firestore لمشروع masro7league ✅ (19 أكتوبر 2026، جزء أول)
+- انتشرت: league و videos للمنظم، users لصاحبه، predictions لصاحبها. room/** للحين مفتوحة (تنتظر الخطوة 1 و 3). القواعد القديمة في firestore.rules.before-2026-10-19.
 - القواعد الحالية مو في المستودع. أول شي: محمد ينسخها من Firebase ← Firestore ← Rules ويحطها في `firestore.rules` هنا (أو ننزلها بحساب الخدمة) عشان نعرف وش الوضع بالضبط.
 - القواعد الجديدة: users يكتب صاحبها بس، predictions تنكتب بس قبل بداية المواجهة وبـ uid صاحبها، videos و players و matches للمنظم بس، liveMatches الكتابة فيها لحقول محددة (hostSeen، الجرس fb1/fb2 بـ uid المتسابق) والباقي من الدالة.
 

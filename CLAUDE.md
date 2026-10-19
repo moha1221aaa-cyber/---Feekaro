@@ -2,10 +2,11 @@
 
 التعليمات الكاملة (صاحب المشروع، النشر، القواعد) في CLAUDE.md حق مستودع Feekaro-Web-Studio، والهيكل في README.md هنا.
 
-الفحص الأمني: المرحلة 1 انصلحت (18 أكتوبر 2026): safeSrc للصور، jsArg لـ onclick، tts و ai بتوكن Firebase (lib/firebase-auth.js)، وتوكن استماع للضيف في أجورا. الباقي (الأجوبة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة) خطته في SECURITY-PLAN.md وينتظر موافقة محمد.
+الفحص الأمني: المرحلة 1 انصلحت (18 أكتوبر 2026): safeSrc للصور، jsArg لـ onclick، tts و ai بتوكن Firebase (lib/firebase-auth.js)، وتوكن استماع للضيف في أجورا. الباقي (الأجوبة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة) خطته في SECURITY-PLAN.md.
 - أي قيمة داخل onclick="fn(...)": استخدم jsArg(قيمة). وأي رابط داخل src: safeSrc(رابط). escapeHTML بروحه ما يكفي داخل JS.
 - أي دالة سيرفر جديدة تصرف رصيد أو حصة: تحقق بـ verifyFirebaseToken(bearer(request)) والمتصفح يرسل authHeaders().
-- فحص شامل (19 أكتوبر 2026) في AUDIT.md: انصلح الأداء والوصول و SEO و sw.js و safeSrc لصور البث، وانضافت بطاقة النتيجة وملف المتسابق والأوسمة واستيراد CSV وملخص البث. الأمن الباقي (المرحلة 2) يحتاج حساب خدمة لمشروع masro7league (سر MASRO7_FIREBASE_SA)، ما هو موجود للحين.
+- **قواعد Firestore (19 أكتوبر 2026):** في firestore.rules هنا، وتنتشر من league-rules.yml (mode=deploy، و mode=read يقرا الحالية) بسر MASRO7_FIREBASE_SA في Feekaro-Web-Studio. league و videos للمنظم، users لصاحبه، predictions لصاحبها (userId والمعرّف uid_...)، room/** مفتوحة للحين، والمجموعات القديمة للمنظم. أي كتابة جديدة في كود الموقع لازم يكون لها مكان في القواعد، وإلا ترجع permission-denied. نتيجة البث تنكتب في league من جهاز المنظم بس. للرجوع: firestore.rules.before-2026-10-19.
+- فحص شامل (19 أكتوبر 2026) في AUDIT.md: انصلح الأداء والوصول و SEO و sw.js و safeSrc لصور البث، وانضافت بطاقة النتيجة وملف المتسابق والأوسمة واستيراد CSV وملخص البث. الأمن الباقي: الغرفة والبث (room/main و liveMatches) للحين مفتوحة للكتابة، والأجوبة في وثيقة البث.
 - التجربة المحلية بالبيانات الحقيقية مشروحة آخر README.md (Firebase من npm بدل gstatic).
 - الهيدر (19 أكتوبر 2026): في الصفحات غير الرئيسية ينضاف كلاس hdr-compact (showTab في league.js) يعطي العنوان مسافة عن الجرس. الجرس يسار وزر تثبيت التطبيق يمين، لا تحطهم بنفس المكان.
 ## graphify
