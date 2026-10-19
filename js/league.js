@@ -354,6 +354,7 @@ if(headerBranding) {
         headerBranding.style.display = "none";
     }
 }
+document.getElementById("mainHeader").classList.toggle("hdr-compact", sectionId !== 'home');
 
 if(evt) {
 evt.currentTarget.classList.add("active");

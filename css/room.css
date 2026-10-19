@@ -134,6 +134,8 @@
 /* ===== ضغط الغرفة لتظهر كاملة في الشاشة بدون سكرول ===== */
 body.room-active #mainHeader{padding:8px 10px;}
 body.room-active .notif-bell-btn{top:4px;width:30px;height:30px;font-size:14px;}
+body.room-active #mainHeader.hdr-compact{padding-left:50px;padding-right:50px;}
+body.room-active #mainHeader.hdr-compact #adminTitle{line-height:30px;}
 #roomScreen.open{padding:calc(6px + env(safe-area-inset-top,0px)) 8px 0;--seat:clamp(30px,5.3vh,42px);}
 #roomContent{overflow:hidden;}
 .room-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;max-width:420px;margin:0 auto 4px;}

@@ -79,6 +79,10 @@ font-size: 14px;
 color: #60a5fa;
 letter-spacing: 1px;
 }
+/* الهيدر المختصر (كل الصفحات غير الرئيسية): العنوان ما يلمس الجرس، والجرس في نص الهيدر */
+header.hdr-compact{padding-left:60px;padding-right:60px;}
+header.hdr-compact #adminTitle{display:block;font-size:13px;letter-spacing:.5px;line-height:38px;}
+header.hdr-compact .notif-bell-btn{top:calc(50% - 19px);}
 
 button {
 margin: 10px auto;
