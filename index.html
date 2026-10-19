@@ -279,6 +279,8 @@
 <input type="text" id="qbankNewText" placeholder="نص السؤال">
 <input type="text" id="qbankNewAnswer" placeholder="الإجابة الصحيحة (تبقى مخفية عن المتسابقين)">
 <button onclick="addQuestionToBank()" style="width:100%;"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة سؤال جديد</button>
+<label class="qbank-csv-btn"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> استيراد أسئلة من ملف CSV<input type="file" id="qbankCsvFile" accept=".csv,.txt,text/csv,text/plain" onchange="importQBankCsv(this)" style="display:none"></label>
+<div class="qbank-csv-hint">كل سطر: السؤال، الإجابة (فاصلة أو تاب). تقدر تسويه من Google Sheets: ملف ← تنزيل ← CSV.</div>
 </div>
 <div class="ai-gen">
 <div class="ai-gen-title"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> أسئلة جديدة بالذكاء الاصطناعي</div>

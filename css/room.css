@@ -309,3 +309,8 @@ body.room-open .bottom-nav, body.live-open .bottom-nav{display:none !important;}
 .rid-box button{width:100%;margin-top:6px;padding:12px;font-size:15px;}
 .shake{animation:ridShake .35s;}
 @keyframes ridShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* بنك الأسئلة: استيراد CSV */
+.qbank-csv-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:0 10px;height:46px;box-sizing:border-box;border:1px dashed #475569;border-radius:8px;color:#cbd5e1;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;}
+.qbank-csv-btn .ic{width:16px;height:16px;}
+.qbank-csv-hint{font-size:11px;color:#94a3b8;margin-top:4px;text-align:center;}

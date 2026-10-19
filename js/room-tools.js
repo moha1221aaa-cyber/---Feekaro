@@ -741,6 +741,50 @@ renderQBankList();
 alert("تمت إضافة السؤال إلى القاعدة بنجاح!");
 }
 
+/* استيراد أسئلة من CSV: كل سطر سؤال وإجابة (فاصلة، فاصلة عربية، فاصلة منقوطة، أو تاب). السطر الأول يتجاهل لو عنوان */
+function parseQBankCsv(text) {
+const rows = [];
+String(text).replace(/^\uFEFF/, "").split(/\r?\n/).forEach(line => {
+    if (!line.trim()) return;
+    const cells = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+        else if (ch === '"' && !cur.trim()) q = true;
+        else if (",،;\t".includes(ch) && cells.length === 0) { cells.push(cur); cur = ""; }
+        else cur += ch;
+    }
+    cells.push(cur);
+    const t = (cells[0] || "").trim(), a = (cells[1] || "").trim();
+    if (t && a) rows.push({ text: t.slice(0, 300), answer: a.slice(0, 120) });
+});
+if (rows.length && /^(ال)?سؤال$|^question$/i.test(rows[0].text) && /^(ال)?(إجابة|اجابة|جواب)( الصحيحة)?$|^answer$/i.test(rows[0].answer)) rows.shift();
+return rows;
+}
+function importQBankCsv(input) {
+if (!isAdmin) return;
+const file = input.files && input.files[0];
+input.value = "";
+if (!file) return;
+if (file.size > 200000) return alert("الملف كبير، خلّه أقل من 200KB");
+const reader = new FileReader();
+reader.onload = () => {
+    const rows = parseQBankCsv(reader.result);
+    if (!rows.length) return alert("ما لقيت أسئلة في الملف. كل سطر لازم يكون: السؤال، الإجابة");
+    if (!roomState.qbank) roomState.qbank = [];
+    const have = new Set(roomState.qbank.map(q => q && q.text));
+    const fresh = rows.filter(r => !have.has(r.text) && have.add(r.text)).slice(0, 200);
+    if (!fresh.length) return alert("كل الأسئلة اللي في الملف موجودة في البنك من قبل");
+    if (!confirm(`بنضيف ${fresh.length} سؤال للبنك. أول سؤال:\n${fresh[0].text}\nالإجابة: ${fresh[0].answer}`)) return;
+    roomState.qbank.push(...fresh);
+    saveRoomState();
+    renderQBankList();
+    alert(`انضاف ${fresh.length} سؤال` + (rows.length - fresh.length > 0 ? ` (وتجاهلت ${rows.length - fresh.length} مكرر أو زايد عن 200)` : ""));
+};
+reader.onerror = () => alert("ما قدرت أقرا الملف");
+reader.readAsText(file, "utf-8");
+}
+
 function deleteQuestionFromBank(index) {
 if(!roomState.qbank[index]) return;
 roomState.qbank.splice(index, 1);
