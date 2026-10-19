@@ -12,6 +12,7 @@
 - الهيدر (19 أكتوبر 2026): في الصفحات غير الرئيسية ينضاف كلاس hdr-compact (showTab في league.js) يعطي العنوان مسافة عن الجرس. الجرس يسار وزر تثبيت التطبيق يمين، لا تحطهم بنفس المكان.
 - **صوت المتسابقين (19 أكتوبر 2026):** لو المتصفح حجب التشغيل التلقائي (AgoraRTC.onAudioAutoplayFailed ← onAgoraAutoplayBlocked في core.js) يطلع زر أصفر #bcUnlock فوق شاشة البث (z-index أعلى من live-screen 1000001) يشغّل الصوت بضغطة. المايك speech_standard، والموسيقى الخلفية تنزل لـ 35% لما أحد يتكلم (bcRemoteTalk). وقبل البث تحذير أحمر لأي متسابق مو مربوط بحساب (ما له مايك ولا جرس) مع زر ربط.
 - **صوت المذيع (19 أكتوبر 2026):** functions/tts.js يجرب بالترتيب: Azure Speech (ar-SA-HamedNeural، سر AZURE_TTS_KEY و AZURE_TTS_REGION، الباقة المجانية F0) ← ElevenLabs ← Google ← صوت الجوال. كل محرك كاشه لحاله، والهيدر X-TTS-Engine يقول مين اللي رد. league.yml يحط سرّي Azure من GitHub Secrets ويجرب المفتاح مباشرة.
+- **القائمة الجانبية (19 أكتوبر 2026):** زر ☰ يمين الهيدر (js/menu.js) وزر التثبيت صار جنبه (right:60px) ويختفي من الهيدر في الصفحات غير الرئيسية لأنه موجود في القائمة. أي ميزة جديدة ضيفها في MENU_CHANGELOG عشان تطلع في "ما الجديد"، وأي بيانات جديدة تنجمع حدّث سياسة الخصوصية في MENU_INFO.
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

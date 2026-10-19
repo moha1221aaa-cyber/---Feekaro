@@ -87,13 +87,15 @@
 <symbol id="i-drum" viewBox="0 0 24 24"><path d="m2 2 8 8"/><path d="m22 2-8 8"/><ellipse cx="12" cy="9" rx="10" ry="5"/><path d="M7 13.4v7.9"/><path d="M12 14v8"/><path d="M17 13.4v7.9"/><path d="M2 9v8a10 5 0 0 0 20 0V9"/></symbol>
 <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
 <symbol id="i-frown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
 <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/><path d="M6.4 18.7 4 21"/><path d="M17.6 18.7 20 21"/></symbol>
 </defs></svg>
 
 
 <header id="mainHeader">
 <button class="notif-bell-btn" id="notifBellBtn" onclick="enableNotifications()" title="الإشعارات"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><i class="notif-dot"></i></button>
-<button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:auto; right:15px;"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
+<button class="notif-bell-btn menu-btn" id="menuBtn" onclick="openSideMenu()" title="القائمة" aria-label="القائمة" aria-haspopup="dialog" aria-expanded="false" aria-controls="sideMenu"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
+<button class="notif-bell-btn pwa-install-btn" id="pwaInstallBtn" onclick="installPwa()" title="تثبيت التطبيق" style="display:none; left:auto; right:60px;"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
 <div class="header-branding" id="headerBranding">
 <div class="logo-box">
 <img src="logo.png" alt="MASRO7 LEAGUE Logo" class="logo">
@@ -354,6 +356,29 @@
 </div>
 </div>
 
+<!-- القائمة الجانبية (زر ☰) -->
+<div id="sideMenu" class="modal-overlay side-menu-overlay" onclick="if(event.target===this)goBackModal()">
+<nav class="side-menu" role="dialog" aria-modal="true" aria-label="القائمة">
+<div class="side-menu-head">
+<img src="icon-192.png" alt="" width="44" height="44">
+<div><div class="side-menu-title">دوري بنو مسروح للنخبة</div><div class="side-menu-sub">MASRO7 LEAGUE</div></div>
+<button class="side-menu-close" onclick="goBackModal()" aria-label="إغلاق القائمة"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+</div>
+<div id="sideMenuBody"></div>
+</nav>
+</div>
+
+<!-- صفحات المعلومات (ما الجديد، طريقة اللعب، الخصوصية، عن الدوري) -->
+<div id="infoPageModal" class="modal-overlay">
+<div class="modal-content info-page">
+<div class="modal-header">
+<h3 id="infoPageTitle"></h3>
+<button class="modal-back-btn" onclick="goBackModal()"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg> رجوع</button>
+</div>
+<div id="infoPageBody"></div>
+</div>
+</div>
+
 <input type="file" id="userAvatarFileInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoUpload(event)">
 
 <div class="bottom-nav">
@@ -406,6 +431,7 @@
 <script src="js/broadcast/voice-answer.js"></script>
 <script src="js/broadcast/screen.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/menu.js"></script>
 </body>
 
 </html>

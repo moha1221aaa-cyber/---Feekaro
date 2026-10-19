@@ -34,6 +34,7 @@ js/
     voice.js            صوت البث (قناة أجورا مستقلة)
     voice-answer.js     جواب المتسابق بالصوت بعد الجرس (تسجيل، كشف السكوت، WAV، /ai task voice)
     screen.js           شاشة البث: الرسم والمشاهد والانتقالات
+  menu.js               القائمة الجانبية (☰): التنقل والميزات وصفحات ما الجديد وطريقة اللعب والخصوصية وعن الدوري
   ai.js                 الذكاء الاصطناعي: توليد الأسئلة، التصحيح الذكي، جمل المقدم (aiLines)، مساعد الدوري
 functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs)، time، ai (Workers AI مجاني، وفيه تحويل الصوت لنص للجواب الصوتي)
 wrangler.toml           إعدادات Pages: ربط Workers AI باسم AI (بدون مفتاح)
