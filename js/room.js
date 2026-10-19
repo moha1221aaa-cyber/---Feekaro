@@ -135,7 +135,7 @@ function renderParticipantsModal() {
         html += `
 <div class="user-card ${isMe ? "is-me" : ""}">
 <div class="user-card-profile">
-<div class="user-card-avatar"><img src="${safeSrc(avatar)}" alt=""></div>
+<div class="user-card-avatar"><img loading="lazy" decoding="async" src="${safeSrc(avatar)}" alt=""></div>
 <div class="user-card-info">
 <div class="user-card-name">${escapeHTML(p.name || "ضيف")} ${isMe ? '<span class="user-me-badge">أنت</span>' : ""} ${p.isAdmin ? ic("crown","gold") : ""}</div>
 </div>
@@ -216,7 +216,7 @@ let clickAttr = isMine ? `onclick="toggleMyMic(${i})"` : (isAdmin ? `onclick="ad
 html += `
 <div class="mic-slot${i === HOST_SEAT ? ' host-seat' : ''}">
 <div class="mic-slot-avatar-wrap ${m.muted ? '' : 'speaking'}" ${clickAttr} style="cursor:${isMine || isAdmin ? 'pointer' : 'default'};">
-<img src="${safeSrc(cdnThumb(avatarUrl))}" class="mic-slot-avatar" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(cdnThumb(avatarUrl))}" class="mic-slot-avatar" alt="">
 ${m.muted ? '<div class="mic-slot-muted-icon">' + ic('mic-off') + '</div>' : ''}
 </div>
 <div class="mic-slot-name">${escapeHTML(m.name)}</div>
@@ -261,7 +261,7 @@ let av = getPlayerAvatar(msg.senderName);
 let timeStr = msg.time || "";
 html += `
 <div class="room-chat-msg">
-<img src="${safeSrc(av.url)}" class="room-chat-msg-avatar" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(av.url)}" class="room-chat-msg-avatar" alt="">
 <div class="room-chat-msg-body">
 <div style="display:flex; justify-content:space-between; align-items:center;">
 <span class="room-chat-msg-name">${escapeHTML(msg.senderName)}</span>

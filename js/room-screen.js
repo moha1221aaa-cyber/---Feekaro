@@ -60,7 +60,7 @@ function renderRoomCard() {
     let avatars = "";
     seated.slice(0, 7).forEach(m => {
         const url = m.avatar || getPlayerAvatar(m.name).url;
-        avatars += `<img src="${escapeHTML(cdnThumb(url))}" alt="">`;
+        avatars += `<img src="${safeSrc(cdnThumb(url))}" alt="">`;
     });
     if (seated.length > 7) avatars += `<span class="more">+${seated.length - 7}</span>`;
     if (!avatars) avatars = `<span class="empty">${live ? "ما أحد على المايك حالياً" : "الغرفة فاضية"}</span>`;

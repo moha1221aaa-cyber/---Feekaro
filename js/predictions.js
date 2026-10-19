@@ -89,7 +89,7 @@ html += `
 <div class="prediction-round">جولة ${m.round}</div>
 <div class="prediction-teams-box">
 <div class="prediction-player">
-<img src="${safeSrc(av1.url)}" class="prediction-player-img" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(av1.url)}" class="prediction-player-img" alt="">
 <div class="prediction-player-name">${escapeHTML(m.p1.name)}</div>
 </div>
 <div class="prediction-score">
@@ -98,7 +98,7 @@ html += `
 <input type="number" id="${p2InputId}" min="0" value="${pred.s2 !== "" ? pred.s2 : ""}" placeholder="-">
 </div>
 <div class="prediction-player">
-<img src="${safeSrc(av2.url)}" class="prediction-player-img" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(av2.url)}" class="prediction-player-img" alt="">
 <div class="prediction-player-name">${escapeHTML(m.p2.name)}</div>
 </div>
 </div>
@@ -126,7 +126,7 @@ html += `
 <div class="prediction-round">جولة ${m.round} (انتهت)</div>
 <div class="prediction-teams-box">
 <div class="prediction-player">
-<img src="${safeSrc(av1.url)}" class="prediction-player-img" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(av1.url)}" class="prediction-player-img" alt="">
 <div class="prediction-player-name">${escapeHTML(m.p1.name)}</div>
 </div>
 <div style="text-align:center;">
@@ -134,7 +134,7 @@ html += `
 <div style="font-size:11px; color:#94a3b8; margin-top:2px;">توقعك: ${pred.s1} - ${pred.s2}</div>
 </div>
 <div class="prediction-player">
-<img src="${safeSrc(av2.url)}" class="prediction-player-img" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(av2.url)}" class="prediction-player-img" alt="">
 <div class="prediction-player-name">${escapeHTML(m.p2.name)}</div>
 </div>
 </div>
@@ -254,7 +254,7 @@ html += `
 <div class="user-card-rank ${rankClass}">${rankBadge}</div>
 <div class="user-card-profile">
 <div class="user-card-avatar">
-<img src="${safeSrc(avatarSrc)}" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(avatarSrc)}" alt="">
 </div>
 <div class="user-card-info">
 <div class="user-card-name">

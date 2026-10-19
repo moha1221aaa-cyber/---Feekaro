@@ -280,9 +280,9 @@ function cineMatchIntro(d) {
 <div class="cine-kicker">دوري بنو مسروح للنخبة · الجولة ${escapeHTML(String(d.round || ""))}</div>
 <div class="cine-big"><span class="cine-gold">المواجهة ${escapeHTML(BC_AR_NUM_F[d.cur] || String(n))}</span></div>
 <div class="cine-duel">
-<div class="cine-p p1"><div class="av"><img src="${escapeHTML(bcAv(o, 1))}" alt=""></div><b>${escapeHTML(o.p1)}</b></div>
+<div class="cine-p p1"><div class="av"><img src="${safeSrc(bcAv(o, 1))}" alt=""></div><b>${escapeHTML(o.p1)}</b></div>
 <div class="cine-vs">${CINE_BOLT}VS<i class="rg"></i><i class="rg two"></i></div>
-<div class="cine-p p2"><div class="av"><img src="${escapeHTML(bcAv(o, 2))}" alt=""></div><b>${escapeHTML(o.p2)}</b></div>
+<div class="cine-p p2"><div class="av"><img src="${safeSrc(bcAv(o, 2))}" alt=""></div><b>${escapeHTML(o.p2)}</b></div>
 </div>
 <div class="cine-of">المواجهة ${n} من ${total} · ${LIVE_Q_COUNT} أسئلة</div>
 <div class="cine-skip">اضغط للتخطي</div>`, 7000);

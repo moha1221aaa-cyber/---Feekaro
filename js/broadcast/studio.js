@@ -227,7 +227,7 @@ function bcLowerThird(d) {
     if (BC_L3.key !== want.key) {
         BC_L3.key = want.key;
         el.classList.remove("on");
-        el.innerHTML = `<img src="${escapeHTML(want.av)}" alt=""><div class="tx"><b>${escapeHTML(want.name)}</b><span>${escapeHTML(want.sub)}</span></div>`;
+        el.innerHTML = `<img src="${safeSrc(want.av)}" alt=""><div class="tx"><b>${escapeHTML(want.name)}</b><span>${escapeHTML(want.sub)}</span></div>`;
         el.classList.toggle("gold", !!want.gold);
         void el.offsetWidth;
     }

@@ -46,7 +46,7 @@ container.innerHTML = `
 <button class="settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
 <div class="profile-avatar-wrapper" onclick="triggerProfilePhotoUpload()">
 <div class="profile-avatar-large">
-<img src="${safeSrc(avatarSrc)}" alt="">
+<img loading="lazy" decoding="async" src="${safeSrc(avatarSrc)}" alt="">
 </div>
 <button class="upload-photo-btn" title="تغيير الصورة"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></button>
 </div>

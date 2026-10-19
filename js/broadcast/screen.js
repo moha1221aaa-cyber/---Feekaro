@@ -271,7 +271,7 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
         const pod = n => `
 <div class="st-pod ${lit === n ? "lit" : ""} ${me === n ? "me" : ""} ${lit && lit !== n ? "dim" : ""}" ${(n === 1 ? o.uid1 : o.uid2) ? `data-bcuid="${escapeHTML(n === 1 ? o.uid1 : o.uid2)}"` : ""}>
 <i class="st-cone"></i>
-<img src="${escapeHTML(bcAv(o, n))}" alt="">
+<img src="${safeSrc(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
 <div class="st-desk"><b>${n === 1 ? (d.s1 || 0) : (d.s2 || 0)}</b><i>نقاط</i></div>
 </div>`;
@@ -323,7 +323,7 @@ function bcHostHTML(d) {
     const micOn = d.scene === "talk" || d.scene === "countdown" || d.scene === "playing";
     return `
 <div class="st-host" ${d.hostUid ? `data-bcuid="${escapeHTML(d.hostUid)}"` : ""}>
-<div class="ring"><img src="${escapeHTML(av)}" alt=""><span class="mi">${ic("mic")}</span></div>
+<div class="ring"><img src="${safeSrc(av)}" alt=""><span class="mi">${ic("mic")}</span></div>
 <div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b><span>${micOn ? `<i class="bc-st">المايك مقفل</i>` : "مقدم البرنامج"}</span></div>
 </div>`;
 }
@@ -355,9 +355,9 @@ function bcFixturesHTML(d, withScores) {
         if (i === d.cur && bcInMatch(d)) cls += " cur";
         return `
 <div class="bc-fx ${cls}" style="animation-delay:${0.25 + i * 0.12}s">
-<div class="p"><img src="${escapeHTML(bcAv(o, 1))}" alt=""><span>${escapeHTML(o.p1)}</span></div>
+<div class="p"><img src="${safeSrc(bcAv(o, 1))}" alt=""><span>${escapeHTML(o.p1)}</span></div>
 ${mid}
-<div class="p r"><span>${escapeHTML(o.p2)}</span><img src="${escapeHTML(bcAv(o, 2))}" alt=""></div>
+<div class="p r"><span>${escapeHTML(o.p2)}</span><img src="${safeSrc(bcAv(o, 2))}" alt=""></div>
 </div>`;
     }).join("");
 }
@@ -415,7 +415,7 @@ ${adminBar(`<button class="bc-go" onclick="bcNext(false)">${ic("zap")} ابدأ 
             const form = inf.last.length ? inf.last.map(r => `<i class="${r}">${r === "w" ? "ف" : (r === "l" ? "خ" : "ت")}</i>`).join("") : `<em>أول مواجهة</em>`;
             return `
 <div class="bc-side ${n === 1 ? "l" : "r"} ${me === n ? "me" : ""}" ${uid ? `data-bcuid="${escapeHTML(uid)}"` : ""}>
-<div class="ring"><img src="${escapeHTML(bcAv(o, n))}" alt=""><span class="mi">${ic("mic")}</span></div>
+<div class="ring"><img src="${safeSrc(bcAv(o, n))}" alt=""><span class="mi">${ic("mic")}</span></div>
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
 <div class="st-card"><div><b>${inf.pts > 0 || inf.played ? "#" + inf.rank : "—"}</b><small>الترتيب</small></div><div><b>${inf.w}</b><small>فوز</small></div><div><b>${inf.pts}</b><small>نقاط</small></div></div>
 <div class="st-form" title="آخر 3 نتائج">${form}</div>
@@ -476,7 +476,7 @@ ${adminBar(`<button class="bc-go" onclick="bcForceStart()">${ic("rocket")} اب�
         return `
 <div class="lv-final ${kind}">
 ${kind ? `<div class="st-kind">${kind === "big" ? "فوز ساحق!" : "عودة تاريخية!"}</div>` : ""}
-${wAv ? `<img class="bc-win-av" src="${escapeHTML(wAv)}" alt="">` : `<div class="tro">${ic("trophy")}</div>`}
+${wAv ? `<img class="bc-win-av" src="${safeSrc(wAv)}" alt="">` : `<div class="tro">${ic("trophy")}</div>`}
 <div class="w">${winner ? "الفوز لـ " + escapeHTML(winner) : "تعادل!"}</div>
 </div>
 <div class="st-stats">

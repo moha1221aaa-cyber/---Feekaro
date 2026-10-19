@@ -2,7 +2,7 @@
    - يخزن الصفحة الرئيسية والشعار مؤقتاً ليفتح الموقع بسرعة حتى مع نت ضعيف.
    - لا يخزن بيانات الدوري نفسها (النتائج، الشات، الغرفة)، فهذي دائماً تجي محدثة من الإنترنت.
    - رقم الإصدار CACHE_NAME: لازم يتغيّر مع كل تحديث كبير للموقع حتى يحمّل الأجهزة النسخة الجديدة. */
-const CACHE_NAME = "masro7-shell-v22";
+const CACHE_NAME = "masro7-shell-v23";
 /* ملفات الموقع الأساسية (الشكل في css/ والكود في js/) */
 const SHELL_FILES = ["/", "/index.html", "/logo.png", "/manifest.json", "/css/main.css", "/css/room.css", "/css/broadcast.css", "/js/core.js", "/js/pwa.js", "/js/config.js", "/js/voice.js", "/js/app.js", "/js/notifications.js", "/js/predictions.js", "/js/league.js", "/js/account.js", "/js/videos.js", "/js/room.js", "/js/room-tools.js", "/js/room-screen.js", "/js/broadcast/engine.js", "/js/broadcast/presenter.js", "/js/broadcast/studio.js", "/js/broadcast/cinema.js", "/js/broadcast/voice.js", "/js/broadcast/screen.js", "/js/ai.js"];
 
@@ -45,8 +45,11 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        /* نخزّن الرد السليم بس، عشان صفحة خطأ (404 أو 500) ما تنحفظ وتطلع بدون نت */
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
         return res;
       })
       .catch(() => caches.match(req).then((cached) => cached || (req.mode === "navigate" ? caches.match("/index.html") : undefined)))

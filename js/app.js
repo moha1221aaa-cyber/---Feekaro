@@ -4,7 +4,6 @@ const ADMIN_EMAIL = "moha1221aaa@gmail.com";
 let firebaseReady = false;
 let firebaseDB = null;
 let firebaseAuth = null;
-let firebaseStorage = null;
 
 let isAdmin = false;
 let notifyEnabled = false;
@@ -45,7 +44,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         firebaseDB = firebase.firestore();
         firebaseAuth = firebase.auth();
-        firebaseStorage = firebase.storage();
         firebaseReady = true;
 
         document.getElementById("debugText").textContent = "تم الاتصال بـ Firebase بنجاح";
