@@ -5,6 +5,7 @@
 الفحص الأمني: المرحلة 1 انصلحت (18 أكتوبر 2026): safeSrc للصور، jsArg لـ onclick، tts و ai بتوكن Firebase (lib/firebase-auth.js)، وتوكن استماع للضيف في أجورا. الباقي (الأجوبة في وثيقة البث، room/main و liveMatches مفتوحة للكتابة) خطته في SECURITY-PLAN.md وينتظر موافقة محمد.
 - أي قيمة داخل onclick="fn(...)": استخدم jsArg(قيمة). وأي رابط داخل src: safeSrc(رابط). escapeHTML بروحه ما يكفي داخل JS.
 - أي دالة سيرفر جديدة تصرف رصيد أو حصة: تحقق بـ verifyFirebaseToken(bearer(request)) والمتصفح يرسل authHeaders().
+- الهيدر (19 أكتوبر 2026): في الصفحات غير الرئيسية ينضاف كلاس hdr-compact (showTab في league.js) يعطي العنوان مسافة عن الجرس. الجرس يسار وزر تثبيت التطبيق يمين، لا تحطهم بنفس المكان.
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
