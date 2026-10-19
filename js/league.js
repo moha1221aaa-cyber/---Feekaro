@@ -1,4 +1,27 @@
 /* الدوري: ملف المتسابق، جدول الترتيب، الملخص، بطاقات المواجهات، التبويبات */
+/* مستوى المتسابق من مواجهاته المنتهية: آخر 5 نتائج، أطول سلسلة فوز، متوسط أجوبته، وأكبر فوز */
+function playerFormHTML(name) {
+let done = matches.filter(m => (m.p1.name === name || m.p2.name === name) && m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null)
+    .sort((a, b) => a.round - b.round)
+    .map(m => { const me = m.p1.name === name, a = Number(me ? m.s1 : m.s2), b = Number(me ? m.s2 : m.s1); return { a, b, opp: me ? m.p2.name : m.p1.name, r: a > b ? "w" : a < b ? "l" : "d" }; });
+if(!done.length) return "";
+let best = 0, run = 0, big = null;
+done.forEach(g => { run = g.r === "w" ? run + 1 : 0; best = Math.max(best, run); if(g.r === "w" && (!big || g.a - g.b > big.a - big.b)) big = g; });
+const avg = (done.reduce((t, g) => t + g.a, 0) / done.length).toFixed(1);
+const label = { w: "ف", d: "ت", l: "خ" }, color = { w: "#4ade80", d: "#facc15", l: "#f87171" };
+const last = done.slice(-5).reverse().map(g => `<span class="form-pill" style="background:${color[g.r]}" title="${g.a} - ${g.b} ضد ${escapeHTML(g.opp)}">${label[g.r]}</span>`).join("");
+return `
+<div style="margin-top:15px; text-align:right;">
+<div style="font-size:13px; font-weight:bold; color:#4ade80; margin-bottom:8px; border-bottom:1px solid #334155; padding-bottom:4px;">${ic("zap")} مستوى المتسابق</div>
+<div class="form-row"><span>آخر النتائج</span><div class="form-pills">${last}</div></div>
+<div class="stats-grid-box">
+<div class="stat-box-item"><div class="stat-box-value" style="color:#4ade80;">${best}</div><div class="stat-box-label">أطول سلسلة فوز</div></div>
+<div class="stat-box-item"><div class="stat-box-value" style="color:#60a5fa;">${avg}</div><div class="stat-box-label">متوسط أجوبته بالمواجهة</div></div>
+<div class="stat-box-item"><div class="stat-box-value" style="font-size:15px;">${big ? `${big.a} - ${big.b}` : "-"}</div><div class="stat-box-label">${big ? `أكبر فوز (ضد ${escapeHTML(big.opp)})` : "أكبر فوز"}</div></div>
+</div>
+</div>`;
+}
+
 function openUserProfile(uid, playerName) {
 let body = document.getElementById("viewProfileModalBody");
 if(!body) return;
@@ -96,8 +119,9 @@ body.innerHTML = `
 <div style="font-size:18px; font-weight:bold; color:white; display:flex; align-items:center; justify-content:center; gap:5px;">
 ${escapeHTML(displayName)} ${av.isVerified ? '<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>' : ''}
 </div>
-${userData && userData.email ? `<div style="font-size:12px; color:#94a3b8; direction:ltr; margin-top:3px;">${escapeHTML(userData.email)}</div>` : ''}
+${userData && userData.email && (isAdmin || (currentUser && currentUser.uid === uid)) ? `<div style="font-size:12px; color:#94a3b8; direction:ltr; margin-top:3px;">${escapeHTML(userData.email)}</div>` : ''}
 ${statsHTML}
+${pStat ? playerFormHTML(displayName) : ''}
 ${predStatsHTML}
 ${playerMatchesHTML}
 ${adminButton}
