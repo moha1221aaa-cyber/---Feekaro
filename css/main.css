@@ -122,6 +122,10 @@ border-radius: 20px;
 font-size: 13px;
 }
 
+/* زر مشاركة بطاقة النتيجة تحت المواجهة المنتهية */
+.match-share-btn{grid-column:1 / -1;margin:0;width:100%;padding:8px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;background:#0f172a;border:1px solid #334155;color:#cbd5e1;min-height:40px;}
+.match-share-btn .ic{width:16px;height:16px;}
+
 .league-quick-summary {
 display: grid;
 grid-template-columns: repeat(3, 1fr);

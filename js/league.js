@@ -185,6 +185,47 @@ let url = `https://wa.me/?text=${encodeURIComponent(text)}`;
 window.open(url, '_blank');
 }
 
+/* بطاقة نتيجة المواجهة (صورة 1080×1080) تنرسل في الواتساب. الصور الشخصية من مواقع ثانية تقفل الحفظ من canvas، فنرسم أول حرف بدالها */
+async function shareMatchCard(m) {
+    const W = 1080, c = document.createElement("canvas");
+    c.width = W; c.height = W;
+    const x = c.getContext("2d");
+    try { await document.fonts.load("800 60px Tajawal"); } catch (e) {}
+    const F = (w, px) => `${w} ${px}px Tajawal, sans-serif`;
+    const bg = x.createLinearGradient(0, 0, 0, W);
+    bg.addColorStop(0, "#1e293b"); bg.addColorStop(1, "#0f172a");
+    x.fillStyle = bg; x.fillRect(0, 0, W, W);
+    x.direction = "rtl"; x.textAlign = "center"; x.textBaseline = "middle";
+    const logo = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = "logo.png"; });
+    if (logo) x.drawImage(logo, W / 2 - 90, 70, 180, 180);
+    x.fillStyle = "#ffffff"; x.font = F(800, 54); x.fillText("دوري بنو مسروح للنخبة", W / 2, 310);
+    x.fillStyle = "#60a5fa"; x.font = F(700, 38); x.fillText(`الجولة ${m.round}`, W / 2, 375);
+    const s1 = Number(m.s1), s2 = Number(m.s2);
+    const side = (name, cx, win) => {
+        x.beginPath(); x.arc(cx, 560, 105, 0, Math.PI * 2);
+        x.fillStyle = "#2563eb"; x.fill();
+        x.lineWidth = 10; x.strokeStyle = win ? "#facc15" : "#334155"; x.stroke();
+        x.fillStyle = "#ffffff"; x.font = F(800, 105); x.fillText(String(name).trim().charAt(0), cx, 572);
+        x.font = F(800, 48); x.fillText(name, cx, 730, 320);
+    };
+    // RTL: المتسابق الأول يمين مثل بطاقة المواجهة في الموقع
+    side(m.p1.name, W - 200, s1 > s2);
+    side(m.p2.name, 200, s2 > s1);
+    x.fillStyle = "#ffffff"; x.font = F(900, 130); x.direction = "ltr"; x.fillText(`${s2} : ${s1}`, W / 2, 575, 300); x.direction = "rtl";
+    const res = s1 === s2 ? "تعادل" : `الفوز لـ ${s1 > s2 ? m.p1.name : m.p2.name}`;
+    x.fillStyle = s1 === s2 ? "#facc15" : "#4ade80"; x.font = F(800, 56); x.fillText(res, W / 2, 870, 900);
+    x.fillStyle = "#94a3b8"; x.font = F(700, 32); x.fillText("masro7-league.pages.dev", W / 2, 990);
+    const text = `🏆 دوري بنو مسروح للنخبة\n${m.p1.name} ${s1} : ${s2} ${m.p2.name}\n${res}\nhttps://masro7-league.pages.dev`;
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const file = blob && new File([blob], "masro7-result.png", { type: "image/png" });
+    try {
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    // المتصفح ما يدعم مشاركة الصور: نحمّل الصورة ونفتح الواتساب بالنص
+    if (blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "masro7-result.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+}
+
 function createMatchCard(m) {
 let div = document.createElement("div");
 div.className = "match";
@@ -247,6 +288,15 @@ div.appendChild(player2Div);
 
 let liveRow = buildMatchLiveRow(m);
 if (liveRow) div.appendChild(liveRow);
+
+if (m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null) {
+    let shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "match-share-btn";
+    shareBtn.innerHTML = `${ic("share")} شارك النتيجة`;
+    shareBtn.onclick = (e) => { e.stopPropagation(); shareMatchCard(m); };
+    div.appendChild(shareBtn);
+}
 
 return div;
 }
