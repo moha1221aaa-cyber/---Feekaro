@@ -14,12 +14,21 @@ const VA_EXTEND_MS = 10000;      /* وقت التحقق من الصوت (الو�
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
 const VA = { key: "", st: "", msg: "", heard: "", said: "", ok: false, ctx: null, rec: null };
 
+/* نسجّل على نفس AudioContext حق البث (liveCtx في engine.js) لأنه شغّال من لحظة فتح شاشة البث (ضغطة حقيقية).
+   كان ينسوى واحد جديد وقت ضغطة الجرس (pointerdown)، واللمس ما يعتبر إذن تشغيل في الجوال، فيظل معلّق وما يسجّل شي */
 function vaPrime() {
     try {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        if (!VA.ctx) VA.ctx = new AC();
+        VA.ctx = liveCtx();
         if (VA.ctx.state === "suspended") VA.ctx.resume().catch(() => {});
+    } catch (e) {}
+}
+
+/* تشخيص: حالة الجواب الصوتي تنكتب في وثيقة البث (vaDiag.<uid>) عشان نعرف وش صار لو ما اشتغل */
+function vaDiag(st, extra) {
+    try {
+        if (!openLiveId || !currentUser) return;
+        const v = Object.assign({ st, at: bcNow(), ua: (navigator.userAgent || "").slice(0, 90), ctx: VA.ctx ? VA.ctx.state : "" }, extra || {});
+        liveRef(openLiveId).update({ ["vaDiag." + currentUser.uid]: v }).catch(() => {});
     } catch (e) {}
 }
 
@@ -32,7 +41,7 @@ function vaSync(d) {
     if (VA.key === k) return;
     vaStop(false);
     Object.assign(VA, { key: k, st: "", msg: "", heard: "", said: "", ok: false });
-    if (!currentUser || !(window.AudioContext || window.webkitAudioContext)) { vaToType("المتصفح ما يدعم التسجيل، اكتب جوابك"); return; }
+    if (!currentUser || !(window.AudioContext || window.webkitAudioContext) || !window.MediaStream) { vaDiag("unsupported"); vaToType("المتصفح ما يدعم التسجيل، اكتب جوابك"); return; }
     vaStart(d, k);
 }
 
@@ -53,30 +62,35 @@ async function vaStart(d, key) {
             own = true;
         }
     } catch (e) {
+        vaDiag("mic-error", { err: String((e && (e.name || e.message)) || e).slice(0, 80) });
         if (VA.key === key) vaToType("ما قدرت أفتح المايك، اكتب جوابك");
         return;
     }
     if (VA.key !== key) { if (own) stream.getTracks().forEach(x => x.stop()); return; }
     vaPrime();
     const ctx = VA.ctx;
+    if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
     const src = ctx.createMediaStreamSource(stream);
     const proc = ctx.createScriptProcessor(4096, 1, 1);
     const mute = ctx.createGain(); mute.gain.value = 0;   /* ScriptProcessor يحتاج يوصل للمخرج، بس بدون صوت */
     const chunks = [];
-    let noise = 0.008, noiseN = 0, speechMs = 0, lastVoiceAt = 0, startedAt = performance.now();
-    const rec = { key, stop: null };
+    let noise = 0.008, noiseN = 0, speechMs = 0, lastVoiceAt = 0, frames = 0, startedAt = performance.now();
+    const rec = { key, stop: null, timer: 0 };
     VA.rec = rec;
     const stopAt = (d.deadline || 0) - VA_STOP_BEFORE_MS;
 
     const finish = (send) => {
         if (rec.stop === null) return;
         rec.stop = null;
+        clearInterval(rec.timer);
         try { proc.disconnect(); src.disconnect(); mute.disconnect(); } catch (e) {}
         if (own) stream.getTracks().forEach(x => x.stop());
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
         if (VA.rec === rec) VA.rec = null;
         if (!send || VA.key !== key) return;
-        if (speechMs < VA_MIN_SPEECH_MS) { vaToType("ما سمعت جواب، اكتبه بسرعة"); return; }
+        if (!frames) { vaDiag("no-audio"); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
+        if (speechMs < VA_MIN_SPEECH_MS) { vaDiag("no-speech", { frames }); vaToType("ما سمعت جواب، اكتبه بسرعة"); return; }
+        vaDiag("sent", { frames, speechMs: Math.round(speechMs) });
         vaSend(key, chunks, ctx.sampleRate);
     };
     rec.stop = finish;
@@ -85,6 +99,7 @@ async function vaStart(d, key) {
         if (rec.stop === null) return;
         const buf = ev.inputBuffer.getChannelData(0);
         chunks.push(new Float32Array(buf));
+        frames++;
         let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
         const rms = Math.sqrt(sum / buf.length), ms = buf.length / ctx.sampleRate * 1000, now = performance.now();
         /* أول ثلث ثانية نقيس ضجة المكان، وبعدها الكلام = أعلى من الضجة بوضوح */
@@ -92,10 +107,16 @@ async function vaStart(d, key) {
         const level = Math.min(1, rms / 0.12);
         const bar = document.getElementById("vaLevel"); if (bar) bar.style.transform = "scaleX(" + Math.max(0.04, level).toFixed(2) + ")";
         if (rms > Math.max(0.02, noise * 3)) { speechMs += ms; lastVoiceAt = now; }
-        if (speechMs >= VA_MIN_SPEECH_MS && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
-        else if (bcNow() >= stopAt) finish(true);
     };
+    /* الإيقاف بمؤقت مستقل (مو داخل onaudioprocess)، فلو الصوت ما وصل أبد ما يعلّق: بعد 1.5 ث بدون صوت نحوّل للكتابة */
+    rec.timer = setInterval(() => {
+        const now = performance.now();
+        if (!frames && now - startedAt > 1500) finish(true);
+        else if (speechMs >= VA_MIN_SPEECH_MS && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
+        else if (bcNow() >= stopAt) finish(true);
+    }, 150);
     src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+    vaDiag("rec", { via: own ? "getUserMedia" : "bcTrack" });
 }
 
 function vaStop(send) { if (VA.rec && VA.rec.stop) VA.rec.stop(send); }
@@ -136,6 +157,7 @@ async function vaSend(key, chunks, rate) {
         res = await aiCall("voice", { q: q0.text || "", answer: q0.answer || "", audio: vaB64(vaWav(chunks, rate)) }, VA_EXTEND_MS - 800);
     } catch (e) { res = null; }
     if (VA.key !== key) return;
+    vaDiag(res ? "result" : "server-error", res ? { heard: (res.heard || "").slice(0, 60), said: res.said || "", ok: res.ok === true } : {});
     if (!res || (!res.said && !res.heard)) { vaToType(res ? "ما فهمت الجواب، اكتبه بسرعة" : "تعذّر التحقق من صوتك، اكتب جوابك"); return; }
     VA.heard = res.heard || ""; VA.said = res.said || ""; VA.ok = res.ok === true;
     VA.st = "done"; vaRefresh();
