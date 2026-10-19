@@ -23,3 +23,23 @@ function loadAgora() {
     });
     return agoraLoading;
 }
+
+/* إمكانية الوصول: أي عنصر مو زر وفيه onclick (التبويبات، البطاقات، المقاعد) يتوصل له بالكيبورد ويشتغل بـ Enter أو مسافة */
+const A11Y_CLICK = "[onclick]:not(button):not(a):not(input):not(select):not(textarea):not(label)";
+function a11yMark(root) {
+    if (!root || !root.querySelectorAll) return;
+    const list = root.matches && root.matches(A11Y_CLICK) ? [root] : [];
+    root.querySelectorAll(A11Y_CLICK).forEach(el => list.push(el));
+    list.forEach(el => {
+        if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
+        if (!el.hasAttribute("role")) el.setAttribute("role", "button");
+    });
+}
+document.addEventListener("DOMContentLoaded", () => {
+    a11yMark(document.body);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) a11yMark(n); })))
+        .observe(document.body, { childList: true, subtree: true });
+});
+document.addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(A11Y_CLICK)) { e.preventDefault(); e.target.click(); }
+});

@@ -59,7 +59,7 @@
 .bc-spk.on .ring,.bc-side.on .ring{background:#16a34a;}
 .bc-spk.on .ring .mi,.bc-side.on .ring .mi{background:#16a34a;}
 .bc-spk.talk .ring,.bc-side.talk .ring{background:#4ade80;box-shadow:0 0 0 4px rgba(74,222,128,.25),0 0 22px rgba(74,222,128,.6);}
-.bc-st{font-size:11px;color:#64748b;}
+.bc-st{font-size:11px;color:#94a3b8;}
 .bc-spk.on .bc-st,.bc-side.on .bc-st{color:#4ade80;}
 .bc-st.warn{color:#f87171;}
 .bc-note{font-size:12px;color:#93c5fd;display:flex;align-items:center;justify-content:center;gap:5px;}
@@ -480,7 +480,7 @@
 .lv-pill.ok{background:#16a34a;color:#fff;}
 .lv-ready-btn{margin:6px auto 0;width:min(320px,100%);padding:16px;font-size:20px;border-radius:16px;background:#16a34a;box-shadow:0 8px 22px rgba(22,163,74,.4);}
 .lv-link{background:none;color:#f87171;font-size:12px;padding:4px;margin:0 auto;text-decoration:underline;}
-.lv-rules{font-size:12px;color:#64748b;line-height:1.8;}
+.lv-rules{font-size:12px;color:#94a3b8;line-height:1.8;}
 .lv-count{font-size:110px;font-weight:bold;color:#facc15;line-height:1;text-shadow:0 0 40px rgba(250,204,21,.5);animation:lvPop .9s ease infinite;}
 @keyframes lvPop{0%{transform:scale(1.25);opacity:.4}30%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:1}}
 .lv-dots{display:flex;gap:7px;justify-content:center;flex-shrink:0;}
