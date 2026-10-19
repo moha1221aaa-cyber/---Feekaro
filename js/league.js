@@ -19,6 +19,8 @@ let photoUrl = (userData && userData.photoURL) ? userData.photoURL : av.url;
 let pStat = players.find(p => p.name === displayName);
 let pRank = pStat ? (players.indexOf(pStat) + 1) : "-";
 
+// إحصائيات التوقعات تحتاج توقعات الكل: لو ما تحمّلت للحين، نرسم الملف ونعيده أول ما توصل (لو الملف للحين مفتوح)
+ensurePredictionRanking(() => { if (activeModalId === "viewProfileModal") openUserProfile(uid, playerName); });
 let predStats = getUserPredictionStats(uid, userEmail);
 
 let statsHTML = "";

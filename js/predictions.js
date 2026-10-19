@@ -158,6 +158,7 @@ document.getElementById("predictPage").classList.add("active");
 } else {
 document.querySelectorAll(".prediction-tab")[1].classList.add("active");
 document.getElementById("rankingPage").classList.add("active");
+ensurePredictionRanking();
 renderRankingUI();
 }
 }
@@ -174,13 +175,25 @@ renderRankingUI();
 table();
 });
 
+}
+
+/* توقعات الكل (لترتيب المتوقعين وملف المتسابق) تتحمل بس لما أحد يفتحها، بدل ما كل زائر يقراها أول ما يفتح الموقع */
+let predsRankingReady = false, predsRankingWaiters = [];
+function ensurePredictionRanking(onReady) {
+if(predsRankingReady) return true;
+if(onReady) predsRankingWaiters.push(onReady);
+if(!predictionsRankingListener && firebaseDB) {
 predictionsRankingListener = firebaseDB.collection("predictions").onSnapshot(snapshot => {
 cachedPredictionsData = {};
 snapshot.forEach(doc => {
 cachedPredictionsData[doc.id] = doc.data();
 });
+predsRankingReady = true;
 renderRankingUI();
+predsRankingWaiters.splice(0).forEach(f => f());
 });
+}
+return false;
 }
 
 function getPredictionRankingList() {

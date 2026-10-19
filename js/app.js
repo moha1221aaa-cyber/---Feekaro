@@ -38,6 +38,7 @@ let isRankingDataLoaded = false;
 let activeModalId = null;
 
 window.addEventListener('DOMContentLoaded', () => {
+    renderCachedLeague();
     try {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
@@ -357,14 +358,9 @@ function getMatchId(m) {
 return `r${m.round}_${m.p1.name}_${m.p2.name}`;
 }
 
-function loadFromFirebase() {
-if(!firebaseReady || !firebaseDB) return;
-
-firebaseDB.collection("league").doc("current").onSnapshot(doc => {
-if(doc.exists) {
-let data = doc.data();
-isInitialLoad = false;
-
+/* بيانات الدوري (المتسابقين والمواجهات) تنحفظ في الجوال، فالترتيب يطلع على طول وحتى بدون نت، وبعدين يتحدث من Firebase */
+const LEAGUE_CACHE_KEY = "masro7_league_v1";
+function applyLeagueData(data) {
 if(data.playersList && Array.isArray(data.playersList)) {
 players = data.playersList.map(name => ({ name:name, w:0, d:0, l:0, gf:0, ga:0, pts:0 }));
 }
@@ -377,14 +373,36 @@ return { p1:p1Obj, p2:p2Obj, s1:m.s1, s2:m.s2, round:m.round };
 });
 }
 playerLinks = data.playerLinks || {};
-} else {
-generateMatches();
 }
+function renderLeagueAll() {
 table();
 renderMatches();
 renderPredictions();
 renderFullAccountPage();
 renderLeagueSummary();
+}
+
+// تشتغل قبل Firebase: بدون نت مكتبة Firebase نفسها ما تتحمل، فالنسخة المحفوظة هي اللي تطلع
+function renderCachedLeague() {
+try {
+const cached = JSON.parse(localStorage.getItem(LEAGUE_CACHE_KEY) || "null");
+if(cached && isInitialLoad && Array.isArray(cached.matches) && cached.matches.length) { applyLeagueData(cached); renderLeagueAll(); }
+} catch(e) {}
+}
+
+function loadFromFirebase() {
+if(!firebaseReady || !firebaseDB) return;
+
+firebaseDB.collection("league").doc("current").onSnapshot(doc => {
+if(doc.exists) {
+let data = doc.data();
+isInitialLoad = false;
+applyLeagueData(data);
+try { localStorage.setItem(LEAGUE_CACHE_KEY, JSON.stringify({ playersList: data.playersList || [], matches: data.matches || [], playerLinks: data.playerLinks || {} })); } catch(e) {}
+} else {
+generateMatches();
+}
+renderLeagueAll();
 notifScoresCheck();
 });
 
