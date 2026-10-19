@@ -445,7 +445,11 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
 ${(() => { const have = (roomState.qbank || []).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} بنك الأسئلة فيه ${have} سؤال بس، والجولة تحتاج ${need}. البث بيكمّل من ${LIVE_FALLBACK_QUESTIONS.length} سؤال احتياطي وبتتكرر الأسئلة. الأفضل تضيف أسئلة من الغرفة الصوتية (بنك الأسئلة) قبل البث.</div>` : ""; })()}
-${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.join("، "))} غير موثّق بحساب، فما يقدر يضغط "جاهز" أو الجرس ولا ينفتح له مايك. تقدر تتخطى مواجهته وقت البث.</div>` : ""}
+${unlinked.length ? `<div class="bc-ask-x">
+<div class="t">${ic("alert")} ${unlinked.length} متسابق مو مربوط بحساب</div>
+<div class="s">ما ينفتح له مايك (محد يسمعه)، وما يقدر يضغط "جاهز" ولا الجرس. اربطه قبل البث: المتسابق يسجّل في الموقع، وبعدها تضغط "ربط" وتختار حسابه.</div>
+<div class="names">${unlinked.map(n => `<button class="bc-link" data-a="link" data-n="${escapeHTML(n)}">${ic("user")} ${escapeHTML(n)} · ربط</button>`).join("")}</div>
+</div>` : ""}
 <button class="bc-go" data-a="now">${ic("zap")} ابدأ البث الحين</button>
 <div class="bc-ask-or">أو حدد موعد، ويطلع للكل عداد لين يبدأ:</div>
 <div class="bc-ask-row"><input type="time" id="bcAskTime" value="${hh}:${mm}"><button class="bc-ghost" data-a="at">${ic("hourglass")} جدولة البث</button></div>
@@ -457,6 +461,7 @@ ${unlinked.length ? `<div class="bc-ask-w">${ic("alert")} ${escapeHTML(unlinked.
             if (!b) { if (e.target === box) done(null); return; }
             const a = b.dataset.a;
             if (a === "no") return done(null);
+            if (a === "link") { done(null); openLinkPlayerModal(b.dataset.n); return; }
             if (a === "now") return done({ at: 0 });
             const v = (box.querySelector("#bcAskTime").value || "").split(":");
             if (v.length < 2) return;
