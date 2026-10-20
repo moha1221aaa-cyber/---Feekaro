@@ -166,7 +166,8 @@ let playerCellHTML = `
 </div>
 `;
 
-row.innerHTML = `<td>${i+1}</td><td>${playerCellHTML}</td><td>${p.w}</td><td>${p.d}</td><td>${p.l}</td><td>${p.gf}</td><td>${p.ga}</td><td><b>${p.pts}</b></td>`;
+if(i < 3) row.className = `top-${i+1}`;
+row.innerHTML = `<td class="rank-cell">${i+1}</td><td>${playerCellHTML}</td><td>${p.w}</td><td>${p.d}</td><td>${p.l}</td><td>${p.gf}</td><td>${p.ga}</td><td class="pts-cell"><b>${p.pts}</b></td>`;
 tbody.appendChild(row);
 });
 
@@ -275,6 +276,7 @@ in1.value = m.s1;
 in1.disabled = !isAdmin;
 
 let separator = document.createElement("span");
+separator.className = "match-sep";
 separator.textContent = ":";
 
 let in2 = document.createElement("input");
@@ -314,6 +316,7 @@ let liveRow = buildMatchLiveRow(m);
 if (liveRow) div.appendChild(liveRow);
 
 if (m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null) {
+    div.classList.add("is-done");
     let shareBtn = document.createElement("button");
     shareBtn.type = "button";
     shareBtn.className = "match-share-btn";
@@ -379,11 +382,11 @@ pastGroup[m.round].push(m);
 
 let upRounds = Object.keys(upcomingGroup).map(Number).sort((a,b) => a - b);
 if(upRounds.length === 0) {
-upDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مواجهات قادمة</div>`;
+upDiv.innerHTML = `<div class="empty-state">لا توجد مواجهات قادمة</div>`;
 } else {
 upRounds.forEach(r => {
 let rHeader = document.createElement("h3");
-rHeader.style.cssText = "text-align:center; color:#60a5fa; margin:15px 0 5px; font-size:15px;";
+rHeader.className = "round-head";
 rHeader.textContent = `الجولة ${r}`;
 upDiv.appendChild(rHeader);
 let rLive = buildRoundLiveRow(r);
@@ -397,11 +400,11 @@ upDiv.appendChild(createMatchCard(m));
 
 let pastRounds = Object.keys(pastGroup).map(Number).sort((a,b) => b - a);
 if(pastRounds.length === 0) {
-pastDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">لا توجد مواجهات سابقة</div>`;
+pastDiv.innerHTML = `<div class="empty-state">لا توجد مواجهات سابقة</div>`;
 } else {
 pastRounds.forEach(r => {
 let rHeader = document.createElement("h3");
-rHeader.style.cssText = "text-align:center; color:#facc15; margin:15px 0 5px; font-size:15px;";
+rHeader.className = "round-head past";
 rHeader.textContent = `الجولة ${r}`;
 pastDiv.appendChild(rHeader);
 let rSum = buildRoundSummary(r);
@@ -416,7 +419,7 @@ pastDiv.appendChild(createMatchCard(m));
 if(homeUpDiv && upRounds.length > 0) {
 let nextRound = upRounds[0];
 let rHeader = document.createElement("h3");
-rHeader.style.cssText = "text-align:center; color:#60a5fa; margin:15px 0 10px; font-size:16px;";
+rHeader.className = "round-head home";
 rHeader.innerHTML = ic("ball") + ` المواجهات القادمة (الجولة ${nextRound})`;
 homeUpDiv.appendChild(rHeader);
 let hLive = buildRoundLiveRow(nextRound);
@@ -437,7 +440,15 @@ document.getElementById("upcoming").style.display = (tabName === 'upcoming') ? '
 document.getElementById("past").style.display = (tabName === 'past') ? 'block' : 'none';
 }
 
+/* التنقل بين التبويبات بانتقال ناعم (View Transitions) لو المتصفح يدعمه، وإلا يتبدل على طول */
 function showTab(evt, sectionId) {
+const tabEl = evt && evt.currentTarget;
+const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!document.startViewTransition || reduce || !tabEl) return showTabNow(tabEl, sectionId);
+document.startViewTransition(() => showTabNow(tabEl, sectionId));
+}
+
+function showTabNow(tabEl, sectionId) {
 document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
 document.querySelectorAll(".bottom-nav .tab").forEach(t => t.classList.remove("active"));
 
@@ -454,8 +465,8 @@ if(headerBranding) {
 }
 document.getElementById("mainHeader").classList.toggle("hdr-compact", sectionId !== 'home');
 
-if(evt) {
-evt.currentTarget.classList.add("active");
+if(tabEl) {
+tabEl.classList.add("active");
 } else {
 let navTabs = document.querySelectorAll(".bottom-nav .tab");
 if(sectionId === 'home') navTabs[0].classList.add("active");
