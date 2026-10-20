@@ -1,0 +1,45 @@
+name: eleven-saudi-samples
+# يقرأ جملة بكل الأصوات السعودية في مكتبة ElevenLabs ويرفعها mp3
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: "الجملة"
+        required: true
+        default: "يا هلا ومرحبا فيكم في دوري مصروح، جاهزين للسؤال الجاي؟"
+      limit:
+        description: "أقصى عدد أصوات"
+        default: "20"
+
+jobs:
+  samples:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate
+        env:
+          ELEVEN_KEY: ${{ secrets.ELEVEN_KEY }}
+          TEXT: ${{ inputs.text }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          mkdir -p out
+          curl -sf "https://api.elevenlabs.io/v1/shared-voices?language=ar&accent=saudi&page_size=$LIMIT&sort=cloned_by_count" \
+            -H "xi-api-key: $ELEVEN_KEY" > voices.json
+          jq -r '.voices[] | "\(.public_owner_id)\t\(.voice_id)\t\(.name)\t\(.gender)\t\(.age)"' voices.json > list.tsv
+          echo "| الاسم | الجنس | العمر | Voice ID |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r owner id name gender age; do
+            safe=$(echo "$name" | tr -c 'A-Za-z0-9_-' '_')
+            body=$(jq -n --arg t "$TEXT" '{text:$t, model_id:"eleven_multilingual_v2"}')
+            if curl -sf -X POST "https://api.elevenlabs.io/v1/text-to-speech/$id?output_format=mp3_44100_64" \
+                 -H "xi-api-key: $ELEVEN_KEY" -H "Content-Type: application/json" \
+                 -d "$body" -o "out/${safe}__${id}.mp3"; then
+              echo "| $name | $gender | $age | \`$id\` |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| $name | $gender | $age | \`$id\` (فشل) |" >> "$GITHUB_STEP_SUMMARY"
+              rm -f "out/${safe}__${id}.mp3"
+            fi
+          done < list.tsv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: saudi-voices
+          path: out/
