@@ -1,7 +1,7 @@
 /* صوت المذيع: يحوّل نص السؤال لصوت بشري
-   - الأساسي: Azure Speech (سر AZURE_TTS_KEY و AZURE_TTS_REGION في Cloudflare Pages)، صوت حامد السعودي ar-SA-HamedNeural
+   - الأساسي: ElevenLabs (سر ELEVEN_KEY)، صوت محمد المنصاري السعودي (يتغير بـ ELEVEN_VOICE). لو الرصيد خلص يجرب اللي بعده
+   - بعده: Azure Speech (سر AZURE_TTS_KEY و AZURE_TTS_REGION في Cloudflare Pages)، صوت حامد السعودي ar-SA-HamedNeural
      (يتغير بـ AZURE_TTS_VOICE). الباقة المجانية F0 فيها 500 ألف حرف بالشهر
-   - بعده: ElevenLabs (سر ELEVEN_KEY، والصوت من ELEVEN_VOICE أو الافتراضي تحت)
    - بعده: Google Text-to-Speech لو انضاف سر TTS_KEY
    - لو محرك فشل (مثلاً الرصيد خلص) يجرب اللي بعده
    - كل جملة تنحفظ في كاش Cloudflare 30 يوم، فنفس السؤال ما ينحسب من الرصيد مرتين */
@@ -9,7 +9,7 @@
 import { verifyFirebaseToken, bearer } from "../lib/firebase-auth.js";
 
 const MAX_CHARS = 300;
-const DEFAULT_ELEVEN_VOICE = "nPczCjzI2devNBz1zQrb"; /* Brian: اختاره محمد مذيع للدوري */
+const DEFAULT_ELEVEN_VOICE = "2bnoa3wtrtcUW41TrSJM"; /* Mohammed Almansari (لهجة سعودية): اختاره محمد مذيع للدوري، 20 أكتوبر 2026 */
 const ELEVEN_MODEL = "eleven_multilingual_v2";
 const DEFAULT_AZURE_VOICE = "ar-SA-HamedNeural";
 
@@ -81,8 +81,8 @@ export async function onRequestGet(context) {
 
   /* المحركات المتوفرة بالترتيب. كل محرك له مفتاح كاش لحاله، فلو تغيّر المحرك ما يطلع الصوت القديم */
   const engines = [];
-  if (env.AZURE_TTS_KEY && env.AZURE_TTS_REGION) engines.push({ key: "az:" + (env.AZURE_TTS_VOICE || DEFAULT_AZURE_VOICE), run: () => azure(env, text) });
   if (env.ELEVEN_KEY) engines.push({ key: "el:" + (env.ELEVEN_VOICE || DEFAULT_ELEVEN_VOICE), run: () => eleven(env, text) });
+  if (env.AZURE_TTS_KEY && env.AZURE_TTS_REGION) engines.push({ key: "az:" + (env.AZURE_TTS_VOICE || DEFAULT_AZURE_VOICE), run: () => azure(env, text) });
   if (env.TTS_KEY) engines.push({ key: "g:" + (env.TTS_VOICE || ""), run: () => google(env, text, url.origin) });
   if (!engines.length) return err(503, "TTS not configured");
 

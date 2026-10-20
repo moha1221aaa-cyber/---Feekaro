@@ -36,7 +36,7 @@ js/
     screen.js           شاشة البث: الرسم والمشاهد والانتقالات
   menu.js               القائمة الجانبية (☰): التنقل والميزات وصفحات ما الجديد وطريقة اللعب والخصوصية وعن الدوري
   ai.js                 الذكاء الاصطناعي: توليد الأسئلة، التصحيح الذكي، جمل المقدم (aiLines)، مساعد الدوري
-functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs)، time، ai (Workers AI مجاني، وفيه تحويل الصوت لنص للجواب الصوتي)
+functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs ثم Azure)، time، ai (Workers AI مجاني، وفيه تحويل الصوت لنص للجواب الصوتي)
 wrangler.toml           إعدادات Pages: ربط Workers AI باسم AI (بدون مفتاح)
 audio/                  أصوات البث الحقيقية (mp3)
 media/                  فيديو وصور الاستوديو
