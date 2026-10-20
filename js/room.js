@@ -134,7 +134,7 @@ function renderParticipantsModal() {
     let html = `<div class="ranking-cards-container">`;
     list.forEach(([id, p]) => {
         let isMe = id === myPresenceId();
-        let avatar = cdnThumb(p.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent((p.name || "ض").charAt(0))}&background=1c1c1c&color=fff&bold=true`;
+        let avatar = cdnThumb(p.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent((p.name || "ض").charAt(0))}&background=2563eb&color=fff&bold=true`;
         html += `
 <div class="user-card ${isMe ? "is-me" : ""}">
 <div class="user-card-profile">
