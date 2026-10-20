@@ -280,7 +280,7 @@ let rank = index + 1;
 let rankClass = rank === 1 ? "rank-1" : (rank === 2 ? "rank-2" : (rank === 3 ? "rank-3" : ""));
 let rankBadge = rank === 1 ? ic("medal","m1") : (rank === 2 ? ic("medal","m2") : (rank === 3 ? ic("medal","m3") : rank));
 
-let avatarSrc = cdnThumb(item.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=2563eb&color=fff&bold=true`;
+let avatarSrc = cdnThumb(item.photoURL) || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name.charAt(0))}&background=1c1c1c&color=fff&bold=true`;
 
 html += `
 <div class="user-card ${isMe ? 'is-me' : ''}" onclick="openUserProfile(${jsArg(item.uid)}, '')">

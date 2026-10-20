@@ -190,7 +190,7 @@ container.innerHTML = `
 </div>
 <div class="summary-card">
 <div class="summary-card-val" style="color:#facc15;"><svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> ${totalGoals}</div>
-<div class="summary-card-lbl">إجمالي الأجوبة الصحيحة</div>
+<div class="summary-card-lbl">الأجوبة الصحيحة</div>
 </div>
 <div class="summary-card">
 <div class="summary-card-val" style="color:#4ade80;"><svg class="ic" aria-hidden="true"><use href="#i-crown"/></svg> ${escapeHTML(leader)}</div>
@@ -317,6 +317,7 @@ if (liveRow) div.appendChild(liveRow);
 
 if (m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null) {
     div.classList.add("is-done");
+    if (Number(m.s1) !== Number(m.s2)) (Number(m.s1) < Number(m.s2) ? in1 : in2).classList.add("lose");
     let shareBtn = document.createElement("button");
     shareBtn.type = "button";
     shareBtn.className = "match-share-btn";
@@ -464,6 +465,8 @@ if(headerBranding) {
     }
 }
 document.getElementById("mainHeader").classList.toggle("hdr-compact", sectionId !== 'home');
+const screenTitle = document.getElementById("screenTitle");
+if (screenTitle) screenTitle.textContent = { table: "الترتيب", matches: "المواجهات", predictions: "التوقعات", accountTab: "الحساب", room: "الغرفة الصوتية" }[sectionId] || "";
 
 if(tabEl) {
 tabEl.classList.add("active");
