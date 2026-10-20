@@ -212,7 +212,7 @@ return { url: userData.photoURL, isVerified: true };
 let cleanName = (playerName || "P").trim();
 let firstChar = cleanName.charAt(0);
 let encoded = encodeURIComponent(firstChar);
-let defaultUrl = `https://ui-avatars.com/api/?name=${encoded}&length=1&background=2563eb&color=ffffff&bold=true&size=128`;
+let defaultUrl = `https://ui-avatars.com/api/?name=${encoded}&length=1&background=1c1c1c&color=ffffff&bold=true&size=128`;
 return { url: defaultUrl, isVerified: !!linkedUid };
 }
 

@@ -36,7 +36,7 @@ return;
 let name = (currentUserDocData && currentUserDocData.name) ? currentUserDocData.name : (currentUser.displayName || "مستخدم");
 let email = currentUser.email || "";
 let photoURL = (currentUserDocData && currentUserDocData.photoURL) ? currentUserDocData.photoURL : "";
-let avatarSrc = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&background=2563eb&color=fff&bold=true`;
+let avatarSrc = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&background=1c1c1c&color=fff&bold=true`;
 
 let predStats = getUserPredictionStats(currentUser.uid, email);
 
