@@ -304,7 +304,7 @@ function liveSoundsOnChange(d) {
     const p = livePrevView;
     livePrevView = view;
     if (!p) return;
-    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed) cinePlay("buzz", 0.7);
+    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed && bcLocalBuzzQ !== openLiveId + "|" + d.cur + "|" + d.qIndex) cinePlay("buzz", 0.7);
     if (view.phase === "answer" && d.passed && p.ans !== view.ans) cinePlay("wrong", 0.5);
     if (view.phase === "buzz" && p.phase !== "buzz" && view.q > 0) cinePlay("whoosh", 0.4);
     if (view.phase === "reveal" && p.phase !== "reveal") {
@@ -543,6 +543,10 @@ ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGol
 
     if (d.phase === "buzz") {
         const canBuzz = !!me;
+        /* ضغطت الجرس وننتظر السيرفر: الجرس يظل مضغوط والتسجيل ظاهر لو انعاد الرسم */
+        if (canBuzz && typeof VA !== "undefined" && VA.arm && VA.arm.id === openLiveId && VA.arm.qIndex === d.qIndex) {
+            return html + `<button class="lv-bell rung" id="lvBell" disabled>${ic("bell")}<span>ضغطت!</span></button>` + vaHTML();
+        }
         html += `
 <button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz()"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
 <div class="lv-muted">${canBuzz ? "أسرع واحد يضغط الجرس هو اللي يجاوب" : "بانتظار أحد المتسابقين يضغط الجرس"}</div>`;

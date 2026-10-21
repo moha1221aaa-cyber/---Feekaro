@@ -54,6 +54,7 @@ let liveMatchesSig = "";
 let liveApplyTried = {};
 let livePrevView = null;
 let bcPrevKey = null;
+let bcLocalBuzzQ = "";   /* السؤال اللي ضغطت جرسه من هالجهاز (صوت الجرس اشتغل محلياً، فما نعيده) */
 const bcEndedStale = {};
 
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
@@ -568,9 +569,17 @@ function liveBuzz() {
     const d = liveMatchesCache[id];
     if (!d || d.scene !== "playing" || d.phase !== "buzz" || !myLiveNum(d)) return;
     const bell = document.getElementById("lvBell");
-    if (bell) bell.classList.add("rung");
-    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال لو فزت بالجرس */
+    if (bell && bell.classList.contains("rung")) return;   /* ضغطة وحدة تكفي */
+    /* استجابة فورية قبل ما يرد السيرفر: صوت الجرس، اهتزاز، والجرس يتغير، ويبدأ التسجيل على طول عشان أول كلمة ما تضيع.
+       الحكم مين ضغط أول يظل في الـ transaction تحت، ولو غيري سبقني يتلغى التسجيل */
+    if (bell) { bell.classList.add("rung"); const sp = bell.querySelector("span"); if (sp) sp.textContent = "ضغطت!"; }
+    bcLocalBuzzQ = id + "|" + d.cur + "|" + d.qIndex;
+    cinePlay("buzz", 0.7);
+    try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+    if (typeof bcStopSpeech === "function") bcStopSpeech();
+    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
     if (typeof vaPrime === "function") vaPrime();
+    if (typeof vaArm === "function") vaArm(id, d.qIndex);
     liveTx(id, (x, now) => {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
@@ -581,7 +590,8 @@ function liveBuzz() {
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
         if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
         return u;
-    }).catch(err => console.log("buzz:", err));
+    }).then(u => { if (!u && typeof vaDisarm === "function") vaDisarm(); })
+      .catch(err => { console.log("buzz:", err); if (typeof vaDisarm === "function") vaDisarm(); });
 }
 
 async function liveSubmitAnswer() {

@@ -1,5 +1,7 @@
 /* جواب المتسابق بالصوت: بعد ما يفوز بالجرس يقول جوابه بدل ما يكتبه.
    - التسجيل من نفس مايك البث (bcTrack في voice.js) عشان ما ينفتح المايك مرتين (الآيفون يكتم الأول).
+   - يبدأ لحظة ضغط الجرس (vaArm) قبل ما يرد السيرفر، عشان أول كلمة ما تضيع، ولو فاز بالجرس يكمل نفس التسجيل.
+   - أرضية الضجة تتحدث طول الوقت (تنزل بسرعة وتطلع ببطء) فالكلام ما يرفعها، والجواب ما يطول أكثر من 6 ث.
    - يوقف لحاله أول ما يسكت المتسابق بعد جوابه (0.8 ث)، أو قبل نهاية الوقت بـ 1.5 ث، وبعدها الوقت يتمدد للتحقق.
    - أول جواب هو اللي ينحسب (ما فيه تغيير)، وما فيه أزرار: كل شي تلقائي.
    - الصوت يروح لـ /ai (task: voice): Whisper يحوّله نص، والموديل يطلّع الجواب من كلامه ويحكم.
@@ -10,9 +12,11 @@ const VA_SILENCE_MS = 800;       /* سكوت بعد الكلام = خلص جوا
 const VA_MIN_SPEECH_MS = 400;    /* أقل كلام نعتبره جواب */
 const VA_STOP_BEFORE_MS = 1500;  /* نوقف قبل نهاية الوقت بشوي */
 const VA_EXTEND_MS = 10000;      /* وقت التحقق من الصوت (الوقت يتمدد له أول ما يخلص المتسابق) */
+const VA_MAX_MS = 6000;          /* أطول جواب: بعد 6 ث من أول كلمة نوقف حتى لو فيه صوت (موسيقى أو ضجة) */
+const VA_ARM_MS = 5000;          /* التسجيل المبكر ينلغى لو السيرفر ما أكد إني فزت بالجرس خلال 5 ث */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
-const VA = { key: "", st: "", msg: "", heard: "", said: "", ok: false, ctx: null, rec: null };
+const VA = { key: "", st: "", msg: "", heard: "", said: "", ok: false, ctx: null, rec: null, arm: null };
 
 /* نسجّل على نفس AudioContext حق البث (liveCtx في engine.js) لأنه شغّال من لحظة فتح شاشة البث (ضغطة حقيقية).
    كان ينسوى واحد جديد وقت ضغطة الجرس (pointerdown)، واللمس ما يعتبر إذن تشغيل في الجوال، فيظل معلّق وما يسجّل شي */
@@ -39,18 +43,51 @@ function vaTurnKey(d) { return [openLiveId, d.qIndex, d.answerer, d.passed ? 1 :
 function vaSync(d) {
     const k = vaTurnKey(d);
     if (VA.key === k) return;
+    /* التسجيل اللي بدأ لحظة ضغط الجرس: نكمّله لنفس السؤال بدل ما نبدأ من جديد */
+    if (VA.arm && VA.rec && VA.arm.id === openLiveId && VA.arm.qIndex === d.qIndex && !d.passed) {
+        VA.key = k; VA.rec.key = k; VA.arm = null;
+        return;
+    }
     vaStop(false);
+    VA.arm = null;
     Object.assign(VA, { key: k, st: "", msg: "", heard: "", said: "", ok: false });
     if (!currentUser || !(window.AudioContext || window.webkitAudioContext) || !window.MediaStream) { vaDiag("unsupported"); vaToType("المتصفح ما يدعم التسجيل، اكتب جوابك"); return; }
-    vaStart(d, k);
+    vaStart(k);
+}
+
+/* تنادى من liveBuzz لحظة الضغط (قبل رد السيرفر) */
+function vaArm(id, qIndex) {
+    if (VA.rec || !currentUser || !(window.AudioContext || window.webkitAudioContext) || !window.MediaStream) return;
+    const key = "arm|" + id + "|" + qIndex;
+    Object.assign(VA, { key, st: "rec", msg: "", heard: "", said: "", ok: false, arm: { id, qIndex } });
+    vaStart(key);
+    /* الواجهة تتغير على طول تحت الجرس، بدون انتظار السيرفر */
+    const hint = document.querySelector("#lvBell + .lv-muted");
+    if (hint) hint.outerHTML = vaHTML();
+}
+/* السيرفر قال غيري سبقني (أو فشل الطلب): نلغي التسجيل المبكر */
+function vaDisarm() {
+    if (!VA.arm) return;
+    VA.arm = null;
+    if (VA.key.indexOf("arm|") === 0) { vaStop(false); VA.key = ""; VA.st = ""; }
+}
+
+/* يمدد وقت الإجابة مرة وحدة (للتحقق من الصوت، أو عشان يلحق يكتب لو الصوت ما اشتغل) */
+function vaExtend() {
+    const id = openLiveId, d0 = liveMatchesCache[id] || {};
+    liveTx(id, (d, now) => (d.status === "live" && d.phase === "answer" && d.answerer === myLiveNum(d) && d.qIndex === d0.qIndex && d.deadline - now < VA_EXTEND_MS)
+        ? { deadline: now + VA_EXTEND_MS } : null).catch(() => {});
 }
 
 /* الرسم في الدورة الجاية، عشان ما نعيد رسم الشاشة وهي ترسم (vaSync تنادى من داخل الرسم) */
 function vaRefresh() { setTimeout(() => { liveLastSig = ""; renderLiveScreen(); }, 0); }
-function vaToType(msg) { VA.st = "type"; VA.msg = msg || ""; vaRefresh(); }
+function vaToType(msg) { VA.st = "type"; VA.msg = msg || ""; vaExtend(); vaRefresh(); }
 
-async function vaStart(d, key) {
+async function vaStart(key) {
     VA.st = "rec"; VA.msg = "";
+    const rec = { key, stop: null, timer: 0 };
+    VA.rec = rec;
+    if (typeof bedApply === "function") bedApply();
     let stream = null, own = false, unmuted = false;
     try {
         const t = (typeof bcTrack !== "undefined" && bcTrack && bcTrack.getMediaStreamTrack) ? bcTrack.getMediaStreamTrack() : null;
@@ -62,22 +99,26 @@ async function vaStart(d, key) {
             own = true;
         }
     } catch (e) {
+        if (VA.rec === rec) VA.rec = null;
         vaDiag("mic-error", { err: String((e && (e.name || e.message)) || e).slice(0, 80) });
-        if (VA.key === key) vaToType("ما قدرت أفتح المايك، اكتب جوابك");
+        if (VA.key === rec.key && !VA.arm) vaToType("ما قدرت أفتح المايك، اكتب جوابك");
         return;
     }
-    if (VA.key !== key) { if (own) stream.getTracks().forEach(x => x.stop()); return; }
+    if (VA.rec !== rec) { if (own) stream.getTracks().forEach(x => x.stop()); return; }
     vaPrime();
     const ctx = VA.ctx;
     if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
     const src = ctx.createMediaStreamSource(stream);
-    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const proc = ctx.createScriptProcessor(2048, 1, 1);
     const mute = ctx.createGain(); mute.gain.value = 0;   /* ScriptProcessor يحتاج يوصل للمخرج، بس بدون صوت */
     const chunks = [];
-    let noise = 0.008, noiseN = 0, speechMs = 0, lastVoiceAt = 0, frames = 0, startedAt = performance.now();
-    const rec = { key, stop: null, timer: 0 };
-    VA.rec = rec;
-    const stopAt = (d.deadline || 0) - VA_STOP_BEFORE_MS;
+    let noise = 0.006, peak = 0, speechMs = 0, lastVoiceAt = 0, firstVoiceAt = 0, frames = 0;
+    const startedAt = performance.now();
+    /* نهاية وقت الإجابة من الوثيقة نفسها (تتحدث لو الوقت تمدد)، وقبل التأكيد ما فيه نهاية */
+    const stopAt = () => {
+        const x = liveMatchesCache[openLiveId];
+        return (x && x.phase === "answer") ? (x.deadline || 0) - VA_STOP_BEFORE_MS : Infinity;
+    };
 
     const finish = (send) => {
         if (rec.stop === null) return;
@@ -87,10 +128,13 @@ async function vaStart(d, key) {
         if (own) stream.getTracks().forEach(x => x.stop());
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
         if (VA.rec === rec) VA.rec = null;
-        if (!send || VA.key !== key) return;
+        if (typeof bedApply === "function") bedApply();
+        const key = rec.key;
+        if (!send || VA.key !== key || key.indexOf("arm|") === 0) return;
         if (!frames) { vaDiag("no-audio"); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
-        if (speechMs < VA_MIN_SPEECH_MS) { vaDiag("no-speech", { frames }); vaToType("ما سمعت جواب، اكتبه بسرعة"); return; }
-        vaDiag("sent", { frames, speechMs: Math.round(speechMs) });
+        /* لو الكشف ما تأكد من الكلام بس فيه صوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب */
+        if (speechMs < VA_MIN_SPEECH_MS && peak < 0.03) { vaDiag("no-speech", { frames, peak: +peak.toFixed(3) }); vaToType("ما سمعت جواب، اكتبه"); return; }
+        vaDiag("sent", { frames, speechMs: Math.round(speechMs), peak: +peak.toFixed(3), noise: +noise.toFixed(4) });
         vaSend(key, chunks, ctx.sampleRate);
     };
     rec.stop = finish;
@@ -102,21 +146,38 @@ async function vaStart(d, key) {
         frames++;
         let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
         const rms = Math.sqrt(sum / buf.length), ms = buf.length / ctx.sampleRate * 1000, now = performance.now();
-        /* أول ثلث ثانية نقيس ضجة المكان، وبعدها الكلام = أعلى من الضجة بوضوح */
-        if (now - startedAt < 350) { noise = (noise * noiseN + rms) / (++noiseN); return; }
-        const level = Math.min(1, rms / 0.12);
+        if (rms > peak) peak = rms;
+        /* أرضية الضجة: تنزل بسرعة مع الهدوء وتطلع ببطء شديد، فالكلام نفسه ما يرفعها (كانت تنقاس أول ثلث ثانية، والمتسابق غالباً يتكلم فيها) */
+        noise = rms < noise ? noise * 0.6 + rms * 0.4 : noise * 0.997 + rms * 0.003;
+        const talking = rms > Math.max(0.012, noise * 2.5);
+        if (talking) { speechMs += ms; lastVoiceAt = now; if (!firstVoiceAt) firstVoiceAt = now; }
+        /* المتسابق يشوف إن صوته واصل: المؤشر يتحرك والدائرة تكبر والنص يتغير */
+        const level = Math.min(1, rms / 0.1);
         const bar = document.getElementById("vaLevel"); if (bar) bar.style.transform = "scaleX(" + Math.max(0.04, level).toFixed(2) + ")";
-        if (rms > Math.max(0.02, noise * 3)) { speechMs += ms; lastVoiceAt = now; }
+        const box = document.getElementById("vaBox");
+        if (box) {
+            const on = now - lastVoiceAt < 350;
+            box.classList.toggle("talking", on);
+            box.style.setProperty("--lvl", level.toFixed(2));
+            const t = document.getElementById("vaT");
+            const msg = on ? "أسمعك..." : (speechMs >= VA_MIN_SPEECH_MS ? "وصل صوتك" : "قل جوابك الحين");
+            if (t && t.textContent !== msg) t.textContent = msg;
+        }
     };
-    /* الإيقاف بمؤقت مستقل (مو داخل onaudioprocess)، فلو الصوت ما وصل أبد ما يعلّق: بعد 1.5 ث بدون صوت نحوّل للكتابة */
+    /* الإيقاف بمؤقت مستقل (مو داخل onaudioprocess)، فلو الصوت ما وصل أبد ما يعلّق */
     rec.timer = setInterval(() => {
         const now = performance.now();
+        if (rec.key.indexOf("arm|") === 0) {   /* لسا ما تأكد إني فزت بالجرس: نسجّل بس، وما نحكم */
+            if (now - startedAt > VA_ARM_MS) { VA.arm = null; finish(false); }
+            return;
+        }
         if (!frames && now - startedAt > 1500) finish(true);
         else if (speechMs >= VA_MIN_SPEECH_MS && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
-        else if (bcNow() >= stopAt) finish(true);
-    }, 150);
+        else if (firstVoiceAt && now - firstVoiceAt > VA_MAX_MS) finish(true);
+        else if (bcNow() >= stopAt()) finish(true);
+    }, 100);
     src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
-    vaDiag("rec", { via: own ? "getUserMedia" : "bcTrack" });
+    vaDiag("rec", { via: own ? "getUserMedia" : "bcTrack", armed: key.indexOf("arm|") === 0 });
 }
 
 function vaStop(send) { if (VA.rec && VA.rec.stop) VA.rec.stop(send); }
@@ -150,8 +211,7 @@ async function vaSend(key, chunks, rate) {
     const q0 = (d0.questions || [])[d0.qIndex] || {};
     VA.st = "think"; vaRefresh();
     /* المتسابق خلص كلامه: نمدد الوقت لين يجي الحكم (التحويل والتصحيح ياخذون من 2 إلى 8 ث)، مرة وحدة بالدور */
-    liveTx(id, (d, now) => (d.status === "live" && d.phase === "answer" && d.answerer === myLiveNum(d) && d.qIndex === d0.qIndex && d.deadline - now < VA_EXTEND_MS)
-        ? { deadline: now + VA_EXTEND_MS } : null).catch(() => {});
+    vaExtend();
     let res = null;
     try {
         res = await aiCall("voice", { q: q0.text || "", answer: q0.answer || "", audio: vaB64(vaWav(chunks, rate)) }, VA_EXTEND_MS - 800);
@@ -175,13 +235,13 @@ function vaHTML() {
 </div>`;
     }
     if (VA.st === "rec") {
-        return `<div class="va-box rec">
+        return `<div class="va-box rec" id="vaBox">
 <div class="va-mic">${ic("mic")}</div>
-<div class="va-t">قل جوابك الحين</div>
+<div class="va-t" id="vaT">قل جوابك الحين</div>
 <div class="va-meter"><i id="vaLevel"></i></div>
 <div class="va-sub">أول جواب تقوله هو اللي ينحسب</div>
 </div>`;
     }
-    if (VA.st === "think") return `<div class="va-box"><div class="va-spin"></div></div>`;
+    if (VA.st === "think") return `<div class="va-box"><div class="va-spin"></div><div class="va-t">وصل جوابك، يتحقق...</div></div>`;
     return `<div class="va-box ${VA.ok ? "ok" : "no"}"><div class="va-res">${ic(VA.ok ? "check-circle" : "x-circle")} ${VA.ok ? "صح" : "غلط"}</div><div class="va-t">«${escapeHTML(VA.said || VA.heard)}»</div></div>`;
 }
