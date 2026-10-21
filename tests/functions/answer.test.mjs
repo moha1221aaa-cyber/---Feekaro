@@ -1,6 +1,6 @@
 /* functions/answer.js: الختم، والتصحيح في السيرفر (مين يحق له، والوقت، وأول حكم ينحسب)، والكشف بعد وقته بس.
    وثيقة البث من Firestore وهمية (fetch محلي)، والتوكن موقّع بمفتاح تجريبي. */
-import { setupAuth, fakeCaches, ctxFor, readNdjson, check, done } from "./helpers.mjs";
+import { setupAuth, fakeCaches, ctxFor, runFn, readNdjson, check, done } from "./helpers.mjs";
 import { onRequestPost, onRequestGet } from "../../functions/answer.js";
 import { sealKey, unseal } from "../../lib/seal.js";
 
@@ -23,8 +23,8 @@ auth.routes.push({ match: u => u.startsWith("https://firestore.googleapis.com/")
     if (!DOC || !u.includes("/liveMatches/" + ID + "?")) return new Response("{}", { status: 404 });
     return new Response(JSON.stringify({ fields: enc(DOC).mapValue.fields }));
 } });
-const post = async (body, tok) => onRequestPost(ctxFor(new Request("https://masro7-league.pages.dev/answer", { method: "POST",
-    headers: Object.assign({ Origin: "https://masro7-league.pages.dev", "Content-Type": "application/json" }, tok ? { Authorization: "Bearer " + tok } : {}), body: JSON.stringify(body) }), env));
+const post = async (body, tok) => runFn(onRequestPost, (new Request("https://masro7-league.pages.dev/answer", { method: "POST",
+    headers: Object.assign({ Origin: "https://masro7-league.pages.dev", "Content-Type": "application/json" }, tok ? { Authorization: "Bearer " + tok } : {}), body: JSON.stringify(body) })), env);
 const admin = await auth.token("u_admin", "moha1221aaa@gmail.com"), p1 = await auth.token("u_p1"), p2 = await auth.token("u_p2");
 
 /* --- seal --- */
@@ -78,13 +78,43 @@ DOC = Object.assign(base(), { passed: true, cur: 0, order: [{ uid1: "u_p1", uid2
 r = await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1); j = await r.json();
 check("grade: tampered turn fields don't reset the first verdict", j.repeat === true && j.ok === false, j);
 
-/* --- reveal --- */
-DOC = Object.assign(base(), { qIndex: 1, phase: "answer" });
-r = await post({ action: "reveal", id: ID }); j = await r.json();
-check("reveal (guest): earlier question shown, current hidden", j.answers["0"] === "الرياض" && j.answers["1"] === undefined, j);
+/* --- reveal: للمنظم بس (الوثيقة مفتوحة، فمراحلها ما تنصدّق) --- */
 DOC = Object.assign(base(), { qIndex: 1, phase: "reveal" });
-j = await (await post({ action: "reveal", id: ID })).json();
-check("reveal after reveal phase: current shown (first alt)", j.answers["1"] === "7", j);
-check("reveal never leaks future questions", !JSON.stringify(j).includes("سبعة"));
+check("reveal: guest refused (401)", (await post({ action: "reveal", id: ID })).status === 401);
+check("reveal: player refused even if doc says reveal (403)", (await post({ action: "reveal", id: ID }, p1)).status === 403);
+j = await (await post({ action: "reveal", id: ID }, admin)).json();
+check("reveal: admin gets revealed answers (first alt)", j.answers["0"] === "الرياض" && j.answers["1"] === "7", j);
+
+/* --- طول الختم ثابت مهما كان طول الجواب --- */
+const sl = await (await post({ action: "seal", id: ID, items: [{ text: "ق1", answer: "7" }, { text: "ق2", answer: "عبدالرحمن بن عوف|عبد الرحمن بن عوف" }] }, admin)).json();
+check("seal length doesn't leak answer length", sl.items[0].seal.length === sl.items[1].seal.length, sl.items.map(x => x.seal.length));
+
+/* --- المحاولات المتوازية: وحدة بس تتصحح --- */
+const p4 = await auth.token("u_p4");
+DOC = Object.assign(base(), { order: [{ uid1: "u_p4", uid2: "u_p2" }] });
+/* طلبات ورا بعض بفرق بسيط (اللي يجي والأول للحين يتصحح ينرفض). نفس اللحظة بالضبط ممكن يعدّي: يحتاج تخزين ذرّي (مكتوب في SECURITY-PLAN) */
+let slowAI = env.AI.run; env.AI.run = async (m, i) => { await new Promise(r => setTimeout(r, 80)); return slowAI(m, i); };
+const par = await Promise.all([0, 30, 60].map(ms => new Promise(r => setTimeout(r, ms)).then(() => post({ action: "grade", id: ID, qIndex: 0, given: "جدة" }, p4)).then(r => r.status)));
+env.AI.run = slowAI;
+check("staggered grading: one graded, the rest refused", par.filter(x => x === 200).length === 1 && par.filter(x => x === 409).length === 2, par);
+/* --- open: صندوق أسئلة المواجهة الجاية --- */
+const box = (await (await post({ action: "seal", id: ID, boxes: [JSON.stringify({ qs: [{ text: "م1", seal: "x" }], gold: [] }), JSON.stringify({ qs: [{ text: "م2 سؤال", seal: "y" }], gold: [{ text: "ذهبي", seal: "z" }] })] }, admin)).json()).boxes;
+check("seal boxes (admin)", box.length === 2 && box.every(b => /^v1\./.test(b)) && !JSON.stringify(box).includes("م2"));
+check("seal boxes refused for player", (await post({ action: "seal", id: ID, boxes: ["{}"] }, p1)).status === 403);
+const od = (extra) => Object.assign({ type: "round", status: "live", scene: "result", cur: 0, hostSeen: Date.now() - 60000,
+    order: [{ state: "done", box: box[0] }, { state: "pending", box: box[1] }] }, extra || {});
+DOC = od();
+j = await (await post({ action: "open", id: ID, m: 1 }, p1)).json();
+check("open: autopilot (host gone, next match) gets texts", j.qs && j.qs[0].text === "م2 سؤال" && j.gold[0].text === "ذهبي", j);
+DOC = od({ hostSeen: Date.now() - 2000 });
+check("open: refused while host is present", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 403);
+DOC = od({ order: [{ state: "pending", box: box[0] }, { state: "pending", box: box[1] }], cur: -1, scene: "opening" });
+check("open: refused for a match that is not next", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 409);
+DOC = od({ scene: "playing" });
+check("open: refused mid-match", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 409);
+DOC = od({ hostSeen: Date.now(), scene: "playing" });
+check("open: admin any time", (await (await post({ action: "open", id: ID, m: 1 }, admin)).json()).qs[0].text === "م2 سؤال");
+check("open: guest refused (401)", (await post({ action: "open", id: ID, m: 1 })).status === 401);
+
 check("bad origin refused", (await onRequestPost(ctxFor(new Request("https://masro7-league.pages.dev/answer", { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }), env))).status === 403);
 auth.restore(); done();

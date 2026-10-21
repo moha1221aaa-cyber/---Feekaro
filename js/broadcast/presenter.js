@@ -78,10 +78,9 @@ function bcToggleVoice() {
    وبعدها كل الأجهزة تاخذها من الكاش. كذا كل جملة تنحسب من رصيد الأصوات مرة وحدة بس */
 function bcPrefetchVoice(d) {
     if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d) || !amBcHost(d)) return;
-    (d.questions || []).forEach((q, i) => {
-        bcTtsLoad(bcQText(d, i, true)).catch(() => {});
-        bcTtsLoad(bcRevealText(d, i, true)).catch(() => {});
-    });
+    /* الأسئلة بس. جملة الجواب ما تتجهز قبل وقتها: كاش /tts عام، فلو انطلبت قبل الكشف أي أحد يقدر يجرّب
+       "والإجابة الصحيحة هي: ..." ويعرف من الكاش (200) إن تخمينه صح. تنطلب من جهاز المنظم أول ما يبدأ الكشف (تحت) */
+    (d.questions || []).forEach((q, i) => { bcTtsLoad(bcQText(d, i, true)).catch(() => {}); });
 }
 
 /* المقدم يتكلم حسب اللحظة في البث */
@@ -112,7 +111,8 @@ function bcAnnouncer(d) {
         /* جملة الجواب (متجهزة مسبقاً) وبعدها جملة الموقف لو فيه موقف. جهاز المنظم يطلبها الحين عشان تكون في الكاش للكل */
         const situ = bcSituText(d);
         text = [bcRevealText(d, d.qIndex, true), situ];
-        if (situ && amBcHost(d) && key !== bcLastSpokenKey && bcVoiceOn && bcTtsServerOk) bcTtsLoad(situ).catch(() => {});
+        /* جهاز المنظم يطلب جملة الجواب والموقف أول ما يبدأ الكشف (الجواب صار علني)، والأجهزة الثانية تقراها بعد 1.75 ث من الكاش */
+        if (amBcHost(d) && key !== bcLastSpokenKey && bcVoiceOn && bcTtsServerOk) [text[0], situ].forEach(t => { if (t) bcTtsLoad(t).catch(() => {}); });
     } else if (d.scene === "result" && o) {
         key = "res" + d.cur; delay = 2000; text = bcResultText(d);
     } else if (d.scene === "closing") {
@@ -129,7 +129,15 @@ function bcAnnouncer(d) {
         if (key[0] === "q" && x && x.phase !== "buzz") return;
         /* الجواب المختوم: نستنى السيرفر يكشفه، وبعدها نقرا جملة الجواب (نفس النص اللي جهّزه المنظم) وجملة الموقف */
         if (key[0] === "a" && Array.isArray(text) && !text[0]) {
-            bcRevealFetch(openLiveId).then(() => { if (bcLastSpokenKey === key) bcSpeak([bcRevealText(d, d.qIndex, true), text[1]]); });
+            /* ننتظر جهاز المنظم يكتب الجواب (shown) لين 3 ث، وبعدها نقرا */
+            let n = 0;
+            const wait = () => {
+                const x = liveMatchesCache[openLiveId];
+                const t0 = x && x.cur === d.cur && x.qIndex === d.qIndex ? bcRevealText(x, d.qIndex, true) : "";
+                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]]); return; }
+                setTimeout(wait, 200);
+            };
+            wait();
             return;
         }
         bcSpeak(text);

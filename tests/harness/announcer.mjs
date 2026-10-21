@@ -64,7 +64,11 @@ try {
     const reveal = "والإجابة الصحيحة هي: كذا";
     const fanTexts = tts.filter(t => t.who === "fan").map(t => t.text);
     const situ = fanTexts.find(t => /نار|يوقفه/.test(t));
-    check("reveal line was prefetched by host before reveal", fanTexts.filter(t => !/نار|يوقفه/.test(t)).every(t => prefetched.has(t)), { fanTexts });
+    /* جملة الجواب ما تنطلب قبل الكشف (كاش /tts عام = يكشف الجواب لو انطلبت قبل)، وجهاز المنظم يطلبها أول وقت الكشف */
+    const revealLine = fanTexts.find(t => !/نار|يوقفه/.test(t));
+    check("reveal line NOT requested before the reveal", !!revealLine && !prefetched.has(revealLine), { revealLine });
+    const hr = tts.find(t => t.who === "host" && t.text === revealLine), fr = tts.find(t => t.who === "fan" && t.text === revealLine);
+    check("host requested the reveal line first at reveal time", hr && fr && hr.at <= fr.at, { host: hr && hr.at, fan: fr && fr.at });
     check("situ line spoken (streak)", !!situ, situ);
     const hostSitu = tts.find(t => t.who === "host" && t.text === situ), fanSitu = tts.find(t => t.who === "fan" && t.text === situ);
     check("host requested situ first (others hit the cache)", hostSitu && fanSitu && hostSitu.at <= fanSitu.at, { host: hostSitu && hostSitu.at, fan: fanSitu && fanSitu.at });

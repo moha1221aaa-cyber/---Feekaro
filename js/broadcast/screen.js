@@ -229,7 +229,8 @@ function renderLiveScreen() {
     const me = d ? myLiveNum(d) : 0;
     bcBuzzSeen(d);
     bcDiagPanel(d);
-    if (d && d.scene === "playing" && d.phase === "reveal") bcRevealFetch(openLiveId);
+    if (d && d.scene === "playing" && d.phase === "reveal") bcPublishShown(d);
+    if (d && d.pend) bcHostJudge(d);
 
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";

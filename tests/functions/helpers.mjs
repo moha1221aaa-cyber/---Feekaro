@@ -27,12 +27,21 @@ export async function setupAuth() {
 
 export function fakeCaches() {
     const m = new Map();
-    globalThis.caches = { default: { match: async k => m.has(k.url) ? new Response(m.get(k.url)) : undefined, put: async (k, r) => { m.set(k.url, await r.text()); } } };
+    globalThis.caches = { default: { match: async k => m.has(k.url) ? new Response(m.get(k.url)) : undefined, put: async (k, r) => { m.set(k.url, await r.text()); }, delete: async k => m.delete(k.url) } };
 }
 
 export function ctxFor(request, env) {
     const pending = [];
     return { request, env, waitUntil: p => pending.push(p), pending };
+}
+
+/* يشغّل الدالة ويستنى شغلها الخلفي (waitUntil) قبل ما يرجّع، مثل طلب حقيقي خلص */
+export async function runFn(fn, request, env) {
+    const c = ctxFor(request, env);
+    const res = await fn(c);
+    const body = await res.text();
+    await Promise.all(c.pending);
+    return new Response(body, { status: res.status, headers: res.headers });
 }
 
 export async function readNdjson(res) {

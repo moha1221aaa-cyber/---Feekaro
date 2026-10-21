@@ -225,6 +225,9 @@ async function vaStart(key) {
     catch (e) {
         if (VA.rec === rec) VA.rec = null;
         if (own) stream.getTracks().forEach(x => x.stop());
+        /* لو فتحنا مايكه المكتوم عشان التسجيل، نرجّعه مكتوم (المايك ما يظل مفتوح بسبب خطأ) */
+        if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
+        if (typeof bedApply === "function") bedApply();
         vaDiag("capture-error", { err: String((e && (e.name || e.message)) || e).slice(0, 80) });
         if (VA.key === rec.key && !VA.arm) vaToType("ما قدرت أسجّل صوتك، اكتب جوابك");
         return;

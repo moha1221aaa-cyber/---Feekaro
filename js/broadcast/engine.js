@@ -307,12 +307,13 @@ async function bcStartRound(r) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     try {
-        await firebaseDB.runTransaction(async tx => {
+        const wrote = await firebaseDB.runTransaction(async tx => {
             const snap = await tx.get(liveRef(id));
-            if (snap.exists && isLiveActive(snap.data())) return;
+            if (snap.exists && isLiveActive(snap.data())) return false;
             tx.set(liveRef(id), data);
+            return true;
         });
-        if (secret) bcSaveSecret(id, secret);
+        if (secret && wrote) bcSaveSecret(id, secret);
         openLiveScreen(id);
         if (!secret) roomToast("تنبيه: الأجوبة ما انختمت (السيرفر ما رد)، فالبث شغال بالطريقة القديمة والأجوبة في الوثيقة", "alert");
     } catch (err) {
@@ -341,7 +342,8 @@ function liveTx(id, fn) {
 /* ===== الأجوبة المختومة (functions/answer.js، SECURITY-PLAN الخطوة 1) =====
    عند بداية البث: لكل مواجهة 5 أسئلة + 3 ذهبية، وأجوبتها تنختم في السيرفر. الوثيقة العامة فيها { text, seal } بس،
    والأجوبة الأصلية في liveSecrets/<id> (المنظم بس يقراها: للمذيع يجهّز جملة الجواب مسبقاً).
-   التصحيح في السيرفر (bcServerGrade)، والجواب يطلع للكل بعد مرحلة الكشف بس (bcRevealFetch).
+   التصحيح في السيرفر (bcServerGrade). وقت الكشف جهاز المنظم يكتب الجواب في الوثيقة (shown.<مواجهة>_<سؤال>)، فالكل يشوفه.
+   السيرفر ما يكشف الجواب لغير المنظم، لأن مراحل البث في الوثيقة المفتوحة ممكن أي أحد يغيّرها (تدقيق 21 أكتوبر).
    لو الختم ما اشتغل: البث يكمل بالطريقة القديمة (الجواب في الوثيقة والتصحيح في الجهاز). */
 const LIVE_GOLD_N = 3;
 const bcSecrets = {};     /* id ← { qs: { text: answer } } (المنظم) */
@@ -368,30 +370,68 @@ async function bcSealRound(id, order) {
         const res = await answerPost({ action: "seal", id, items }, 12000);
         const out = res.items || [];
         if (out.length !== items.length) throw new Error("seal count");
-        const secret = {};
+        const answers = {}, boxes = [];
         let k = 0;
-        plan.forEach((p, i) => {
-            const take = list => list.map(q => { const x = out[k++]; secret[x.text] = q.answer; return { text: x.text, seal: x.seal }; });
-            order[i].qs = take(p.qs);
-            order[i].gold = take(p.gold);
+        const mplan = plan.map(p => {
+            const take = list => list.map(q => { const x = out[k++]; answers[x.text] = q.answer; return { text: x.text, seal: x.seal }; });
+            return { qs: take(p.qs), gold: take(p.gold) };
         });
-        return secret;
+        /* نص أسئلة كل مواجهة نفسه مختوم (box): ما ينفتح إلا لما يجي دور المواجهة (bcOpenNext)، عشان محد يقرا أسئلته من بداية البث */
+        const bx = await answerPost({ action: "seal", id, boxes: mplan.map(m => JSON.stringify(m)) }, 12000);
+        if (!bx.boxes || bx.boxes.length !== order.length) throw new Error("box count");
+        order.forEach((o, i) => { o.box = bx.boxes[i]; });
+        return { answers, plan: mplan };
     } catch (e) {
         console.log("seal:", e && e.message);
-        order.forEach(o => { delete o.qs; delete o.gold; });
+        order.forEach(o => { delete o.box; });
         return null;
     }
 }
 function bcSaveSecret(id, secret) {
-    bcSecrets[id] = secret;
-    firebaseDB.collection("liveSecrets").doc(id).set({ answers: secret, at: bcNow() }).catch(err => console.log("liveSecrets:", err && err.code));
+    bcSecrets[id] = secret.answers;
+    bcPlans[id] = secret.plan;
+    firebaseDB.collection("liveSecrets").doc(id).set({ answers: secret.answers, plan: JSON.stringify(secret.plan), at: bcNow() }).catch(err => console.log("liveSecrets:", err && err.code));
+}
+/* ===== فتح أسئلة المواجهة الجاية قبل الانتقال لها =====
+   المنظم: من liveSecrets عنده. جهاز ثاني (الطيار الآلي والمنظم غايب): من السيرفر (open)، والسيرفر يتأكد إن المنظم غايب وإنها فعلاً الجاية */
+const bcPlans = {};       /* id ← [{ qs, gold }] (المنظم) */
+const bcOpened = {};      /* id ← { رقم المواجهة: { qs, gold } } */
+function bcNextIndex(x) {
+    const order = x.order || [];
+    let n = order.findIndex((o, i) => o.state === "pending" && i > x.cur);
+    if (n === -1) n = order.findIndex((o, i) => o.state === "pending" && i !== x.cur);
+    return n;
+}
+function bcOpenedFor(id, x, i) {
+    const o = (x.order || [])[i] || {};
+    if (!o.box) return null;
+    return (bcOpened[id] || {})[i] || ((bcPlans[id] || [])[i]) || null;
+}
+async function bcOpenNext(id, skip) {
+    const x = liveMatchesCache[id];
+    if (!x) return;
+    const tmp = Object.assign({}, x, { order: (x.order || []).map((o, i) => i === x.cur && skip && o.state === "pending" ? Object.assign({}, o, { state: "skipped" }) : o) });
+    const n = bcNextIndex(tmp);
+    if (n === -1 || !(tmp.order[n] || {}).box || bcOpenedFor(id, x, n)) return;
+    if (isAdmin) { await bcLoadSecret(id, true); if (bcOpenedFor(id, x, n)) return; }
+    try {
+        const r = await answerPost({ action: "open", id, m: n }, 8000);
+        if (r && Array.isArray(r.qs)) (bcOpened[id] || (bcOpened[id] = {}))[n] = { qs: r.qs, gold: r.gold || [] };
+    } catch (e) { console.log("open:", e && e.message); }
 }
 /* المنظم يجيب الأجوبة الأصلية (لو فتح البث من جهاز ثاني أو بعد تحديث الصفحة) */
 let bcSecretTry = {};
-function bcLoadSecret(id) {
-    if (!isAdmin || bcSecrets[id] || bcSecretTry[id]) return;
-    bcSecretTry[id] = 1;
-    firebaseDB.collection("liveSecrets").doc(id).get().then(s => { if (s.exists) { bcSecrets[id] = (s.data() || {}).answers || {}; liveLastSig = ""; renderLiveScreen(); } }).catch(() => {});
+function bcLoadSecret(id, force) {
+    if (!isAdmin || (bcSecrets[id] && bcPlans[id])) return Promise.resolve();
+    if (bcSecretTry[id] && !force) return bcSecretTry[id];
+    bcSecretTry[id] = firebaseDB.collection("liveSecrets").doc(id).get().then(s => {
+        if (!s.exists) { delete bcSecretTry[id]; return; }   /* لسا ما انكتبت: نجرب مرة ثانية بعدين */
+        const v = s.data() || {};
+        bcSecrets[id] = v.answers || {};
+        try { bcPlans[id] = JSON.parse(v.plan || "[]"); } catch (e) { bcPlans[id] = []; }
+        liveLastSig = ""; renderLiveScreen();
+    }).catch(() => { delete bcSecretTry[id]; });
+    return bcSecretTry[id];
 }
 /* جواب السؤال i: من الوثيقة (الطريقة القديمة)، أو اللي انكشف، أو أجوبة المنظم */
 function bcAnswerOf(d, i) {
@@ -399,14 +439,26 @@ function bcAnswerOf(d, i) {
     if (!q) return "";
     if (q.answer) return String(q.answer);
     const id = openLiveId;
-    return (bcRevealed[id] && bcRevealed[id][q.text]) || (bcSecrets[id] && bcSecrets[id][q.text]) || "";
+    const shown = (d.shown || {})[d.cur + "_" + i];
+    return shown || (bcRevealed[id] && bcRevealed[id][q.text]) || (bcSecrets[id] && bcSecrets[id][q.text]) || "";
+}
+/* المنظم وقت الكشف: يكتب الجواب (أول صيغة) في الوثيقة. لو غاب المنظم، الجواب ما يطلع (البث يكمل عادي) */
+const bcShownSent = {};
+function bcPublishShown(d) {
+    const q = (d.questions || [])[d.qIndex];
+    const k = openLiveId + "|" + d.cur + "_" + d.qIndex;
+    if (!isAdmin || !q || !bcSealed(q) || bcShownSent[k] || ((d.shown || {})[d.cur + "_" + d.qIndex])) return;
+    const a = (bcSecrets[openLiveId] || {})[q.text];
+    if (!a) { bcRevealFetch(openLiveId); return; }
+    bcShownSent[k] = 1;
+    liveRef(openLiveId).update({ ["shown." + d.cur + "_" + d.qIndex]: String(a).split("|")[0] }).catch(() => { delete bcShownSent[k]; });
 }
 /* بعد الكشف: نجيب الجواب من السيرفر (السيرفر يتأكد من الوثيقة إن وقته جا) */
 const bcRevealBusy = {};
 function bcRevealFetch(id) {
     const d = liveMatchesCache[id];
     const q = d && (d.questions || [])[d.qIndex];
-    if (!q || !bcSealed(q) || bcAnswerOf(d, d.qIndex)) return Promise.resolve();
+    if (!isAdmin || !q || !bcSealed(q) || bcAnswerOf(d, d.qIndex)) return Promise.resolve();   /* للمنظم بس (السيرفر يرفض غيره) */
     const k = id + "|" + d.cur + "|" + d.qIndex;
     if (!bcRevealBusy[k]) {
         bcRevealBusy[k] = answerPost({ action: "reveal", id }, 8000).then(res => {
@@ -418,9 +470,32 @@ function bcRevealFetch(id) {
     }
     return bcRevealBusy[k];
 }
-/* تصحيح الكتابة في السيرفر (السؤال المختوم) */
+/* تصحيح الكتابة في السيرفر (السؤال المختوم): يرجّع true/false بس لو السيرفر حكم فعلاً */
 function bcServerGrade(id, qIndex, given) {
     return answerPost({ action: "grade", id, qIndex, given }, 6000).then(r => r.ok === true);
+}
+/* السيرفر ما رد (نت، 5xx، 429): الجواب ينكتب في الوثيقة (pend) وجهاز المنظم يصححه من الأجوبة اللي عنده.
+   ما نحسبه غلط لأن الخطأ مو من المتسابق. ولو المنظم غايب، يخلص الوقت عادي */
+function bcAskHost(id, d0, text) {
+    const n = myLiveNum(d0);
+    return liveRef(id).update({ pend: { by: n, cur: d0.cur, q: d0.qIndex, text: String(text).slice(0, 80), at: bcNow() } });
+}
+const bcJudged = {};
+function bcHostJudge(d) {
+    const p = d && d.pend;
+    if (!p || !isAdmin || d.phase !== "answer" || p.by !== d.answerer || p.cur !== d.cur || p.q !== d.qIndex) return;
+    const q = (d.questions || [])[d.qIndex];
+    const ans = q && (bcSecrets[openLiveId] || {})[q.text];
+    const k = openLiveId + "|" + p.cur + "|" + p.q + "|" + p.by + "|" + p.at;
+    if (!ans || bcJudged[k]) return;
+    bcJudged[k] = 1;
+    const ok = liveAnswerMatches(p.text, ans);
+    liveTx(openLiveId, (x, now) => {
+        const pp = x.pend;
+        if (!pp || x.status !== "live" || x.scene !== "playing" || x.phase !== "answer" || pp.by !== x.answerer || pp.cur !== x.cur || pp.q !== x.qIndex || pp.at !== p.at) return null;
+        const last = { by: pp.by, text: pp.text, correct: ok };
+        return Object.assign(ok ? liveRevealUpd(x, pp.by, now, last) : livePassUpd(x, pp.by, now, last), { pend: null });
+    }).catch(() => { delete bcJudged[k]; });
 }
 
 function liveQuestionUpd(i, now) {
@@ -429,7 +504,7 @@ function liveQuestionUpd(i, now) {
 function liveRevealUpd(d, winner, now, last) {
     const log = (d.log || Array(LIVE_Q_COUNT).fill(-1)).slice();
     log[d.qIndex] = winner;
-    const u = { phase: "reveal", outcome: winner, log: log, deadline: now + LIVE_REVEAL_MS };
+    const u = { phase: "reveal", outcome: winner, log: log, deadline: now + LIVE_REVEAL_MS, pend: null };
     if (last !== undefined) u.lastAnswer = last;
     if (winner === 1) u.s1 = (d.s1 || 0) + 1;
     if (winner === 2) u.s2 = (d.s2 || 0) + 1;
@@ -443,7 +518,7 @@ function liveRevealUpd(d, winner, now, last) {
 function livePassUpd(d, n, now, last) {
     const o = n === 1 ? 2 : 1;
     if (!d["tried" + o]) {
-        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS };
+        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS, pend: null };
         u["tried" + o] = true;
         return u;
     }
@@ -461,7 +536,7 @@ function liveNextStep(d, now) {
         if (next < qs.length) return liveQuestionUpd(next, now);
         /* تعادل: سؤال ذهبي (لين 3 مرات)، واللي يجاوب صح أول يفوز */
         if ((d.s1 || 0) === (d.s2 || 0) && (d.golden || 0) < 3) {
-            const gold = ((d.order || [])[d.cur] || {}).gold;
+            const gold = d.gold || ((d.order || [])[d.cur] || {}).gold;
             const extra = Array.isArray(gold) && gold.length ? gold[(d.golden || 0) % gold.length]
                 : pickLiveQuestions((d.usedQ || []).concat(qs.map(q => q.text)))[0];
             if (extra) {
@@ -499,7 +574,7 @@ function bcNext(skip) {
     const d = liveMatchesCache[id];
     if (!d || !isAdmin) return;
     if (skip && !confirm(`تخطي مواجهة ${livePlayerName(d, 1)} ضد ${livePlayerName(d, 2)}؟\nما بتنسجل لها نتيجة وتقدرون تلعبونها بعدين.`)) return;
-    liveTx(id, (x, now) => bcNextUpd(x, now, skip)).catch(err => alert("تعذّر: " + err.message));
+    bcOpenNext(id, skip).then(() => liveTx(id, (x, now) => bcNextUpd(x, now, skip))).catch(err => alert("تعذّر: " + err.message));
 }
 
 /* البث المجدول: يبدأ الافتتاح (المنظم يضغط "ابدأ الحين" أو لحاله أول ما يخلص العداد) */
@@ -574,9 +649,12 @@ function bcNextUpd(x, now, skip) {
     if (next === -1) next = order.findIndex((o, i) => o.state === "pending" && i !== x.cur);
     if (next === -1) return { scene: "closing", order: order, phase: "done", deadline: 0, sceneAt: now };
     const used = (x.usedQ || []).concat((x.questions || []).map(q => q.text)).slice(-300);
+    /* المواجهة أسئلتها مختومة (box) وما انفتحت للحين على هالجهاز: ما ننتقل (bcOpenNext يفتحها قبل) */
+    const opened = order[next].box ? bcOpenedFor(openLiveId, x, next) : null;
+    if (order[next].box && !opened) return null;
     return Object.assign(bcQuizReset(), {
         scene: "intro", cur: next, order: order, sceneAt: now,
-        usedQ: used, questions: (order[next].qs && order[next].qs.length) ? order[next].qs.slice() : pickLiveQuestions(used)
+        usedQ: used, questions: opened ? opened.qs.slice() : pickLiveQuestions(used), gold: opened ? opened.gold.slice() : null
     });
 }
 
@@ -598,13 +676,13 @@ function bcAutoPilot(d) {
     if (!wait || bcNow() - (Number(d.sceneAt) || 0) < wait || bcNow() - bcAutoTry < 4000) return;
     bcAutoTry = bcNow();
     const id = openLiveId, scene = d.scene, v = d.v;
-    liveTx(id, (x, now) => {
+    (scene === "opening" || scene === "result" ? bcOpenNext(id, false) : Promise.resolve()).then(() => liveTx(id, (x, now) => {
         if (x.status !== "live" || x.scene !== scene || x.v !== v || !bcHostGone(x)) return null;
         if (scene === "intro") return { scene: "talk", sceneAt: now, auto: true };
         if (scene === "talk") return { scene: "countdown", deadline: now + LIVE_COUNT_MS, auto: true };
         if (scene === "closing") return { status: "ended", phase: "done", endedAt: now, endReason: "auto" };
         return bcNextUpd(x, now, false);
-    }).catch(() => {});
+    })).catch(() => {});
 }
 
 /* البث المجدول: أي جهاز فاتح الموقع يبدأه أول ما يجي الموعد (مو لازم المنظم) */
@@ -765,8 +843,18 @@ async function liveSubmitAnswer() {
     if (bcSealed(q0)) {
         /* الجواب مختوم: التصحيح كله في السيرفر */
         inp.value = "يتحقق من إجابتك...";
-        aiOk = await bcServerGrade(id, d0.qIndex, text).catch(() => false);
+        let err = null;
+        aiOk = await bcServerGrade(id, d0.qIndex, text).catch(e => { err = e; return false; });
         inp.value = text;
+        if (err) {
+            if (err.status === 403 || err.status === 409) {   /* السيرفر رفض (مو دورك، خلص الوقت، أو جوابك قيد التصحيح): ما نسجّل شي */
+                roomToast(err.message || "ما انحسب الجواب", "alert");
+                return;
+            }
+            bcAskHost(id, d0, text).then(() => roomToast("السيرفر ما رد، المنظم يصحح جوابك", "hourglass"))
+                .catch(() => { inp.disabled = false; if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "إرسال"; } });
+            return;
+        }
     } else if (q0.text && !liveAnswerMatches(text, q0.answer || "") && typeof aiGrade === "function") {
         const left = (d0.deadline || 0) - bcNow();
         if (left > 1500) {

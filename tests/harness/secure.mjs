@@ -3,7 +3,7 @@
    يتأكد: الجواب ما يطلع في الوثيقة العامة ولا عند المشاهدين قبل الكشف، والتصحيح في السيرفر، والغش ينرفض.
    node tests/harness/secure.mjs [مجلد] */
 import fs from "node:fs";
-import { serve, FakeDB, seed, launch, device, until, sleep, liveDoc } from "./harness.mjs";
+import { serve, FakeDB, seed, launch, device, until, sleep, liveDoc, PORT } from "./harness.mjs";
 import { setupAuth, fakeCaches } from "../functions/helpers.mjs";
 import { onRequestPost as answerPost } from "../../functions/answer.js";
 
@@ -40,8 +40,8 @@ async function callAnswer(body, who) {
     if (body.action === "seal") (body.items || []).forEach(x => { truth[x.text] = x.answer; });
     calls.push({ who, action: body.action });
     const pending = [];
-    const req = new Request("http://127.0.0.1:8787/answer", { method: "POST", body: JSON.stringify(body),
-        headers: Object.assign({ Origin: "http://127.0.0.1:8787", "Content-Type": "application/json" }, who && tokens[who] ? { Authorization: "Bearer " + tokens[who] } : {}) });
+    const req = new Request("http://127.0.0.1:" + PORT + "/answer", { method: "POST", body: JSON.stringify(body),
+        headers: Object.assign({ Origin: "http://127.0.0.1:" + PORT, "Content-Type": "application/json" }, who && tokens[who] ? { Authorization: "Bearer " + tokens[who] } : {}) });
     const res = await answerPost({ request: req, env, waitUntil: p => pending.push(p) });
     const text = await res.text();
     await Promise.all(pending);
@@ -68,11 +68,15 @@ try {
         const j = (typeof doc === "string" ? doc : JSON.stringify(doc)).replace(/\\?"seal\\?":\\?"[^"\\]*\\?"/g, "");
         return answers.filter(a => new RegExp("(^|[^\\p{L}\\p{N}])" + esc(a) + "([^\\p{L}\\p{N}]|$)", "u").test(j));
     };
-    check("every match has 5 sealed + 3 golden", d0.order.every(o => o.qs && o.qs.length === 5 && o.gold && o.gold.length === 3 && o.qs.concat(o.gold).every(q => /^v1\./.test(q.seal) && !q.answer)));
+    check("every match has a sealed box (question texts hidden too)", d0.order.every(o => /^v1\./.test(o.box || "") && !o.qs && !o.gold));
+    const allTexts = Object.keys(truth);
+    const docTexts = allTexts.filter(t => JSON.stringify(d0).replace(/"box":"[^"]*"/g, "").includes(t));
+    check("no question text of any match in the public doc at start", docTexts.length === 0, docTexts);
     check("no answer anywhere in the public doc", leaks(d0).length === 0, leaks(d0));
     const sec = await until(() => db.data("liveSecrets/round_2"), 5000);
-    check("host kept the answers in liveSecrets (admin-only)", !!sec && d0.order.every(o => o.qs.concat(o.gold).every(q => !!sec.answers[q.text])));
-    await host.goto("http://127.0.0.1:8787/index.html?as=host&live=round_2");
+    const plan = sec ? JSON.parse(sec.plan || "[]") : [];
+    check("host kept answers + plan in liveSecrets (admin-only)", !!sec && plan.length === d0.order.length && plan.every(m => m.qs.length === 5 && m.gold.length === 3 && m.qs.concat(m.gold).every(q => !!sec.answers[q.text] && /^v1\./.test(q.seal))));
+    await host.goto("http://127.0.0.1:" + PORT + "/index.html?as=host&live=round_2");
     const p1 = await device(browser, db, "p1", { api }), p2 = await device(browser, db, "p2", { api }), fan = await device(browser, db, "fan", { api });
     await until(() => host.$("button.bc-go"), 8000);
     await host.click("button.bc-go");   /* ابدأ المواجهة الأولى */
@@ -81,6 +85,8 @@ try {
     await until(() => liveDoc(db).scene === "talk", 6000);
     await sleep(800);
     await host.click("button.bc-go");
+    const dm = liveDoc(db);
+    check("only the current match's questions opened", dm.questions.length === 5 && dm.questions.every(q => plan[0].qs.some(x => x.text === q.text)) && !plan[1].qs.some(x => JSON.stringify(dm).includes(x.text)));
     check("question live", await until(() => liveDoc(db).scene === "playing" && liveDoc(db).phase === "buzz", 12000));
     await sleep(800);
     const fanCache = await fan.evaluate(() => JSON.stringify(liveMatchesCache));
@@ -103,6 +109,10 @@ try {
     check("viewer sees the right answer after the reveal", shown === truth[qText].split("|")[0], { shown, want: truth[qText] });
     await sleep(300);
     await fan.screenshot({ path: out + "/2-reveal-viewer.png" });
+    /* غش: مشاهد يغيّر مرحلة البث في الوثيقة المفتوحة لـ reveal (والسؤال الجاي) ويطلب الأجوبة من السيرفر */
+    await until(() => liveDoc(db).qIndex === 1 && liveDoc(db).phase === "buzz", 15000);
+    const peek = await fan.evaluate(() => liveRef("round_2").update({ phase: "reveal", qIndex: 4 }).then(() => answerPost({ action: "reveal", id: "round_2" })).then(r => JSON.stringify(r), e => String(e.status)));
+    check("viewer can't unlock answers by rewriting the phase", peek === "403", peek);
     const errs = [host, p1, p2, fan].flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
     check("no page errors", !errs.length, errs);
 } catch (e) { ok = false; console.log(e.stack || e); }

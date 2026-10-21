@@ -18,7 +18,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "..", "..");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".mp3": "audio/mpeg", ".mp4": "video/mp4", ".json": "application/json", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
 
+export const PORT = Number(process.env.HARNESS_PORT) || 8787;   /* HARNESS_PORT لو 8787 مشغول */
 export function serve(port) {
+    port = PORT;
     const srv = http.createServer((req, res) => {
         let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
         if (p === "/") p = "/index.html";
@@ -189,7 +191,7 @@ export async function device(browser, db, who, opts) {
     page.on("console", m => page.__logs.push(m.type() + ": " + m.text()));
     page.on("pageerror", e => page.__logs.push("PAGEERROR: " + e.message));
     page.on("dialog", d => d.accept());
-    await page.goto(`${opts.base || "http://127.0.0.1:8787"}/index.html?as=${who}&live=${opts.live || "round_2"}`);
+    await page.goto(`${opts.base || "http://127.0.0.1:" + PORT}/index.html?as=${who}&live=${opts.live || "round_2"}`);
     return page;
 }
 
