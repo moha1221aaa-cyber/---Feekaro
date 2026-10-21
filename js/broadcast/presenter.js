@@ -127,6 +127,11 @@ function bcAnnouncer(d) {
         /* سؤال انضغط جرسه قبل ما يبدأ المذيع يقراه: ما نقراه */
         const x = liveMatchesCache[openLiveId];
         if (key[0] === "q" && x && x.phase !== "buzz") return;
+        /* الجواب المختوم: نستنى السيرفر يكشفه، وبعدها نقرا جملة الجواب (نفس النص اللي جهّزه المنظم) وجملة الموقف */
+        if (key[0] === "a" && Array.isArray(text) && !text[0]) {
+            bcRevealFetch(openLiveId).then(() => { if (bcLastSpokenKey === key) bcSpeak([bcRevealText(d, d.qIndex, true), text[1]]); });
+            return;
+        }
         bcSpeak(text);
     }, delay);
 }

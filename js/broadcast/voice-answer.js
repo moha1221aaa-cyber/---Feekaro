@@ -284,11 +284,11 @@ function vaPartial(key, chunks, rate) {
 }
 
 /* الطلب للسيرفر: الرد يجي على دفعتين (سطر لكل دفعة): {heard} أول ما يخلص Whisper، وبعدها {said, ok} */
-async function vaPost(body, onHeard, timeoutMs) {
+async function vaPost(body, onHeard, timeoutMs, path) {
     const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
     const t = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
     try {
-        const r = await fetch("/ai", {
+        const r = await fetch(path || "/ai", {
             method: "POST",
             headers: Object.assign({ "Content-Type": "application/json" }, await authHeaders()),
             body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined
@@ -324,12 +324,16 @@ async function vaSend(key, chunks, rate) {
     let res = null;
     const t0 = performance.now();
     try {
-        res = await vaPost({ task: "voice", stream: true, q: q0.text || "", answer: q0.answer || "", audio: vaB64(vaWav(chunks, rate)) }, heard => {
+        /* السؤال المختوم: السيرفر (functions/answer.js) يتأكد إنه دوري ويفتح الجواب ويصحح. القديم: /ai بالجواب من الوثيقة */
+        const audio = vaB64(vaWav(chunks, rate));
+        const sealed = typeof bcSealed === "function" && bcSealed(q0);
+        const body = sealed ? { action: "grade", stream: true, id, qIndex: d0.qIndex, audio } : { task: "voice", stream: true, q: q0.text || "", answer: q0.answer || "", audio };
+        res = await vaPost(body, heard => {
             if (VA.key !== key) return;
             VA.live = heard;
             const el = document.getElementById("vaLive"); if (el) el.textContent = "«" + heard + "»";
             vaDiag("heard", { heard: heard.slice(0, 60), heardMs: Math.round(performance.now() - t0) });
-        }, VA_EXTEND_MS - 800);
+        }, VA_EXTEND_MS - 800, sealed ? "/answer" : "/ai");
     } catch (e) { res = null; }
     if (VA.key !== key) return;
     vaDiag(res ? "result" : "server-error", res ? { heard: (res.heard || "").slice(0, 60), said: res.said || "", ok: res.ok === true, ms: Math.round(performance.now() - t0) } : {});

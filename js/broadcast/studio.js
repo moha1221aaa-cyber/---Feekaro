@@ -149,7 +149,9 @@ function bcRevealText(d, i, plain) {
     const q = (d.questions || [])[i];
     if (!q) return "";
     /* بدون إضافات: نفس النص اللي جهّزه جهاز المنظم مسبقاً (bcPrefetchVoice)، والموقف جملة لحالها (bcSituText) */
-    return bcFill(bcPick(BC_HOST.reveal, "a" + d.round + ":" + d.cur + ":" + i), { a: String(q.answer || "").split("|")[0] });
+    const a = bcAnswerOf(d, i);
+    if (!a) return "";   /* الجواب مختوم وما انكشف للحين */
+    return bcFill(bcPick(BC_HOST.reveal, "a" + d.round + ":" + d.cur + ":" + i), { a: a.split("|")[0] });
 }
 /* جملة الموقف بعد كشف جواب صح: رجوع من خسارة، تعادل، تقدّم، أو سلسلة (3 إجابات ورا بعض). نفس الجملة على كل الأجهزة (bcPick ثابت) */
 function bcSituKind(d) {

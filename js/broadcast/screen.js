@@ -40,6 +40,7 @@ function openLiveScreen(id) {
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
     cineLoadSamples(CINE_CORE);
     cineLoadSamples(cineNeedFor(liveMatchesCache[id]));
+    bcLoadSecret(id);
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
@@ -228,11 +229,12 @@ function renderLiveScreen() {
     const me = d ? myLiveNum(d) : 0;
     bcBuzzSeen(d);
     bcDiagPanel(d);
+    if (d && d.scene === "playing" && d.phase === "reveal") bcRevealFetch(openLiveId);
 
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -585,7 +587,7 @@ ${lastHTML}
 <div class="lv-reveal ${w ? "" : "none"}">
 <div class="t">${w ? ic("check-circle") + " " + escapeHTML(livePlayerName(d, w)) + " جاوب صح! +1" : ic("x-circle") + " محد جاوب صح"}</div>
 <div class="lv-muted">الإجابة الصحيحة</div>
-<div class="a">${escapeHTML(String(q.answer || "").split("|")[0])}</div>
+<div class="a">${escapeHTML(String(bcAnswerOf(d, d.qIndex) || "…").split("|")[0])}</div>
 </div>
 ${okLast}
 </div>
