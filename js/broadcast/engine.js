@@ -734,11 +734,21 @@ function bcEnd() {
         .catch(err => alert("تعذّر: " + err.message));
 }
 
+/* إعادة تشغيل حركة CSS بدون قراءة offsetWidth: القراءة تجبر المتصفح يرتّب الصفحة كاملة على طول
+   (قسناها ~100ms على معالج أبطأ 6 مرات، وكانت داخل ضغطة الجرس). لو الكلاس مو موجود يتضاف فوراً،
+   ولو موجود يتشال ويرجع بعد إطارين */
+function bcRestartAnim(el, cls, after) {
+    if (!el) return;
+    if (!el.classList.contains(cls)) { el.classList.add(cls); return; }
+    el.classList.remove(cls);
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (!after || after()) el.classList.add(cls); }));
+}
+
 /* ===== الإحساس الفوري: كل ضغطة لها رد محلي (صوت واهتزاز وحركة) قبل ما يرد السيرفر ===== */
 function bcTap(el, cls, sound, vib) {
-    if (el) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-    if (sound) cinePlay(sound, 0.6);
     try { if (vib && navigator.vibrate) navigator.vibrate(vib); } catch (e) {}
+    if (sound) cinePlay(sound, 0.6);
+    bcRestartAnim(el, cls);
 }
 
 /* ===== التشخيص: آخر 5 قياسات لكل نوع (الجرس، الجواب الصوتي) في liveDiag/<id> → bcDiag.<uid>.<نوع> =====

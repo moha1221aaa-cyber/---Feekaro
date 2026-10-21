@@ -250,7 +250,9 @@ function bcLowerThird(d) {
         el.classList.remove("on");
         el.innerHTML = `<img src="${safeSrc(want.av)}" alt=""><div class="tx"><b>${escapeHTML(want.name)}</b><span>${escapeHTML(want.sub)}</span></div>`;
         el.classList.toggle("gold", !!want.gold);
-        void el.offsetWidth;
+        const k = want.key;
+        bcRestartAnim(el, "on", () => BC_L3.key === k);   /* كان void offsetWidth: ~100ms لحظة الجرس على الجوال الضعيف */
+        return;
     }
     el.classList.add("on");
 }

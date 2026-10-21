@@ -47,7 +47,7 @@ function tvTick(d) {
         TV.sec = sec;
         if (sec > 0) {
             const num = document.getElementById("lvTimerNum");
-            if (num) { num.classList.remove("beat"); void num.offsetWidth; num.classList.add("beat"); }
+            bcRestartAnim(num, "beat");
             if (d.phase === "buzz") cinePlay("tick", sec <= 3 ? 0.45 : 0.3);
         }
     }
@@ -77,7 +77,7 @@ function tvBoard(d) {
 <div class="tv-bd-p r ${d.outcome === 2 ? "up" : ""}">${num(p2, s2)}<span class="nm">${escapeHTML(o.p2)}</span><img src="${safeSrc(bcAv(o, 2))}" alt=""></div>
 </div>
 <div class="tv-bd-lead">${escapeHTML(lead)}</div>`;
-        b.classList.remove("on"); void b.offsetWidth;
+        b.classList.remove("on");
     }
     b.classList.add("on");
 }
