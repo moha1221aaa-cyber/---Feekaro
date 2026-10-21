@@ -16,6 +16,7 @@ function openLiveScreen(id) {
     bcRxSeenN = null;
     bcTickerSig = "";
     bcEnterScene = ""; bcEnterPhase = "";
+    TV.boardKey = ""; TV.sec = -1;
     /* فيديو الاستوديو الحقيقي (من Google Flow) خلفية ثابتة للبث */
     if (!document.getElementById("stVideo")) {
         const v = document.createElement("video");
@@ -39,6 +40,7 @@ function openLiveScreen(id) {
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
     cineLoadSamples(CINE_CORE);
     cineLoadSamples(cineNeedFor(liveMatchesCache[id]));
+    bcLoadSecret(id);
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
@@ -63,6 +65,7 @@ function closeLiveScreen(fromPop) {
     bedSet("");
     bcTicker(null);
     { const l3 = document.getElementById("stL3"); if (l3) l3.remove(); BC_L3.key = ""; }
+    { const tb = document.getElementById("tvBoard"); if (tb) tb.remove(); if (scr) scr.classList.remove("tv-final"); }
     if (scr) { delete scr.dataset.scene; delete scr.dataset.shot; }
     bcSyncAudio();
 }
@@ -98,6 +101,7 @@ function liveTick() {
     bcAutoPilot(d);
     bcTickMics();
     bcLowerThird(d);
+    tvTick(d);
     liveAdvanceIfDue();
 }
 
@@ -154,7 +158,9 @@ function bcSceneEffects(d) {
     if (d.scene === "opening") {
         cineOpening(d);
     } else if (d.scene === "intro" && o) {
-        cineMatchIntro(d);
+        /* فاصل بين المواجهات (أشرطة الدوري ونتايج الجولة) وبعده مشهد المواجهة */
+        if (prevScene === "result") tvBumper(d, () => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "intro" && x.cur === d.cur) cineMatchIntro(x); });
+        else cineMatchIntro(d);
     } else if (d.scene === "talk") {
         bcTransition("talk");
     } else if (d.scene === "countdown") {
@@ -162,6 +168,7 @@ function bcSceneEffects(d) {
     } else if (d.scene === "playing" && prevScene === "countdown") {
         cineGo();
     } else if (d.scene === "result") {
+        tvWarm();
         setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
         cineResult(d);
     } else if (d.scene === "closing") {
@@ -220,11 +227,15 @@ function renderLiveScreen() {
     if (!body || !openLiveId) return;
     const d = liveMatchesCache[openLiveId];
     const me = d ? myLiveNum(d) : 0;
+    bcBuzzSeen(d);
+    bcDiagPanel(d);
+    if (d && d.scene === "playing" && d.phase === "reveal") bcPublishShown(d);
+    if (d && d.pend) bcHostJudge(d);
 
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -304,6 +315,7 @@ function liveSoundsOnChange(d) {
     const p = livePrevView;
     livePrevView = view;
     if (!p) return;
+    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans)) tvBuzzMoment(d);
     if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed && bcLocalBuzzQ !== openLiveId + "|" + d.cur + "|" + d.qIndex) cinePlay("buzz", 0.7);
     if (view.phase === "answer" && d.passed && p.ans !== view.ans) cinePlay("wrong", 0.5);
     if (view.phase === "buzz" && p.phase !== "buzz" && view.q > 0) cinePlay("whoosh", 0.4);
@@ -336,6 +348,7 @@ ${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">$
 <button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
 <button class="${cineBgOn ? "" : "off"}" onclick="bcToggleBg()" aria-label="الموسيقى">${ic("music")}</button>
+${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()" aria-label="التشخيص">${ic("chart")}</button>` : ""}
 </div>`;
 }
 /* تحكم مايكي: يطلع بس في صفحة بداية المواجهة */
@@ -548,7 +561,7 @@ ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGol
             return html + `<button class="lv-bell rung" id="lvBell" disabled>${ic("bell")}<span>ضغطت!</span></button>` + vaHTML();
         }
         html += `
-<button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz()"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
+<button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz(event)"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
 <div class="lv-muted">${canBuzz ? "أسرع واحد يضغط الجرس هو اللي يجاوب" : "بانتظار أحد المتسابقين يضغط الجرس"}</div>`;
     } else if (d.phase === "answer") {
         const nm = escapeHTML(livePlayerName(d, d.answerer));
@@ -571,11 +584,11 @@ ${lastHTML}
         const okLast = last && last.correct ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : lastHTML;
         html += `
 <div class="st-reveal ${hold ? "hold" : ""}" id="stReveal">
-<div class="st-wait">والإجابة الصحيحة هي<span>.</span><span>.</span><span>.</span></div>
+<div class="st-wait">والإجابة الصحيحة هي<span>.</span><span>.</span><span>.</span><i class="tv-drum" style="animation-delay:${-Math.max(0, 1600 - Math.max(0, bcRevealAt(d) - bcNow()))}ms"></i></div>
 <div class="lv-reveal ${w ? "" : "none"}">
 <div class="t">${w ? ic("check-circle") + " " + escapeHTML(livePlayerName(d, w)) + " جاوب صح! +1" : ic("x-circle") + " محد جاوب صح"}</div>
 <div class="lv-muted">الإجابة الصحيحة</div>
-<div class="a">${escapeHTML(String(q.answer || "").split("|")[0])}</div>
+<div class="a">${escapeHTML(String(bcAnswerOf(d, d.qIndex) || "…").split("|")[0])}</div>
 </div>
 ${okLast}
 </div>
@@ -585,3 +598,28 @@ ${okLast}
 }
 /* وقت كشف الإجابة: بعد 1.6 ثانية من بداية لحظة الكشف */
 function bcRevealAt(d) { return (d.deadline || 0) - LIVE_REVEAL_MS + 1600; }
+
+/* ===== لوحة التشخيص (للمنظم): زمن الجرس وآخر محاولات الجواب الصوتي لكل متسابق ===== */
+let bcDiagOpen = false;
+function bcToggleDiag() { bcDiagOpen = !bcDiagOpen; liveLastSig = ""; renderLiveScreen(); }
+function bcDiagPanel(d) {
+    let el = document.getElementById("bcDiag");
+    if (!bcDiagOpen || !isAdmin || !d || !openLiveId) { if (el) el.remove(); return; }
+    const o = bcCur(d) || {};
+    const diag = d.bcDiag || {};
+    const ms = v => v > 0 ? v + "ms" : (v < 0 ? "فشل" : "—");
+    const ql = q => { const p = String(q || "").split("_"); return p.length === 2 ? "م" + (+p[0] + 1) + " س" + (+p[1] + 1) : escapeHTML(String(q || "")); };
+    const who = [[o.uid1, o.p1], [o.uid2, o.p2]].filter(x => x[0]);
+    const rows = who.map(([uid, name]) => {
+        const x = diag[uid] || {};
+        const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
+        const vd = (d.vaDiag || {})[uid];
+        const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}</li>`).join("");
+        return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>
+${bz ? `<table><tr><th>السؤال</th><th>محلي</th><th>السيرفر</th><th>وصل</th><th></th></tr>${bz}</table>` : `<div class="bd-e">ما ضغط الجرس للحين</div>`}
+${va ? `<ul>${va}</ul>` : ""}</div>`;
+    }).join("");
+    if (!el) { el = document.createElement("div"); el.id = "bcDiag"; el.className = "bc-diag"; document.getElementById("liveScreen").appendChild(el); }
+    const html = `<div class="bd-h">${ic("chart")} التشخيص <button onclick="bcToggleDiag()" aria-label="إغلاق">${ic("x")}</button></div>${rows || `<div class="bd-e">ما فيه متسابقين مربوطين في هالمواجهة</div>`}`;
+    if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+}

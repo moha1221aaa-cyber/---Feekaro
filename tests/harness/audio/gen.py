@@ -1,0 +1,23 @@
+# يولّد ملفات المايك الوهمي للاختبار (Chromium --use-file-for-fake-audio-capture) من مقطع كلام قصير وموسيقى البث.
+# الاستخدام: python3 tests/harness/audio/gen.py  (يحتاج ffmpeg و numpy)
+import numpy as np, wave, subprocess, os
+D = os.path.dirname(os.path.abspath(__file__)); R = 48000; N = 32 * R
+def rd(p):
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", p, "-f", "s16le", "-ar", str(R), "-ac", "1", "-"], capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+def wr(name, x):
+    w = wave.open(os.path.join(D, name), "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(R)
+    w.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes()); w.close()
+sp = rd(os.path.join(D, "speech_clip.wav"))
+noise = np.random.default_rng(1).normal(0, 0.0015, N).astype(np.float32)
+cyc = np.zeros(N, np.float32)
+for k in range(0, 32, 4): cyc[k * R:k * R + len(sp)] += sp      # كلام 1.15 ث كل 4 ث
+m = rd(os.path.join(D, "..", "..", "..", "audio", "think2.mp3")); m = np.tile(m, N // len(m) + 1)[:N]; m = m / np.max(np.abs(m)) * 0.12
+wr("speech.wav", cyc + noise)
+lng = np.zeros(N, np.float32); two = np.concatenate([sp, np.zeros(int(0.1 * R), np.float32), sp])
+for k in range(0, 30, 6): lng[k * R:k * R + len(two)] += two  # جواب طويل 2.4 ث كل 6 ث (للنص المباشر)
+wr("speech_long.wav", lng + noise)
+wr("speech_music.wav", cyc + m + noise)
+wr("silence.wav", noise)
+wr("music_only.wav", m + noise)
+print("ok")

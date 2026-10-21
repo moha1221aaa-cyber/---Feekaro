@@ -1,7 +1,10 @@
 /* مذيع البث وصوته */
 /* =====================================================================
    مذيع البث + مكتبة الأصوات
-   - المذيع: صوت بشري (Google) يقرا السؤال والإجابة ويقدّم المواجهات، وإذا ما توفر يستخدم صوت الجوال
+   - المذيع: صوت بشري (functions/tts.js: ElevenLabs ثم Azure) يقرا السؤال والإجابة ويقدّم المواجهات.
+     لو السيرفر ما رد يسكت (ممنوع أي صوت من المتصفح، فما فيه speechSynthesis)
+   - جمل الموقف (سلسلة، تعادل، رجوع، تقدّم) مقطع لحاله بعد جملة الجواب: جملة الجواب نفسها تتجهز مسبقاً من جهاز المنظم،
+     وجملة الموقف يطلبها جهاز المنظم أول ما يصير الموقف، فالأجهزة الثانية تاخذها من الكاش (كل جملة تنحسب من الرصيد مرة)
    - مكتبة الأصوات: المنظم يضغط صوت فيسمعه كل اللي في البث بنفس اللحظة
    ===================================================================== */
 const BC_AR_NUM = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
@@ -31,44 +34,37 @@ function bcTtsLoad(text) {
 }
 
 function bcStopSpeech() {
+    bcSpeakSeq++;
     try { if (bcSpeechSrc) bcSpeechSrc.stop(); } catch (e) {}
     bcSpeechSrc = null;
-    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
     bedDuck(false);
 }
 
-/* صوت الجوال كاحتياط: نختار أحسن صوت عربي موجود */
-function bcBrowserSpeak(text) {
-    try {
-        if (!window.speechSynthesis) return;
-        const vs = speechSynthesis.getVoices().filter(v => /^ar/i.test(v.lang));
-        const score = v => (/natural|neural|online|google|hamed|zariyah|majed/i.test(v.name) ? 2 : 0) + (/sa/i.test(v.lang) ? 1 : 0);
-        vs.sort((a, b) => score(b) - score(a));
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = vs[0] ? vs[0].lang : "ar-SA";
-        if (vs[0]) u.voice = vs[0];
-        u.rate = 0.95;
-        u.onstart = () => bedDuck(true);
-        u.onend = u.onerror = () => bedDuck(false);
-        speechSynthesis.speak(u);
-    } catch (e) {}
-}
-
-function bcSpeak(text) {
-    if (!bcVoiceOn || !text) return;
+/* يقرا جملة أو أكثر ورا بعض (الجواب ثم الموقف). أي جملة ما توصل من السيرفر تنتخطى بصمت */
+let bcSpeakSeq = 0;
+function bcSpeak(text, then) {
+    const list = (Array.isArray(text) ? text : [text]).filter(Boolean);
+    if (!bcVoiceOn || !list.length) return;
     bcStopSpeech();
+    const seq = ++bcSpeakSeq;
     const c = liveCtx();
     try { if (c.state === "suspended") c.resume(); } catch (e) {}
-    bcTtsLoad(text).then(buf => {
-        bcStopSpeech();
-        const src = c.createBufferSource();
-        const g = c.createGain(); g.gain.value = 1.0;
-        src.buffer = buf; src.connect(g); g.connect(c.destination);
-        src.onended = () => { if (bcSpeechSrc === src) bedDuck(false); };
-        src.start();
-        bcSpeechSrc = src;
-        bedDuck(true);
-    }).catch(() => bcBrowserSpeak(text));
+    const loads = list.map(t => bcTtsLoad(t).catch(() => null));
+    const playAt = i => {
+        if (i >= loads.length || seq !== bcSpeakSeq) { if (seq === bcSpeakSeq) bedDuck(false); return; }
+        loads[i].then(buf => {
+            if (seq !== bcSpeakSeq) return;
+            if (!buf) return playAt(i + 1);
+            const src = c.createBufferSource();
+            const g = c.createGain(); g.gain.value = 1.0;
+            src.buffer = buf; src.connect(g); g.connect(c.destination);
+            src.onended = () => { if (bcSpeechSrc === src) { bcSpeechSrc = null; setTimeout(() => playAt(i + 1), 250); } };
+            src.start();
+            bcSpeechSrc = src;
+            bedDuck(true);
+        });
+    };
+    playAt(0);
 }
 
 function bcToggleVoice() {
@@ -82,10 +78,9 @@ function bcToggleVoice() {
    وبعدها كل الأجهزة تاخذها من الكاش. كذا كل جملة تنحسب من رصيد الأصوات مرة وحدة بس */
 function bcPrefetchVoice(d) {
     if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d) || !amBcHost(d)) return;
-    (d.questions || []).forEach((q, i) => {
-        bcTtsLoad(bcQText(d, i, true)).catch(() => {});
-        bcTtsLoad(bcRevealText(d, i, true)).catch(() => {});
-    });
+    /* الأسئلة بس. جملة الجواب ما تتجهز قبل وقتها: كاش /tts عام، فلو انطلبت قبل الكشف أي أحد يقدر يجرّب
+       "والإجابة الصحيحة هي: ..." ويعرف من الكاش (200) إن تخمينه صح. تنطلب من جهاز المنظم أول ما يبدأ الكشف (تحت) */
+    (d.questions || []).forEach((q, i) => { bcTtsLoad(bcQText(d, i, true)).catch(() => {}); });
 }
 
 /* المقدم يتكلم حسب اللحظة في البث */
@@ -113,7 +108,11 @@ function bcAnnouncer(d) {
         return;
     } else if (d.scene === "playing" && d.phase === "reveal") {
         key = "a" + d.cur + "_" + d.qIndex; delay = 1750;   /* بعد لحظة التشويق */
-        text = bcRevealText(d, d.qIndex);
+        /* جملة الجواب (متجهزة مسبقاً) وبعدها جملة الموقف لو فيه موقف. جهاز المنظم يطلبها الحين عشان تكون في الكاش للكل */
+        const situ = bcSituText(d);
+        text = [bcRevealText(d, d.qIndex, true), situ];
+        /* جهاز المنظم يطلب جملة الجواب والموقف أول ما يبدأ الكشف (الجواب صار علني)، والأجهزة الثانية تقراها بعد 1.75 ث من الكاش */
+        if (amBcHost(d) && key !== bcLastSpokenKey && bcVoiceOn && bcTtsServerOk) [text[0], situ].forEach(t => { if (t) bcTtsLoad(t).catch(() => {}); });
     } else if (d.scene === "result" && o) {
         key = "res" + d.cur; delay = 2000; text = bcResultText(d);
     } else if (d.scene === "closing") {
@@ -128,6 +127,19 @@ function bcAnnouncer(d) {
         /* سؤال انضغط جرسه قبل ما يبدأ المذيع يقراه: ما نقراه */
         const x = liveMatchesCache[openLiveId];
         if (key[0] === "q" && x && x.phase !== "buzz") return;
+        /* الجواب المختوم: نستنى السيرفر يكشفه، وبعدها نقرا جملة الجواب (نفس النص اللي جهّزه المنظم) وجملة الموقف */
+        if (key[0] === "a" && Array.isArray(text) && !text[0]) {
+            /* ننتظر جهاز المنظم يكتب الجواب (shown) لين 3 ث، وبعدها نقرا */
+            let n = 0;
+            const wait = () => {
+                const x = liveMatchesCache[openLiveId];
+                const t0 = x && x.cur === d.cur && x.qIndex === d.qIndex ? bcRevealText(x, d.qIndex, true) : "";
+                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]]); return; }
+                setTimeout(wait, 200);
+            };
+            wait();
+            return;
+        }
         bcSpeak(text);
     }, delay);
 }

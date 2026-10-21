@@ -1,0 +1,36 @@
+# فيديوهات البث (Remotion في مجلد video/): افتتاح البث والفاصل بين المواجهات
+# يرندرها ويحطها في media/ (mp4 للآيفون و webm للباقي)، صامتة وبدون مسار صوت. ما ينشر شي: النشر من league.yml في Feekaro-Web-Studio
+name: League Video
+on:
+  workflow_dispatch:
+  push:
+    paths: ['video/src/**', 'video/package.json', '.github/workflows/league-video.yml']
+permissions:
+  contents: write
+concurrency:
+  group: league-video-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Render
+        working-directory: video
+        run: |
+          npm ci
+          cp ../logo.png public/logo.png
+          for c in Opening Bumper; do
+            f=$(echo "$c" | tr 'A-Z' 'a-z')
+            npx remotion render "$c" "../media/$f.mp4" --muted --crf 30
+            npx remotion render "$c" "../media/$f.webm" --codec vp8 --muted
+          done
+          ls -la ../media/opening.* ../media/bumper.*
+      - name: Commit
+        run: |
+          git config user.name bot && git config user.email bot@users.noreply.github.com
+          git add media/opening.mp4 media/opening.webm media/bumper.mp4 media/bumper.webm
+          git diff --cached --quiet && echo "ما تغيّر شي" || { git commit -qm "chore(video): ريندر فيديوهات البث من video/"; git push -q; }

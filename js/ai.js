@@ -84,7 +84,7 @@ function aiGrade(q, answer, given, timeoutMs) {
         .catch(() => false);
 }
 
-/* ===== 3) جمل المقدم ===== */
+/* ===== 3) جمل المقدم (والمواقف: سلسلة، رجوع، تعادل، تقدّم) ===== */
 function aiHostLines(round, order) {
     const ms = (order || []).map((o, i) => {
         let ctx = "";
@@ -92,7 +92,7 @@ function aiHostLines(round, order) {
         return { p1: o.p1, p2: o.p2, ctx };
     });
     return aiCall("host", { round, matches: ms }, 7000)
-        .then(d => (d && (d.open || (d.intros || []).length)) ? { open: d.open || "", intros: d.intros || [], close: d.close || "" } : null)
+        .then(d => (d && (d.open || (d.intros || []).length)) ? { open: d.open || "", intros: d.intros || [], close: d.close || "", situ: d.situ || {} } : null)
         .catch(() => null);
 }
 
