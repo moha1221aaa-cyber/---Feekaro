@@ -1,0 +1,17 @@
+# فحص حي مؤقت بعد نشر البث الجديد (21 أكتوبر 2026): /answer والملفات الجديدة. قراءة بس، ما يكتب شي
+name: Live check answer
+on:
+  push:
+    branches: [live-check-answer]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          U=https://masro7-league.pages.dev
+          echo "GET /answer (must have sealing:true): $(curl -s -m 20 $U/answer)"
+          echo "POST grade no login (must be 401): $(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST -H "Origin: $U" -H 'Content-Type: application/json' -d '{"action":"grade","id":"round_1","qIndex":0,"given":"x"}' $U/answer)"
+          echo "POST reveal no login (must be 401): $(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST -H "Origin: $U" -H 'Content-Type: application/json' -d '{"action":"reveal","id":"round_1"}' $U/answer)"
+          echo "POST bad origin (must be 403): $(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}' $U/answer)"
+          for f in js/broadcast/tv.js js/broadcast/va-worklet.js media/opening.mp4 media/opening.webm media/bumper.mp4 media/bumper.webm; do echo "$f: $(curl -s -o /dev/null -w '%{http_code}:%{content_type}:%{size_download}' -m 30 $U/$f)"; done
+          echo "engine has bcSealRound: $(curl -s -m 20 $U/js/broadcast/engine.js | grep -c bcSealRound)  speechSynthesis in presenter (must be 0 calls): $(curl -s -m 20 $U/js/broadcast/presenter.js | grep -c 'speechSynthesis\.')"
