@@ -28,3 +28,4 @@ Rules:
 
 ## Remotion (فيديو)
 سكلات Remotion الرسمية (remotion-dev/skills، نسخة 4.0.536) في .claude/skills/remotion-*. أي فيديو للدوري ابدأ بـ remotion-best-practices، والريندر عبر GitHub Actions لو التحميل هنا انحجب. كود الفيديو يكون في مجلد video/ منفصل عن الموقع.
+- **تيزر المسابقة (21 أكتوبر 2026):** video/src/Teaser (تكوين LeagueTeaser، 1080×1920، 30 ث، 6 مشاهد في TransitionSeries بانتقال fadeZoom). الألوان والنصوص والتصنيفات والصوت props بـ zod (schema.ts) وتتعدل من Studio. الصوت اختياري: public/voiceover.mp3 و music.mp3 (calculateMetadata يتأكد إنها موجودة). zod لازم يكون 4.5.4 بالضبط (npx remotion add zod). للمعاينة هنا: متصفح الريندر ما يمر على البروكسي، فالخطوط تفشل إلا بسكربت يشيل --no-proxy-server ويحط --proxy-server.
