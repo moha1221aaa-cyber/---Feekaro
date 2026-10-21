@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "video/**"
+      - "!video/public/sfx/**"
       - ".github/workflows/render-teaser.yml"
   workflow_dispatch:
 

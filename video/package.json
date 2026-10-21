@@ -31,7 +31,8 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "sfx:catalog": "node scripts/gen-sfx-catalog.mjs"
   },
   "allowScripts": {
     "esbuild": false
