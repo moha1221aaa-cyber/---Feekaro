@@ -134,6 +134,8 @@ async function vaStart(key) {
         if (!frames) { vaDiag("no-audio"); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
         /* لو الكشف ما تأكد من الكلام بس فيه صوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب */
         if (speechMs < VA_MIN_SPEECH_MS && peak < 0.03) { vaDiag("no-speech", { frames, peak: +peak.toFixed(3) }); vaToType("ما سمعت جواب، اكتبه"); return; }
+        /* رد فوري إن الجواب وصل قبل ما يرد السيرفر */
+        if (typeof bcTap === "function") bcTap(document.getElementById("vaBox"), "tapped", "tick", 20);
         vaDiag("sent", { frames, speechMs: Math.round(speechMs), peak: +peak.toFixed(3), noise: +noise.toFixed(4) });
         vaSend(key, chunks, ctx.sampleRate);
     };

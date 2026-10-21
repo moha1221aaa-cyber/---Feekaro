@@ -549,9 +549,53 @@ function bcEnd() {
         .catch(err => alert("تعذّر: " + err.message));
 }
 
+/* ===== الإحساس الفوري: كل ضغطة لها رد محلي (صوت واهتزاز وحركة) قبل ما يرد السيرفر ===== */
+function bcTap(el, cls, sound, vib) {
+    if (el) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+    if (sound) cinePlay(sound, 0.6);
+    try { if (vib && navigator.vibrate) navigator.vibrate(vib); } catch (e) {}
+}
+
+/* ===== التشخيص: آخر 5 قياسات لكل نوع (الجرس، الجواب الصوتي) في وثيقة البث bcDiag.<uid>.<نوع> ===== */
+function bcDiagPush(kind, entry) {
+    try {
+        if (!openLiveId || !currentUser) return;
+        const d = liveMatchesCache[openLiveId] || {};
+        const prev = (((d.bcDiag || {})[currentUser.uid] || {})[kind]) || [];
+        const list = prev.filter(x => x && x.at !== entry.at).concat([entry]).slice(-5);
+        liveRef(openLiveId).update({ ["bcDiag." + currentUser.uid + "." + kind]: list }).catch(() => {});
+    } catch (e) {}
+}
+
+/* زمن الجرس: الضغط ← الرد المحلي (أول رسمة) ← تأكيد السيرفر (transaction) ← وصول الحالة للجهاز (snapshot) */
+const BC_BUZZ = { cur: null };
+function bcBuzzDone(bz) {
+    if (!bz || bz.sent) return;
+    bz.sent = true;
+    bcDiagPush("buzz", { at: bz.at, q: bz.q, local: bz.local, tx: bz.tx, seen: bz.seen, won: bz.won, ua: (navigator.userAgent || "").slice(0, 60) });
+}
+/* تنادى من رسم الشاشة: أول ما تجي الحالة الجديدة من السيرفر نحسب وقت الوصول */
+function bcBuzzSeen(d) {
+    const bz = BC_BUZZ.cur;
+    if (!bz || bz.sent || !d || bz.id !== openLiveId) return;
+    if (d.cur + "_" + d.qIndex !== bz.q) { bcBuzzDone(bz); return; }
+    if (d.phase === "buzz") return;
+    if (!bz.seen) bz.seen = Math.round(performance.now() - bz.t0);
+    if (bz.won === null) bz.won = d.buzzer === myLiveNum(d);
+    if (bz.tx) bcBuzzDone(bz);
+}
+
 function liveSetReady() {
     const id = openLiveId;
     if (!id) return;
+    /* رد فوري: الزر يتغير ويطلع صوت واهتزاز، ولو السيرفر رفض يرجع */
+    const btn = document.querySelector(".lv-ready-btn");
+    if (btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.innerHTML = ic("check-circle") + " جاهز!";
+        bcTap(btn, "tapped", "tick", 25);
+    }
     liveTx(id, (d, now) => {
         if (d.status !== "live" || d.scene !== "intro") return null;
         const n = myLiveNum(d);
@@ -561,10 +605,14 @@ function liveSetReady() {
         const r1 = n === 1 || d.ready1, r2 = n === 2 || d.ready2;
         if (r1 && r2) { u.scene = "talk"; u.sceneAt = now; }   /* فقرة الترحيب: المنظم يسولف مع المتسابقين، وبعدها يبدأ المواجهة */
         return u;
-    }).then(() => cinePlay("tick", 0.6)).catch(err => roomToast("تعذّر: " + err.message, "alert"));
+    }).catch(err => {
+        if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = ic("check-circle") + " جاهز"; }
+        roomToast("تعذّر: " + err.message, "alert");
+    });
 }
 
-function liveBuzz() {
+function liveBuzz(ev) {
+    const t0 = ev && ev.timeStamp > 0 ? ev.timeStamp : performance.now();
     const id = openLiveId;
     const d = liveMatchesCache[id];
     if (!d || d.scene !== "playing" || d.phase !== "buzz" || !myLiveNum(d)) return;
@@ -576,6 +624,9 @@ function liveBuzz() {
     bcLocalBuzzQ = id + "|" + d.cur + "|" + d.qIndex;
     cinePlay("buzz", 0.7);
     try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+    const bz = BC_BUZZ.cur = { id, q: d.cur + "_" + d.qIndex, t0, at: bcNow(), local: 0, tx: 0, seen: 0, won: null, sent: false };
+    requestAnimationFrame(() => { bz.local = Math.round(performance.now() - t0); });
+    setTimeout(() => bcBuzzDone(bz), 6000);   /* لو ما وصل شي، نسجّل اللي عندنا */
     if (typeof bcStopSpeech === "function") bcStopSpeech();
     /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
     if (typeof vaPrime === "function") vaPrime();
@@ -590,8 +641,17 @@ function liveBuzz() {
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
         if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
         return u;
-    }).then(u => { if (!u && typeof vaDisarm === "function") vaDisarm(); })
-      .catch(err => { console.log("buzz:", err); if (typeof vaDisarm === "function") vaDisarm(); });
+    }).then(u => {
+        bz.tx = Math.round(performance.now() - t0);
+        if (!u) {
+            bz.won = false; bcBuzzDone(bz);
+            if (typeof vaDisarm === "function") vaDisarm();
+        } else if (bz.seen) bcBuzzDone(bz);
+    }).catch(err => {
+        console.log("buzz:", err);
+        bz.tx = -1; bz.won = false; bcBuzzDone(bz);
+        if (typeof vaDisarm === "function") vaDisarm();
+    });
 }
 
 async function liveSubmitAnswer() {
@@ -600,7 +660,13 @@ async function liveSubmitAnswer() {
     if (!id || !inp) return;
     const text = inp.value.trim();
     if (!text) { inp.focus(); return; }
+    if (inp.disabled) return;
     inp.disabled = true;
+    /* رد فوري: الخانة تتقفل وتطلع حركة وصوت قبل التصحيح */
+    const row = inp.closest(".lv-ans-row");
+    const sendBtn = row && row.querySelector("button");
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "أرسلت"; }
+    bcTap(row, "tapped", "tick", 20);
     /* التصحيح الذكي (js/ai.js): لو المطابقة العادية رفضت، نسأل الذكاء الاصطناعي قبل ما ينتهي الوقت */
     const d0 = liveMatchesCache[id] || {};
     const q0 = (d0.questions || [])[d0.qIndex] || {};
@@ -613,7 +679,11 @@ async function liveSubmitAnswer() {
             inp.value = text;
         }
     }
-    liveCommitAnswer(id, text, aiOk, q0).catch(err => { console.log("answer:", err); inp.disabled = false; });
+    liveCommitAnswer(id, text, aiOk, q0).catch(err => {
+        console.log("answer:", err);
+        inp.disabled = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "إرسال"; }
+    });
 }
 
 /* تسجيل الإجابة (كتابة أو صوت js/broadcast/voice-answer.js): صح ← كشف الإجابة، غلط ← السؤال ينتقل للثاني */

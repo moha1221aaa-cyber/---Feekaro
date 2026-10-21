@@ -220,11 +220,13 @@ function renderLiveScreen() {
     if (!body || !openLiveId) return;
     const d = liveMatchesCache[openLiveId];
     const me = d ? myLiveNum(d) : 0;
+    bcBuzzSeen(d);
+    bcDiagPanel(d);
 
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -336,6 +338,7 @@ ${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">$
 <button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
 <button class="${cineBgOn ? "" : "off"}" onclick="bcToggleBg()" aria-label="الموسيقى">${ic("music")}</button>
+${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()" aria-label="التشخيص">${ic("chart")}</button>` : ""}
 </div>`;
 }
 /* تحكم مايكي: يطلع بس في صفحة بداية المواجهة */
@@ -548,7 +551,7 @@ ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGol
             return html + `<button class="lv-bell rung" id="lvBell" disabled>${ic("bell")}<span>ضغطت!</span></button>` + vaHTML();
         }
         html += `
-<button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz()"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
+<button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz(event)"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
 <div class="lv-muted">${canBuzz ? "أسرع واحد يضغط الجرس هو اللي يجاوب" : "بانتظار أحد المتسابقين يضغط الجرس"}</div>`;
     } else if (d.phase === "answer") {
         const nm = escapeHTML(livePlayerName(d, d.answerer));
@@ -585,3 +588,27 @@ ${okLast}
 }
 /* وقت كشف الإجابة: بعد 1.6 ثانية من بداية لحظة الكشف */
 function bcRevealAt(d) { return (d.deadline || 0) - LIVE_REVEAL_MS + 1600; }
+
+/* ===== لوحة التشخيص (للمنظم): زمن الجرس وآخر محاولات الجواب الصوتي لكل متسابق ===== */
+let bcDiagOpen = false;
+function bcToggleDiag() { bcDiagOpen = !bcDiagOpen; liveLastSig = ""; renderLiveScreen(); }
+function bcDiagPanel(d) {
+    let el = document.getElementById("bcDiag");
+    if (!bcDiagOpen || !isAdmin || !d || !openLiveId) { if (el) el.remove(); return; }
+    const o = bcCur(d) || {};
+    const diag = d.bcDiag || {};
+    const ms = v => v > 0 ? v + "ms" : (v < 0 ? "فشل" : "—");
+    const ql = q => { const p = String(q || "").split("_"); return p.length === 2 ? "م" + (+p[0] + 1) + " س" + (+p[1] + 1) : escapeHTML(String(q || "")); };
+    const who = [[o.uid1, o.p1], [o.uid2, o.p2]].filter(x => x[0]);
+    const rows = who.map(([uid, name]) => {
+        const x = diag[uid] || {};
+        const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
+        const va = (x.voice || []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}</li>`).join("");
+        return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>
+${bz ? `<table><tr><th>السؤال</th><th>محلي</th><th>السيرفر</th><th>وصل</th><th></th></tr>${bz}</table>` : `<div class="bd-e">ما ضغط الجرس للحين</div>`}
+${va ? `<ul>${va}</ul>` : ""}</div>`;
+    }).join("");
+    if (!el) { el = document.createElement("div"); el.id = "bcDiag"; el.className = "bc-diag"; document.getElementById("liveScreen").appendChild(el); }
+    const html = `<div class="bd-h">${ic("chart")} التشخيص <button onclick="bcToggleDiag()" aria-label="إغلاق">${ic("x")}</button></div>${rows || `<div class="bd-e">ما فيه متسابقين مربوطين في هالمواجهة</div>`}`;
+    if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+}

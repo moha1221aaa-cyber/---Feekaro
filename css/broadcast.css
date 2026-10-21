@@ -557,3 +557,27 @@
 /* المتصفح حجب صوت البث */
 .bc-unlock{position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:1000010;margin:0;min-height:56px;font-size:16px;font-weight:900;border-radius:14px;background:#facc15;color:#0f172a;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:vaPulse 1.4s ease-in-out infinite;}
 .bc-unlock .ic{width:22px;height:22px;}
+
+/* ===================== الإحساس الفوري (21 أكتوبر 2026): رد محلي لكل ضغطة قبل السيرفر ===================== */
+@keyframes bcTap{0%{transform:scale(1)}35%{transform:scale(.94)}100%{transform:scale(1)}}
+@keyframes bcRipple{0%{transform:scale(.9);opacity:.85}100%{transform:scale(1.9);opacity:0}}
+.tapped{animation:bcTap .22s cubic-bezier(.2,.8,.3,1);}
+.lv-ready-btn.tapped{background:#15803d;}
+.lv-bell{position:relative;}
+.lv-bell::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:4px solid #fde68a;opacity:0;transform:scale(.9);pointer-events:none;}
+.lv-bell.rung::after{animation:bcRipple .55s ease-out 2;}
+/* لوحة التشخيص للمنظم */
+.bc-diag{position:fixed;inset:auto 10px 70px 10px;max-height:46vh;overflow:auto;z-index:1000002;background:rgba(2,6,23,.94);border:1px solid #334155;border-radius:14px;padding:10px 12px;font-size:12px;color:#cbd5e1;direction:rtl;}
+.bc-diag .bd-h{display:flex;align-items:center;gap:6px;font-weight:bold;color:#fff;margin-bottom:6px;}
+.bc-diag .bd-h button{margin:0 auto 0 0;width:auto;min-height:0;padding:4px 8px;background:transparent;border:1px solid #334155;box-shadow:none;}
+.bc-diag .bd-h button .ic{width:14px;height:14px;}
+.bc-diag .bd-n{color:#facc15;font-weight:bold;margin:6px 0 3px;}
+.bc-diag table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+.bc-diag th,.bc-diag td{padding:2px 4px;text-align:center;border-bottom:1px solid #1e293b;}
+.bc-diag ul{margin:4px 0;padding-inline-start:16px;}
+.bc-diag .bd-e{color:#64748b;}
+@media (prefers-reduced-motion: reduce){
+  .tapped{animation:none;opacity:.85;}
+  .lv-bell.rung,.lv-bell.rung::after{animation:none;}
+  .lv-bell.rung::after{opacity:.6;transform:scale(1.05);}
+}
