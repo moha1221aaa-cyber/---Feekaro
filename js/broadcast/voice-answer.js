@@ -3,7 +3,7 @@
    - يبدأ لحظة ضغط الجرس (vaArm) قبل ما يرد السيرفر، عشان أول كلمة ما تضيع، ولو فاز بالجرس يكمل نفس التسجيل.
    - التسجيل على AudioWorklet (va-worklet.js، خيط الصوت نفسه)، ولو المتصفح قديم يرجع لـ ScriptProcessor.
    - كاشف الكلام (vaVadCreate في va-worklet.js): أرضية ضجة بأقل طاقة في آخر 1.5 ث، فالموسيقى المستمرة ما تنحسب كلام.
-   - يوقف لحاله أول ما يسكت المتسابق بعد جوابه (0.8 ث)، أو بعد 6 ث من أول كلمة، أو قبل نهاية الوقت بـ 1.5 ث.
+   - يوقف لحاله أول ما يسكت المتسابق بعد جوابه (0.55 ث)، أو بعد 6 ث من أول كلمة، أو قبل نهاية الوقت بـ 1.5 ث.
    - أول جواب هو اللي ينحسب (ما فيه تغيير)، وما فيه أزرار: كل شي تلقائي.
    - نص مباشر: لو الكلام طويل (1.2 ث) نرسل اللي انقال للحين لـ Whisper ونعرضه، وبعد ما يخلص السيرفر يرد على دفعتين:
      أول شي النص اللي سمعه (يطلع على طول)، وبعدها الحكم.
@@ -11,7 +11,7 @@
    - التشخيص: آخر 5 محاولات في vaDiag.<uid> (كل محاولة: خطواتها، طريقة التسجيل، مدة الكلام، اللي انسمع، والحكم). */
 
 const VA_RATE = 16000;           /* Whisper يشتغل على 16 كيلوهرتز */
-const VA_SILENCE_MS = 800;       /* سكوت بعد الكلام = خلص جوابه (أول جواب ينحسب، فما نستنى) */
+const VA_SILENCE_MS = 550;       /* سكوت بعد الكلام = خلص جوابه (أول جواب ينحسب، فما نستنى). كان 800 ومحمد قال يتأخر */
 const VA_MIN_SPEECH_MS = 300;    /* أقل كلام نعتبره جواب (الكاشف الجديد أدق، فنقبل كلمة قصيرة) */
 const VA_STOP_BEFORE_MS = 1500;  /* نوقف قبل نهاية الوقت بشوي */
 const VA_EXTEND_MS = 10000;      /* وقت التحقق من الصوت (الوقت يتمدد له أول ما يخلص المتسابق) */
@@ -339,7 +339,7 @@ async function vaSend(key, chunks, rate) {
         }, VA_EXTEND_MS - 800, sealed ? "/answer" : "/ai");
     } catch (e) { res = null; }
     if (VA.key !== key) return;
-    vaDiag(res ? "result" : "server-error", res ? { heard: (res.heard || "").slice(0, 60), said: res.said || "", ok: res.ok === true, ms: Math.round(performance.now() - t0) } : {});
+    vaDiag(res ? "result" : "server-error", res ? { heard: (res.heard || "").slice(0, 60), said: res.said || "", ok: res.ok === true, ms: Math.round(performance.now() - t0), srv: res.t || null } : {});
     if (!res || (!res.said && !res.heard)) { vaToType(res ? "ما فهمت الجواب، اكتبه بسرعة" : "تعذّر التحقق من صوتك، اكتب جوابك"); return; }
     VA.heard = res.heard || ""; VA.said = res.said || ""; VA.ok = res.ok === true;
     VA.st = "done"; vaRefresh();
