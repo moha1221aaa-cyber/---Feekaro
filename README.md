@@ -31,13 +31,19 @@ js/
     engine.js           محرك البث: الحالة، وقت السيرفر، تحكم المنظم، الطيار الآلي
     presenter.js        مذيع البث
     studio.js           الاستوديو: الإحصائيات، المقدم، المخرج، التوقعات، التفاعلات
-    cinema.js           المشاهد السينمائية والأصوات والموسيقى
+    cinema.js           المشاهد السينمائية والأصوات والموسيقى (وفيديو Remotion فوق الافتتاح لو اشتغل)
+    tv.js               الإخراج التلفزيوني: لحظة الجرس، العداد الأخير، لوحة النتيجة بين الأسئلة، الفاصل بين المواجهات
     voice.js            صوت البث (قناة أجورا مستقلة)
-    voice-answer.js     جواب المتسابق بالصوت بعد الجرس (تسجيل، كشف السكوت، WAV، /ai task voice)
+    va-worklet.js       كاشف الكلام (VAD) ومعالج AudioWorklet للتسجيل (نفس الملف سكربت عادي للاحتياط)
+    voice-answer.js     جواب المتسابق بالصوت بعد الجرس (تسجيل AudioWorklet، كشف الكلام، نص مباشر، WAV، التصحيح)
     screen.js           شاشة البث: الرسم والمشاهد والانتقالات
   menu.js               القائمة الجانبية (☰): التنقل والميزات وصفحات ما الجديد وطريقة اللعب والخصوصية وعن الدوري
   ai.js                 الذكاء الاصطناعي: توليد الأسئلة، التصحيح الذكي، جمل المقدم (aiLines)، مساعد الدوري
-functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs ثم Azure)، time، ai (Workers AI مجاني، وفيه تحويل الصوت لنص للجواب الصوتي)
+functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs ثم Azure)، time، ai (Workers AI مجاني، وفيه تحويل الصوت لنص للجواب الصوتي)،
+                        answer (أجوبة البث المختومة: الختم والتصحيح والكشف في السيرفر)
+lib/                    مشترك بين الدوال: firebase-auth (التوكن)، grading (التصحيح)، seal (ختم الأجوبة)، firestore-public (قراءة وثيقة البث)
+video/                  فيديو افتتاح البث والفاصل (Remotion)، والملفات في media/ (الريندر: .github/workflows/league-video.yml)
+tests/                  harness/ (البث في 3 أجهزة بقاعدة ومايك وهميين) و functions/ (الدوال بتوكن تجريبي)
 wrangler.toml           إعدادات Pages: ربط Workers AI باسم AI (بدون مفتاح)
 audio/                  أصوات البث الحقيقية (mp3)
 media/                  فيديو وصور الاستوديو
@@ -67,3 +73,17 @@ AUDIT.md                نتايج الفحص الشامل وحالة كل بن�
 ## التجربة محلياً بالبيانات الحقيقية
 
 مكتبة Firebase من gstatic ممكن تكون محجوبة في بيئة Claude، والحل: نسخة `firebase@10.12.0` من npm، و Playwright يحوّل طلبات `gstatic.com/firebasejs/10.12.0/*` لها، والموقع يشتغل من `python3 -m http.server`. Firestore نفسه يتوصل له، فالبيانات حقيقية (قراءة بس). لا تجرب أزرار المنظم بهالطريقة لأنها تكتب في قاعدة البيانات الحقيقية.
+
+## الاختبار المحلي للبث (بدون أي كتابة في القاعدة الحقيقية)
+
+`tests/harness`: الموقع نفسه في Chromium (Playwright) بـ Firebase وأجورا بديلين، وكل الأجهزة تشترك بقاعدة وحدة في Node. المايك وهمي (`--use-file-for-fake-audio-capture`)، وملفاته تتولد بـ `python3 tests/harness/audio/gen.py`.
+
+```bash
+node tests/harness/smoke.mjs speech.wav /tmp/out      # مواجهة كاملة + زمن الجرس
+node tests/harness/voice.mjs /tmp/out                 # الجواب الصوتي: كلام، موسيقى، سكوت، مكتوم، مرفوض
+node tests/harness/vad.mjs                            # كاشف الكلام على الملفات بدون متصفح
+node tests/harness/tv.mjs /tmp/out                    # الإخراج التلفزيوني بالحركة وبدونها
+node tests/harness/announcer.mjs /tmp/out             # جمل المذيع وطلبات /tts
+node tests/harness/secure.mjs /tmp/out                # الأجوبة المختومة (functions/answer.js الحقيقي)
+for t in tests/functions/*.test.mjs; do node $t; done # الدوال
+```
