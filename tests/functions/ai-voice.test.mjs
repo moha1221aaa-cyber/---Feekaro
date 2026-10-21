@@ -49,4 +49,17 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     const fine = await (await onRequestPost(ctxFor(await req({ task: "grade", q: "ما عاصمة اليابان؟", answer: "طوكيو", given: "Tokyo" }), spy))).json();
     check("grade: normal English answer still goes to the model", fine.ok === true && asked === 1, { fine, asked });
 }
+{
+    /* السرعة والدقة (بعد تجربة محمد 21 أكتوبر): الطريق السريع بدون أي موديل لغة، وغلط السمع ينقبل، وأول جواب ينحسب */
+    const mk = text => { const c = []; return { c, env: { AI: { run: async (m, i) => { c.push(m); if (m.includes("whisper")) return { text }; return { response: '{"said":"جدة","ok":false}' }; } } } }; };
+    const go = async (text, q, answer) => { const k = mk(text); const r = await (await onRequestPost(ctxFor(await req({ task: "voice", q, answer, audio }), k.env))).json(); return { r, llm: k.c.filter(m => !m.includes("whisper")).length }; };
+    let x = await go("امم خلني أفكر، الرياض", "ما عاصمة السعودية؟", "الرياض");
+    check("fast path: filler + answer → ok with zero LLM calls", x.r.ok === true && x.llm === 0 && x.r.said === "الرياض" && x.r.t.path === "fast", x);
+    x = await go("توكيو", "ما عاصمة اليابان؟", "طوكيو");
+    check("mishearing ط/ت accepted on fast path", x.r.ok === true && x.llm === 0, x);
+    x = await go("جدة لا لا الرياض", "ما عاصمة السعودية؟", "الرياض");
+    check("first answer counts: جدة لا لا الرياض → wrong (one LLM call)", x.r.ok === false && x.llm === 1 && x.r.said === "جدة", x);
+    x = await go("أظن والله إنها يمكن تكون مدينة جدة اللي على البحر", "ما عاصمة السعودية؟", "الرياض");
+    check("long rambling → extraction path", x.r.ok === false && x.r.t.path === "extract", x);
+}
 auth.restore(); done();
