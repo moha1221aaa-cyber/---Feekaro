@@ -1,4 +1,9 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
 // خلفية متدرجة من الأزرق الملكي للأسود، تتحرك ببطء طول الفيديو
 export const Background: React.FC<{ royalBlue: string }> = ({ royalBlue }) => {

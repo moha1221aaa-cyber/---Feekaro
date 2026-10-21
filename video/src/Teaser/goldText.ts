@@ -1,7 +1,10 @@
 import type { TeaserColors } from "./schema";
 
 // نص بتدرج ذهبي (بيستخدم background-clip)
-export const goldText = (c: TeaserColors, angle = 180): React.CSSProperties => ({
+export const goldText = (
+  c: TeaserColors,
+  angle = 180,
+): React.CSSProperties => ({
   backgroundImage: `linear-gradient(${angle}deg, ${c.goldLight} 0%, ${c.gold} 45%, #8a6a12 75%, ${c.goldLight} 100%)`,
   WebkitBackgroundClip: "text",
   backgroundClip: "text",

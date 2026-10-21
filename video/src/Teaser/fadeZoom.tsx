@@ -17,7 +17,11 @@ const FadeZoom: React.FC<TransitionPresentationComponentProps<Props>> = ({
     <AbsoluteFill
       style={{
         opacity: entering ? p : 1 - p,
-        scale: String(entering ? interpolate(p, [0, 1], [0.9, 1]) : interpolate(p, [0, 1], [1, 1.18])),
+        scale: String(
+          entering
+            ? interpolate(p, [0, 1], [0.9, 1])
+            : interpolate(p, [0, 1], [1, 1.18]),
+        ),
         filter: `blur(${entering ? (1 - p) * 10 : p * 10}px)`,
       }}
     >

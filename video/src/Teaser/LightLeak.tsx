@@ -1,11 +1,16 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
 // Light leak ذهبي يمر على نقطة القطع بين مشهدين
-export const LightLeak: React.FC<{ gold: string; goldLight: string; flip?: boolean }> = ({
-  gold,
-  goldLight,
-  flip,
-}) => {
+export const LightLeak: React.FC<{
+  gold: string;
+  goldLight: string;
+  flip?: boolean;
+}> = ({ gold, goldLight, flip }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const t = frame / durationInFrames;

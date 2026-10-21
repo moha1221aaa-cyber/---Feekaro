@@ -23,6 +23,8 @@ export const teaserSchema = z.object({
     musicFile: z.string(),
     voiceoverVolume: z.number().min(0).max(1),
     musicVolume: z.number().min(0).max(1),
+    sfxEnabled: z.boolean(),
+    sfxVolume: z.number().min(0).max(1),
   }),
   // يعبّيها calculateMetadata: هل ملفات الصوت موجودة في public؟
   audioFound: z

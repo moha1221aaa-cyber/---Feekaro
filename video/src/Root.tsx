@@ -44,6 +44,8 @@ export const RemotionRoot: React.FC = () => {
             musicFile: "music.mp3",
             voiceoverVolume: 1,
             musicVolume: 0.3,
+            sfxEnabled: true,
+            sfxVolume: 0.8,
           },
         }}
       />

@@ -1,7 +1,10 @@
 import type { TeaserColors } from "./schema";
 
 // كأس ذهبي مرسوم SVG
-export const Trophy: React.FC<{ colors: TeaserColors; shine: number }> = ({ colors, shine }) => (
+export const Trophy: React.FC<{ colors: TeaserColors; shine: number }> = ({
+  colors,
+  shine,
+}) => (
   <svg width={620} height={760} viewBox="0 0 620 760">
     <defs>
       <linearGradient id="cup" x1="0" x2="1" y1="0" y2="0">
@@ -12,9 +15,17 @@ export const Trophy: React.FC<{ colors: TeaserColors; shine: number }> = ({ colo
         <stop offset="1" stopColor="#6b4e08" />
       </linearGradient>
       <linearGradient id="shine" x1="0" x2="1" y1="0" y2="1">
-        <stop offset={Math.max(0, shine - 0.12)} stopColor="#fff" stopOpacity="0" />
+        <stop
+          offset={Math.max(0, shine - 0.12)}
+          stopColor="#fff"
+          stopOpacity="0"
+        />
         <stop offset={shine} stopColor="#fff" stopOpacity="0.85" />
-        <stop offset={Math.min(1, shine + 0.12)} stopColor="#fff" stopOpacity="0" />
+        <stop
+          offset={Math.min(1, shine + 0.12)}
+          stopColor="#fff"
+          stopOpacity="0"
+        />
       </linearGradient>
       <clipPath id="trophyClip">
         <path d="M130 60 H490 V180 C490 330 410 430 310 450 C210 430 130 330 130 180 Z" />
@@ -24,12 +35,34 @@ export const Trophy: React.FC<{ colors: TeaserColors; shine: number }> = ({ colo
       </clipPath>
     </defs>
     {/* المقابض */}
-    <path d="M140 110 C40 100 30 250 170 300" fill="none" stroke="url(#cup)" strokeWidth="30" strokeLinecap="round" />
-    <path d="M480 110 C580 100 590 250 450 300" fill="none" stroke="url(#cup)" strokeWidth="30" strokeLinecap="round" />
+    <path
+      d="M140 110 C40 100 30 250 170 300"
+      fill="none"
+      stroke="url(#cup)"
+      strokeWidth="30"
+      strokeLinecap="round"
+    />
+    <path
+      d="M480 110 C580 100 590 250 450 300"
+      fill="none"
+      stroke="url(#cup)"
+      strokeWidth="30"
+      strokeLinecap="round"
+    />
     {/* الجسم */}
-    <path d="M130 60 H490 V180 C490 330 410 430 310 450 C210 430 130 330 130 180 Z" fill="url(#cup)" />
+    <path
+      d="M130 60 H490 V180 C490 330 410 430 310 450 C210 430 130 330 130 180 Z"
+      fill="url(#cup)"
+    />
     <ellipse cx="310" cy="62" rx="180" ry="22" fill="#5c4307" />
-    <ellipse cx="310" cy="60" rx="180" ry="18" fill={colors.goldLight} opacity="0.5" />
+    <ellipse
+      cx="310"
+      cy="60"
+      rx="180"
+      ry="18"
+      fill={colors.goldLight}
+      opacity="0.5"
+    />
     {/* نجمة */}
     <path
       d="M310 150 L330 205 L388 207 L342 242 L358 298 L310 265 L262 298 L278 242 L232 207 L290 205 Z"
@@ -40,8 +73,21 @@ export const Trophy: React.FC<{ colors: TeaserColors; shine: number }> = ({ colo
     <rect x="280" y="440" width="60" height="120" fill="url(#cup)" />
     <path d="M200 560 H420 L450 640 H170 Z" fill="url(#cup)" />
     <rect x="130" y="640" width="360" height="70" rx="12" fill="url(#cup)" />
-    <rect x="200" y="660" width="220" height="30" rx="6" fill="#0A1F5C" opacity="0.55" />
+    <rect
+      x="200"
+      y="660"
+      width="220"
+      height="30"
+      rx="6"
+      fill="#0A1F5C"
+      opacity="0.55"
+    />
     {/* لمعة تمر */}
-    <rect width="620" height="760" fill="url(#shine)" clipPath="url(#trophyClip)" />
+    <rect
+      width="620"
+      height="760"
+      fill="url(#shine)"
+      clipPath="url(#trophyClip)"
+    />
   </svg>
 );

@@ -1,4 +1,11 @@
-import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Easing,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { cairo } from "../fonts";
 import { goldGlow, goldText } from "../goldText";
 import { RevealText } from "../RevealText";
@@ -7,13 +14,19 @@ import type { TeaserColors } from "../schema";
 const NUMBERS = ["٣", "٢", "١"];
 
 // مشهد 4: عدّاد 3..2..1 مع نبضة ضوء على كل رقم واهتزاز خفيف
-export const CountdownScene: React.FC<{ colors: TeaserColors; text: string }> = ({ colors, text }) => {
+export const CountdownScene: React.FC<{
+  colors: TeaserColors;
+  text: string;
+}> = ({ colors, text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const beat = Math.round(1.5 * fps);
   const start = Math.round(0.3 * fps);
   const local = frame - start;
-  const idx = Math.min(NUMBERS.length - 1, Math.max(0, Math.floor(local / beat)));
+  const idx = Math.min(
+    NUMBERS.length - 1,
+    Math.max(0, Math.floor(local / beat)),
+  );
   const t = local - idx * beat; // الفريمات من بداية الرقم الحالي
   const active = local >= 0;
   const hit = active ? Math.exp(-t / 6) : 0; // قوة النبضة تخف بسرعة
@@ -40,8 +53,17 @@ export const CountdownScene: React.FC<{ colors: TeaserColors; text: string }> = 
             marginTop: -220,
             borderRadius: "50%",
             border: `6px solid ${colors.gold}`,
-            opacity: active ? interpolate(t, [0, beat * 0.8], [0.9, 0], { extrapolateRight: "clamp" }) : 0,
-            scale: String(interpolate(t, [0, beat], [0.6, 1.9], { easing: Easing.out(Easing.cubic), extrapolateRight: "clamp" })),
+            opacity: active
+              ? interpolate(t, [0, beat * 0.8], [0.9, 0], {
+                  extrapolateRight: "clamp",
+                })
+              : 0,
+            scale: String(
+              interpolate(t, [0, beat], [0.6, 1.9], {
+                easing: Easing.out(Easing.cubic),
+                extrapolateRight: "clamp",
+              }),
+            ),
             boxShadow: `0 0 60px ${colors.gold}, inset 0 0 60px ${colors.gold}`,
           }}
         />
@@ -54,20 +76,49 @@ export const CountdownScene: React.FC<{ colors: TeaserColors; text: string }> = 
             fontSize: 680,
             lineHeight: 1,
             marginTop: -220,
-            opacity: active ? interpolate(t, [0, 3, beat - 6, beat], [0, 1, 1, idx === NUMBERS.length - 1 ? 1 : 0], { extrapolateRight: "clamp" }) : 0,
+            opacity: active
+              ? interpolate(
+                  t,
+                  [0, 3, beat - 6, beat],
+                  [0, 1, 1, idx === NUMBERS.length - 1 ? 1 : 0],
+                  { extrapolateRight: "clamp" },
+                )
+              : 0,
             scale: String(interpolate(p, [0, 1], [2.2, 1])),
             filter: `blur(${interpolate(p, [0, 1], [12, 0])}px)`,
           }}
         >
-          <span style={{ ...goldText(colors), filter: goldGlow(colors, 40 + hit * 60) }}>{NUMBERS[idx]}</span>
+          <span
+            style={{
+              ...goldText(colors),
+              filter: goldGlow(colors, 40 + hit * 60),
+            }}
+          >
+            {NUMBERS[idx]}
+          </span>
         </div>
       </AbsoluteFill>
-      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 300 }}>
+      <AbsoluteFill
+        style={{
+          justifyContent: "flex-end",
+          alignItems: "center",
+          paddingBottom: 300,
+        }}
+      >
         <RevealText
           delay={0.6 * fps}
-          style={{ fontFamily: cairo, fontWeight: 900, fontSize: 96, color: "#fff", lineHeight: 1.45, padding: "0 80px" }}
+          style={{
+            fontFamily: cairo,
+            fontWeight: 900,
+            fontSize: 96,
+            color: "#fff",
+            lineHeight: 1.45,
+            padding: "0 80px",
+          }}
         >
-          <span style={{ filter: `drop-shadow(0 0 22px ${colors.gold}aa)` }}>{text}</span>
+          <span style={{ filter: `drop-shadow(0 0 22px ${colors.gold}aa)` }}>
+            {text}
+          </span>
         </RevealText>
       </AbsoluteFill>
     </AbsoluteFill>

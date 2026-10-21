@@ -1,11 +1,20 @@
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { cairo } from "../fonts";
 import { goldGlow, goldText } from "../goldText";
 import { RevealText } from "../RevealText";
 import type { TeaserColors } from "../schema";
 
 // مشهد 2: علامة استفهام ذهبية ضخمة تدور ببطء مع توهج
-export const QuestionScene: React.FC<{ colors: TeaserColors; text: string }> = ({ colors, text }) => {
+export const QuestionScene: React.FC<{
+  colors: TeaserColors;
+  text: string;
+}> = ({ colors, text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 14, stiffness: 70 } });
@@ -21,7 +30,13 @@ export const QuestionScene: React.FC<{ colors: TeaserColors; text: string }> = (
           scale: String(interpolate(enter, [0, 1], [0.4, 1])),
         }}
       />
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", perspective: 1600 }}>
+      <AbsoluteFill
+        style={{
+          justifyContent: "center",
+          alignItems: "center",
+          perspective: 1600,
+        }}
+      >
         <div
           style={{
             fontFamily: cairo,
@@ -29,20 +44,44 @@ export const QuestionScene: React.FC<{ colors: TeaserColors; text: string }> = (
             fontSize: 980,
             lineHeight: 1,
             marginTop: -320,
-            opacity: interpolate(enter, [0, 0.5], [0, 1], { extrapolateRight: "clamp" }),
+            opacity: interpolate(enter, [0, 0.5], [0, 1], {
+              extrapolateRight: "clamp",
+            }),
             scale: String(interpolate(enter, [0, 1], [0.3, 1])),
             rotate: `y ${Math.sin(frame / 28) * 38 + interpolate(enter, [0, 1], [-180, 0])}deg`,
           }}
         >
-          <span style={{ ...goldText(colors, 135), filter: goldGlow(colors, 50 * pulse) }}>؟</span>
+          <span
+            style={{
+              ...goldText(colors, 135),
+              filter: goldGlow(colors, 50 * pulse),
+            }}
+          >
+            ؟
+          </span>
         </div>
       </AbsoluteFill>
-      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 330 }}>
+      <AbsoluteFill
+        style={{
+          justifyContent: "flex-end",
+          alignItems: "center",
+          paddingBottom: 330,
+        }}
+      >
         <RevealText
           delay={0.9 * fps}
-          style={{ fontFamily: cairo, fontWeight: 900, fontSize: 112, color: "#fff", lineHeight: 1.4, padding: "0 80px" }}
+          style={{
+            fontFamily: cairo,
+            fontWeight: 900,
+            fontSize: 112,
+            color: "#fff",
+            lineHeight: 1.4,
+            padding: "0 80px",
+          }}
         >
-          <span style={{ filter: `drop-shadow(0 0 24px ${colors.gold}aa)` }}>{text}</span>
+          <span style={{ filter: `drop-shadow(0 0 24px ${colors.gold}aa)` }}>
+            {text}
+          </span>
         </RevealText>
       </AbsoluteFill>
     </AbsoluteFill>
