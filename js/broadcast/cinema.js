@@ -380,11 +380,14 @@ function cineMatchIntro(d) {
 }
 
 /* ===== "انطلق!" لحظة بداية الأسئلة ===== */
-function cineGo() {
+function cineGo(at) {
+    const late = at ? bcNow() - at : 0;
+    if (late > 1200) return;   /* "انطلق!" خلصت عند الكل */
     cineReady();
-    const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, 1400);
+    const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, Math.max(200, 1400 - Math.max(0, late)));
     if (!el) return;
-    cinePlay("start_q", 0.8) || cinePlay("impact", 0.8);
+    showSync(el, at);
+    if (late < SHOW_SOUND_LATE) cinePlay("start_q", 0.8) || cinePlay("impact", 0.8);
     cineFlash(el, 0.6, 350); cineShake(9);
     setTimeout(() => cpSpark(CP.w / 2, CP.h * 0.45, 90, null, 450), 30);
 }

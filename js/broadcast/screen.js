@@ -104,6 +104,7 @@ function liveTick() {
     bcTickMics();
     bcLowerThird(d);
     tvTick(d);
+    showTick(d);
     bcPerfTick(d);
     liveAdvanceIfDue();
 }
@@ -131,17 +132,20 @@ function bcTickClock(d) {
 }
 
 /* لقطة انتقالية بين المشاهد (ستينجر) */
-function bcStinger(title, sub) {
+function bcStinger(title, sub, at) {
     const scr = document.getElementById("liveScreen");
     if (!scr) return;
+    const late = at ? bcNow() - at : 0;
+    if (late > 1500) return;
     const old = scr.querySelector(".bc-stinger");
     if (old) old.remove();
     const el = document.createElement("div");
     el.className = "bc-stinger";
     el.innerHTML = `<div class="bc-st-band"></div><div class="bc-st-txt"><div class="t">${escapeHTML(title)}</div>${sub ? `<div class="s">${escapeHTML(sub)}</div>` : ""}</div>`;
     scr.appendChild(el);
-    cinePlay("whoosh", 0.6);
-    setTimeout(() => el.remove(), 1700);
+    showSync(el, at);
+    showSound(at, "whoosh", 0.6);
+    setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));
 }
 
 function bcSceneEffects(d) {
@@ -165,18 +169,19 @@ function bcSceneEffects(d) {
         if (prevScene === "result") tvBumper(d, () => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "intro" && x.cur === d.cur) cineMatchIntro(x); });
         else cineMatchIntro(d);
     } else if (d.scene === "talk") {
-        bcTransition("talk");
+        bcTransition("talk", Number(d.sceneAt) || 0);
     } else if (d.scene === "countdown") {
-        bcTransition("count");
+        bcTransition("count", (Number(d.deadline) || 0) - LIVE_COUNT_MS);
     } else if (d.scene === "playing" && prevScene === "countdown") {
-        cineGo();
+        cineGo(Number(d.qAt) || 0);
     } else if (d.scene === "result") {
         tvWarm();
-        setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
+        const sAt = (Number(d.sceneAt) || bcNow()) + 900;
+        setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : "", sAt), Math.max(0, sAt - bcNow()));
         cineResult(d);
     } else if (d.scene === "closing") {
         cineCloseAll();
-        bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج");
+        bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج", Number(d.sceneAt) || 0);
         cineClosing();
     }
 }
@@ -204,25 +209,28 @@ function bcEntrance(body, d) {
 }
 
 /* ===== لقطات انتقال بين المشاهد ===== */
-function bcTransition(kind) {
+function bcTransition(kind, at) {
     const scr = document.getElementById("liveScreen");
     if (!scr) return;
+    const late = at ? bcNow() - at : 0;
+    if (late > 1500) return;   /* خلص عند الكل */
     scr.querySelectorAll(".st-trans").forEach(e => e.remove());
     const el = document.createElement("div");
     el.className = "st-trans " + kind;
     if (kind === "talk") {
         el.innerHTML = `<i class="bloom"></i><i class="ring"></i><i class="ring two"></i><div class="lbl">${ic("mic")}<b>الترحيب بالمتسابقين</b><span>المايكات مفتوحة</span></div>`;
-        cinePlay("whoosh", 0.35);
-        setTimeout(() => cinePlay("impact", 0.25), 350);
+        showSound(at, "whoosh", 0.35);
+        if (late < 350) setTimeout(() => cinePlay("impact", 0.25), 350 - Math.max(0, late));
     } else if (kind === "count") {
         el.innerHTML = `<i class="iris"></i><div class="lbl"><b>المواجهة تبدأ</b></div>`;
-        cinePlay("riser", 0.45, { tail: 1.1 });
+        showSound(at, "riser", 0.45, { tail: 1.1 });
     } else {
         el.innerHTML = `<i class="sweep"></i>`;
-        cinePlay("whoosh", 0.3);
+        showSound(at, "whoosh", 0.3);
     }
     scr.appendChild(el);
-    setTimeout(() => el.remove(), 1700);
+    showSync(el, at);
+    setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));
 }
 
 /* القياس (bcPerf في cinema.js): كم ياخذ رسم الشاشة كل مرة */
@@ -297,7 +305,7 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
 <i class="st-cone"></i>
 <img src="${safeSrc(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
-<div class="st-desk"><b>${n === 1 ? (d.s1 || 0) : (d.s2 || 0)}</b><i>نقاط</i></div>
+<div class="st-desk">${showScoreHTML(d, n)}<i>نقاط</i></div>
 </div>`;
         const mid = d.scene === "talk" ? `الترحيب<small>قبل البداية</small>` : d.scene === "playing" ? (d.qIndex >= LIVE_Q_COUNT ? `ذهبي<small>سؤال الحسم</small>` : `السؤال ${d.qIndex + 1}<small>من ${LIVE_Q_COUNT}</small>`) : (d.scene === "result" ? "النتيجة" : "استعدوا");
         const mc = (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
@@ -313,10 +321,12 @@ ${pod(2)}
     R.stage = `<div class="lv-stage bc-scene" data-scene="${escapeHTML(d.scene || "")}">` + bcStageHTML(d, me) + `</div>`;
 
     bcPatchRegions(body, R);
+    showAfterRender(body, d);
     bcEntrance(body, d);
 
     const qc = body.querySelector(".st-qcard");
-    if (qc) { if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
+    /* still بس للوحة جديدة لنفس السؤال (انعاد بناء المشهد)، مو للوحة نفسها اللي للحين تتحرك (الرسم الجزئي ما يعيد بناءها) */
+    if (qc && !qc.dataset.seen) { qc.dataset.seen = "1"; if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
     const inp = document.getElementById("lvAnswerInput");
     if (inp) setTimeout(() => inp.focus(), 60);
     liveTick();
@@ -575,7 +585,7 @@ function bcQuizHTML(d, me) {
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-<div class="lv-qtext">${escapeHTML(q.text)}</div>
+<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>
 </div>`;
 
     const last = d.lastAnswer;

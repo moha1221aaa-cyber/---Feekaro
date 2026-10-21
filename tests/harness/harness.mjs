@@ -145,6 +145,7 @@ export function seed(db, scene, extra) {
 }
 
 /* ===== تشغيل الأجهزة ===== */
+let HID = 0;
 export async function launch(opts) {
     opts = opts || {};
     const args = ["--autoplay-policy=no-user-gesture-required", "--use-fake-device-for-media-stream"];
@@ -161,7 +162,6 @@ export async function device(browser, db, who, opts) {
         permissions: opts.allowMic === false ? [] : ["microphone"], reducedMotion: opts.reducedMotion || "no-preference",
         recordVideo: opts.video ? { dir: opts.video, size: { width: 390, height: 844 } } : undefined
     });
-    let hid = 0;
     await ctx.exposeBinding("__db", (src, op, a) => db.op(src.page, op, a));
     const fakeFb = fs.readFileSync(path.join(HERE, "fake-firebase.js"), "utf8");
     const fakeAg = fs.readFileSync(path.join(HERE, "fake-agora.js"), "utf8");
@@ -188,7 +188,7 @@ export async function device(browser, db, who, opts) {
     });
     await ctx.addInitScript(() => { try { localStorage.setItem("bcVoiceOn", "1"); } catch (e) {} });
     const page = await ctx.newPage();
-    page.__hid = who + (++hid);
+    page.__hid = who + (++HID);   /* عداد عام: جهازين بنفس الدور كانوا ياخذون نفس الرقم ويمسحون اشتراكات بعض */
     page.__logs = [];
     page.on("console", m => page.__logs.push(m.type() + ": " + m.text()));
     page.on("pageerror", e => page.__logs.push("PAGEERROR: " + e.message));

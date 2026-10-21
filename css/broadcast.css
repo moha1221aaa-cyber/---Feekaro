@@ -703,3 +703,52 @@
 #liveScreen.bc-lite .bc-title,#liveScreen.bc-lite .cine-gold,#liveScreen.bc-lite.live-screen[data-scene="waiting"],
 #liveScreen.bc-lite .st-talk .ic-wrap,#liveScreen.bc-lite .va-mic,#liveScreen.bc-lite .bc-onair-tag{animation:none;}
 #liveScreen.bc-lite.live-screen::before{animation-duration:56s;}
+
+/* ===== طبقة الإخراج الثانية (js/broadcast/show.js): كلها transform و opacity ===== */
+/* السؤال كلمة كلمة: --q0 بداية السؤال بالنسبة للحين (سالب = الجوال متأخر فيكمل من نفس الكلمة) */
+.lv-qtext.tv-words{animation:none !important;}
+.lv-qtext .tv-w{display:inline-block;animation:tvWordIn .42s var(--tv-out) both;animation-delay:calc(var(--q0,0ms) + var(--w) * 75ms);}
+@keyframes tvWordIn{from{opacity:0;transform:translateY(.45em) scale(.96)}to{opacity:1;transform:none}}
+.st-qcard.still .lv-qtext .tv-w{animation:none;}
+
+/* شريط عريض: السؤال الذهبي، سؤال الحسم، والموقف (سلسلة، تعادل، رجوع، صدارة) */
+.tv-band{position:absolute;left:0;right:0;top:40%;height:96px;margin-top:-48px;z-index:1000004;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.tv-band .tv-bd-bar{position:absolute;inset:0;background:linear-gradient(90deg,rgba(2,6,23,0),rgba(2,6,23,.92) 18%,rgba(2,6,23,.92) 82%,rgba(2,6,23,0));border-top:2px solid var(--tv-c,#facc15);border-bottom:2px solid var(--tv-c,#facc15);transform-origin:center;animation:tvBandBar 1.8s var(--tv-io) both;}
+.tv-band .tv-bd-glint{position:absolute;top:0;bottom:0;width:30%;left:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);animation:tvBandGlint 1.8s ease both;}
+.tv-band .tv-bd-in{position:relative;display:flex;align-items:center;gap:12px;color:#fff;animation:tvBandIn 1.8s var(--tv-out) both;}
+.tv-band .tv-bd-ic{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--tv-c,#facc15);color:#0b1020;}
+.tv-band .tv-bd-ic .ic{width:28px;height:28px;}
+.tv-band b{display:block;font-size:28px;font-weight:900;line-height:1.15;color:var(--tv-c,#facc15);}
+.tv-band small{display:block;font-size:14px;color:#e2e8f0;}
+.tv-band.decider{--tv-c:#f87171;}
+.tv-band.situ.tie{--tv-c:#38bdf8;}
+.tv-band.situ.comeback{--tv-c:#a78bfa;}
+.tv-band.situ.lead{--tv-c:#4ade80;}
+@keyframes tvBandBar{0%{transform:scaleY(0)}14%{transform:scaleY(1)}84%{transform:scaleY(1);opacity:1}100%{transform:scaleY(0);opacity:0}}
+@keyframes tvBandGlint{0%{transform:translateX(-120%)}55%{transform:translateX(380%)}100%{transform:translateX(380%)}}
+@keyframes tvBandIn{0%{opacity:0;transform:translateX(40px) scale(.92)}18%{opacity:1;transform:none}80%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-30px)}}
+
+/* إضاءة الاستوديو: 3 طبقات ثابتة تحت المحتوى، والتبديل بالشفافية بس */
+.tv-light{position:absolute;inset:0;z-index:0;pointer-events:none;}
+.tv-light i{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;}
+.tv-light .calm{background:radial-gradient(ellipse 70% 45% at 50% 0%,rgba(56,189,248,.16),transparent 70%);}
+.tv-light .tense{background:radial-gradient(ellipse 90% 60% at 50% 110%,rgba(239,68,68,.22),transparent 70%),radial-gradient(ellipse 60% 40% at 50% 0%,rgba(239,68,68,.12),transparent 70%);}
+.tv-light .party{background:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(250,204,21,.28),transparent 70%),radial-gradient(ellipse 50% 40% at 10% 100%,rgba(250,204,21,.14),transparent 70%),radial-gradient(ellipse 50% 40% at 90% 100%,rgba(250,204,21,.14),transparent 70%);}
+.tv-light[data-mood="calm"] .calm,.tv-light[data-mood="tense"] .tense,.tv-light[data-mood="party"] .party{opacity:1;}
+.tv-light[data-mood="tense"] .tense{animation:tvBreath 1.6s ease-in-out infinite;}
+@keyframes tvBreath{0%,100%{opacity:.7}50%{opacity:1}}
+#liveScreen.bc-lite .tv-light[data-mood="tense"] .tense{animation:none;}
+
+/* نقاط المنصة تتدحرج */
+.st-desk .tv-roll{display:inline-flex;flex-direction:column;height:1.15em;overflow:hidden;line-height:1.15;vertical-align:top;}
+.st-desk .tv-roll span{animation:tvRollUp .7s var(--tv-out) .15s both;}
+@keyframes tvRollUp{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+
+@media (prefers-reduced-motion: reduce){
+  .lv-qtext .tv-w{animation:none;}
+  .tv-band .tv-bd-bar,.tv-band .tv-bd-in{animation:tvFadeIO 1.8s linear both;}
+  .tv-band .tv-bd-glint{display:none;}
+  .tv-light[data-mood="tense"] .tense{animation:none;}
+  .st-desk .tv-roll span{animation:none;transform:translateY(-100%);}
+}
+@keyframes tvFadeIO{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}

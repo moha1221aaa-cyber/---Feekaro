@@ -212,6 +212,7 @@ function bcTicker(d) {
     if (tab.some(r => r.pts > 0)) items.push(`${ic("trophy")} الترتيب: ` + tab.map((r, i) => `${i + 1}. ${escapeHTML(r.name)} <b>${r.pts}</b>`).join(" · "));
     const nx = (d.order || []).find((o, i) => o.state === "pending" && i !== d.cur);
     if (nx) items.push(`${ic("zap")} المواجهة الجاية: ${escapeHTML(nx.p1)} ضد ${escapeHTML(nx.p2)}`);
+    items.unshift(...showStats(d));
     items.push(`دوري بنو مسروح للنخبة · الجولة ${escapeHTML(String(d.round))} · بث مباشر`);
     const sig = items.join("|");
     if (sig === bcTickerSig && el) return;
