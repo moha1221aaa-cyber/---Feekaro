@@ -13,6 +13,9 @@ const CASES = [
     { name: "speech-now", wav: "speech.wav", expect: "voice" },
     { name: "long-answer", wav: "speech_long.wav", expect: "voice", live: true },
     { name: "speech-music", wav: "speech_music.wav", expect: "voice" },
+    { name: "phone-mic", wav: "phone.wav", expect: "voice" },
+    { name: "phone-quiet", wav: "phone_quiet.wav", expect: "voice" },
+    { name: "phone-music", wav: "phone_music.wav", expect: "voice" },
     { name: "silence", wav: "silence.wav", expect: "type" },
     { name: "music-only", wav: "music_only.wav", expect: "type" },
     { name: "self-muted", wav: "speech.wav", expect: "voice", mute: true },
@@ -48,7 +51,7 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
             /* كلام فوري: ننتظر لين يبدأ الكلام في الملف ونضغط الجرس معه (أول كلمة لازم ما تضيع) */
             r.waitSpeech = !!(await until(() => p1.evaluate(() => {
                 if (!window.__lvl) { const t = bcTrack.getMediaStreamTrack(); const was = t.enabled; t.enabled = true; const ctx = new AudioContext(); const an = ctx.createAnalyser(); ctx.createMediaStreamSource(new MediaStream([t.clone()])).connect(an); const buf = new Float32Array(an.fftSize); window.__lvl = () => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length); }; t.enabled = was; }
-                return window.__lvl() > 0.03;
+                return window.__lvl() > 0.012;
             }), 9000, 20));
         } else await sleep(500);
         const t0 = Date.now();

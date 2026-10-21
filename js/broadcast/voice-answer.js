@@ -19,6 +19,7 @@ const VA_MAX_MS = 6000;          /* أطول جواب: بعد 6 ث من أول �
 const VA_ARM_MS = 5000;          /* التسجيل المبكر ينلغى لو السيرفر ما أكد إني فزت بالجرس خلال 5 ث */
 const VA_PARTIAL_MS = 1200;      /* كلام أطول من كذا: نعرض نص مباشر قبل ما يخلص */
 const VA_PAD_MS = 300;           /* نخلي 0.3 ث قبل أول كلمة وبعد آخر كلمة في الملف المرسل */
+const VA_LOUD = 0.08;            /* صوت أعلى من كذا بدون ما ينكشف كلام: ينرسل للسيرفر احتياط */
 const VA_QUIET_MS = 5000;        /* 5 ث بدون أي كلام من بداية الدور: نطلّع الكتابة بدل ما ننتظر نهاية الوقت */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
@@ -192,7 +193,9 @@ async function vaStart(key) {
         if (!frames.length) { vaDiag("no-audio", info); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
         /* لو الكاشف لقط كلام قصير بس الصوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب.
            وموسيقى أو ضجة بدون أي كلام ما تنرسل (Whisper يتخيّل منها كلام) */
-        if (speechMs < VA_MIN_SPEECH_MS && (peak < 0.05 || firstIdx < 0)) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
+        /* شبكة أمان (تجربة 21 أكتوبر: صوت واضح 0.13 وما انحسب كلام): صوت عالي بدون كلام مكشوف ينرسل كامل،
+           والسيرفر يحكم (يرفض أي جواب ما هو من كلام المتسابق) */
+        if (speechMs < VA_MIN_SPEECH_MS && !(peak >= VA_LOUD || (peak >= 0.05 && firstIdx >= 0))) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
         /* رد فوري إن الجواب وصل قبل ما يرد السيرفر */
         if (typeof bcTap === "function") bcTap(document.getElementById("vaBox"), "tapped", "tick", 20);
         vaDiag("sent", info);
@@ -243,6 +246,7 @@ async function vaStart(key) {
         if (!frames.length && now - startedAt > 1500) finish(true);
         else if (!firstVoiceAt && now - startedAt > VA_QUIET_MS) finish(true);
         else if (speechMs >= VA_MIN_SPEECH_MS && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
+        else if (speechMs >= 100 && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS * 2) finish(true);   /* كلمة قصيرة قالها مع الجرس: ما ننتظر 5 ث */
         else if (firstVoiceAt && now - firstVoiceAt > VA_MAX_MS) finish(true);
         else if (bcNow() >= stopAt()) finish(true);
     }, 100);
