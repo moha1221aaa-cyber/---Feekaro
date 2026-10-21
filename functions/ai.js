@@ -234,15 +234,23 @@ async function taskHost(env, b) {
     "أنت مقدم برنامج مسابقات ثقافية سعودي اسمه دوري بنو مسروح للنخبة، أسلوبك حماسي ومحترم.",
     "اكتب بالعربية الفصحى البسيطة (لأن الكلام بيتقرأ بصوت آلي)، جمل قصيرة، بدون إيموجي وبدون رموز.",
     "لا تخترع نتائج أو أرقام أو معلومات عن المتسابقين، استخدم بس اللي يجيك في السياق.",
-    "رد بـ JSON بس: {\"open\":\"...\",\"intros\":[\"...\"],\"close\":\"...\"}",
-    "open: ترحيب بداية الجولة (جملتين بالكثير). intros: لكل مواجهة جملة تشويق وحدة قصيرة بعد ما ينذكر اسم المتسابقين (بدون ما تعيد أسماءهم). close: جملة ختام قصيرة بدون وداع (الوداع ينضاف لحاله)."
+    "رد بـ JSON بس: {\"open\":\"...\",\"intros\":[\"...\"],\"close\":\"...\",\"situ\":{\"streak\":[\"...\"],\"comeback\":[\"...\"],\"tie\":[\"...\"],\"lead\":[\"...\"]}}",
+    "open: ترحيب بداية الجولة (جملتين بالكثير). intros: لكل مواجهة جملة تشويق وحدة قصيرة بعد ما ينذكر اسم المتسابقين (بدون ما تعيد أسماءهم). close: جملة ختام قصيرة بدون وداع (الوداع ينضاف لحاله).",
+    "situ: جمل قصيرة جداً (أقل من 8 كلمات) يقولها المقدم بعد إجابة صحيحة حسب الموقف، جملتين لكل موقف: streak (جاوب 3 أسئلة ورا بعض)، comeback (رجع بعد ما كان متأخر بنقطتين)، tie (صار تعادل)، lead (صار متقدم). في streak و comeback و lead اكتب {p} مكان اسم المتسابق بالضبط، وفي tie بدون اسم."
   ].join("\n");
   const user = `الجولة ${round}، وفيها ${ms.length} مواجهات:\n` +
     ms.map((m, i) => `${i + 1}. ${m.p1} ضد ${m.p2}${m.ctx ? " (" + m.ctx + ")" : ""}`).join("\n");
-  const raw = await run(env, system, user, 700, 0.9);
+  const raw = await run(env, system, user, 1000, 0.9);
   const o = pickJSON(raw, "{");
   const intros = (Array.isArray(o.intros) ? o.intros : []).slice(0, ms.length).map(t => clip(t, 160));
-  return { open: clip(o.open, 260), intros, close: clip(o.close, 200) };
+  /* جمل الموقف: جملتين بالكثير لكل موقف، والاسم مكانه {p} بس (ما نقبل أي قوس ثاني عشان bcFill ما يحط شي غريب) */
+  const situ = {};
+  const src = o.situ && typeof o.situ === "object" ? o.situ : {};
+  for (const k of ["streak", "comeback", "tie", "lead"]) {
+    const list = (Array.isArray(src[k]) ? src[k] : []).map(t => clip(t, 90)).filter(t => t && !/\{(?!p\})/.test(t) && (k === "tie" ? t.indexOf("{p}") === -1 : t.indexOf("{p}") !== -1)).slice(0, 2);
+    if (list.length) situ[k] = list;
+  }
+  return { open: clip(o.open, 260), intros, close: clip(o.close, 200), situ };
 }
 
 async function taskChat(env, b) {

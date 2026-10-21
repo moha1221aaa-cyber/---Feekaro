@@ -119,8 +119,13 @@ const BC_HOST = {
     golden: ["تعادل! وصلنا للسؤال الذهبي، واللي يجاوب صح أول يفوز بالمواجهة. {t}", "السؤال الذهبي! أول إجابة صحيحة تحسم المواجهة. {t}"],
     decider: ["سؤال الحسم! هذا السؤال يحدد مصير المواجهة. {t}", "وصلنا لسؤال الحسم، والإجابة الصحيحة تقرر كل شي. {t}"],
     reveal: ["والإجابة الصحيحة هي: {a}.", "الإجابة الصحيحة: {a}.", "والجواب الصحيح هو: {a}."],
-    tieNow: ["وتعادل في النقاط!", "ورجعنا للتعادل!"],
-    leadSwap: ["وتغيّر المتقدم في هذي المواجهة!", "وانقلبت النتيجة!"],
+    /* جمل الموقف بعد الجواب ({p} اسم اللي جاوب). الذكاء الاصطناعي يكتب غيرها لكل جولة (aiLines.situ)، وهذي احتياط */
+    situ: {
+        streak: ["{p} على نار! ثلاث إجابات ورا بعض.", "{p} ما يوقفه أحد الليلة!"],
+        comeback: ["{p} يرجع للمواجهة بقوة!", "ما استسلم {p}، ورجع من بعيد!"],
+        tie: ["وتعادل في النقاط!", "ورجعنا للتعادل!"],
+        lead: ["و{p} يتقدم الحين!", "{p} يخطف الصدارة في هذي المواجهة!"]
+    },
     win: ["نهاية المواجهة. الفوز لـ {w} بنتيجة {a} مقابل {b}.", "انتهت المواجهة، و{w} يفوز {a} مقابل {b}. مبروك!"],
     big: ["فوز ساحق لـ {w} بنتيجة {a} مقابل {b}!"],
     comeback: ["عودة تاريخية! {w} يقلب الطاولة ويفوز {a} مقابل {b}!"],
@@ -143,14 +148,28 @@ function bcQText(d, i, plain) {
 function bcRevealText(d, i, plain) {
     const q = (d.questions || [])[i];
     if (!q) return "";
-    let t = bcFill(bcPick(BC_HOST.reveal, "a" + d.round + ":" + d.cur + ":" + i), { a: String(q.answer || "").split("|")[0] });
-    if (!plain && d.outcome && d.qIndex === i) {
-        const s1 = d.s1 || 0, s2 = d.s2 || 0, [p1, p2] = bcPreScores(d);
-        if (s1 === s2) t += " " + bcPick(BC_HOST.tieNow, "tn" + i + d.cur);
-        else if ((p1 > p2 && s2 > s1) || (p2 > p1 && s1 > s2)) t += " " + bcPick(BC_HOST.leadSwap, "ls" + i + d.cur);
-    }
-    return t;
+    /* بدون إضافات: نفس النص اللي جهّزه جهاز المنظم مسبقاً (bcPrefetchVoice)، والموقف جملة لحالها (bcSituText) */
+    return bcFill(bcPick(BC_HOST.reveal, "a" + d.round + ":" + d.cur + ":" + i), { a: String(q.answer || "").split("|")[0] });
 }
+/* جملة الموقف بعد كشف جواب صح: رجوع من خسارة، تعادل، تقدّم، أو سلسلة (3 إجابات ورا بعض). نفس الجملة على كل الأجهزة (bcPick ثابت) */
+function bcSituKind(d) {
+    if (!d || d.phase !== "reveal" || !d.outcome) return "";
+    const n = d.outcome, s = [0, d.s1 || 0, d.s2 || 0], pre = [0].concat(bcPreScores(d)), o = n === 1 ? 2 : 1;
+    if ((d["bh" + n] || 0) >= 2 && s[n] >= s[o] && pre[n] < pre[o]) return "comeback";
+    if (s[n] === s[o]) return "tie";
+    if (s[n] > s[o] && pre[n] <= pre[o]) return "lead";
+    const log = d.log || [];
+    let run = 0; for (let i = d.qIndex; i >= 0 && log[i] === n; i--) run++;
+    return run >= 3 ? "streak" : "";
+}
+function bcSituText(d) {
+    const k = bcSituKind(d), o = bcCur(d);
+    if (!k || !o) return "";
+    const ai = ((d.aiLines || {}).situ || {})[k];
+    const list = Array.isArray(ai) && ai.length ? ai : BC_HOST.situ[k];
+    return bcFill(bcPick(list, "s" + k + d.round + ":" + d.cur + ":" + d.qIndex), { p: d.outcome === 1 ? o.p1 : o.p2 });
+}
+
 function bcResultText(d) {
     const o = bcCur(d);
     if (!o) return "";
