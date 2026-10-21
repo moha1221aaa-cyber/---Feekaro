@@ -79,7 +79,7 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
             r.note = await p1.evaluate(() => { const n = document.querySelector(".va-note"); return n ? n.textContent.trim() : ""; });
             await p1.screenshot({ path: `${out}/${c.name}-2-type.png` });
         }
-        const diag = (liveDoc(db).vaDiag || {}).u_p1;
+        const diag = ((db.data("room/main/liveDiag/round_2") || {}).vaDiag || {}).u_p1;
         r.diag = Array.isArray(diag) ? diag.map(x => ({ steps: x.steps.join(">"), via: x.via, speechMs: x.speechMs, said: x.said, ok: x.ok })) : diag;
         r.reqs = reqs.map(x => x.task + ":" + x.sec + "s");
         r.errors = p1.__logs.filter(l => /PAGEERROR/.test(l));

@@ -22,8 +22,8 @@ function openLiveScreen(id) {
         const v = document.createElement("video");
         v.id = "stVideo"; v.className = "st-video";
         v.src = "media/studio.mp4"; v.poster = "media/studio.jpg";
-        v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
-        v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", "auto");
+        v.muted = true; v.loop = true; v.autoplay = !bcLite; v.playsInline = true;
+        v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", bcLite ? "none" : "auto");   /* الخفيف: صورة poster بس */
         scr.insertBefore(v, scr.firstChild);
     }
     /* لقطات الاستوديو الثانية (صور من Google Flow بحركة كاميرا بطيئة) */
@@ -35,7 +35,9 @@ function openLiveScreen(id) {
         scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
     }
     scr.classList.add("open");
-    try { const v = document.getElementById("stVideo"); if (v && v.paused) v.play().catch(() => {}); } catch (e) {}
+    try { const v = document.getElementById("stVideo"); if (v && v.paused && !bcLite) v.play().catch(() => {}); } catch (e) {}
+    bcApplyLite();
+    bcWatchFrames();
     document.body.classList.add("live-open");
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
     cineLoadSamples(CINE_CORE);

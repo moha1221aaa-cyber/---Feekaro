@@ -193,7 +193,7 @@ export async function device(browser, db, who, opts) {
     page.on("console", m => page.__logs.push(m.type() + ": " + m.text()));
     page.on("pageerror", e => page.__logs.push("PAGEERROR: " + e.message));
     page.on("dialog", d => d.accept());
-    await page.goto(`${opts.base || "http://127.0.0.1:" + PORT}/index.html?as=${who}&live=${opts.live || "round_2"}`);
+    await page.goto(`${opts.base || "http://127.0.0.1:" + PORT}/index.html?as=${who}&live=${opts.live || "round_2"}${opts.query ? "&" + opts.query : ""}`);
     return page;
 }
 

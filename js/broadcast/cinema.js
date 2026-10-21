@@ -9,6 +9,48 @@
 const CINE_REDUCED = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
 let cineBgOn = true;
 try { cineBgOn = localStorage.getItem("bcBgOn") !== "0"; } catch (e) {}
+/* ===== الوضع الخفيف للجوالات الضعيفة =====
+   فيديو الاستوديو المتكرر + لقطات بحركة كاميرا وفلاتر + زجاج (backdrop-filter) + جزيئات: على جوال ضعيف تاخذ المعالج كله،
+   فالجرس يتأخر (قسنا 300ms على أندرويد 10) والصوت يتقطع. الوضع الخفيف يوقف الفيديو على صورة ثابتة ويشيل الحركة والزجاج،
+   وشكل البث نفسه (الألوان والمنصات والنص) ما يتغير. يشتغل لحاله: جهاز ضعيف (4 أنوية أو أقل، أو ذاكرة 2GB أو أقل)
+   أو لو الإطارات تتأخر أول ما يفتح البث. ?lite=1 أو ?lite=0 للتجربة */
+let bcLite = (() => {
+    try {
+        const q = new URLSearchParams(location.search).get("lite");
+        if (q === "1") return true;
+        if (q === "0") return false;
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent || "")) return false;   /* سفاري ما يعطي عدد الأنوية الحقيقي، والآيفون يكشفه فحص الإطارات */
+        return (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2;
+    } catch (e) { return false; }
+})();
+const BC_LITE_FORCED = (() => { try { return new URLSearchParams(location.search).has("lite"); } catch (e) { return false; } })();
+function bcApplyLite() {
+    const scr = document.getElementById("liveScreen");
+    if (scr) scr.classList.toggle("bc-lite", bcLite);
+    const v = document.getElementById("stVideo");
+    if (v) { if (bcLite) { try { v.pause(); } catch (e) {} } else if (v.paused) v.play().catch(() => {}); }
+}
+function bcSetLite(on, why) {
+    if (bcLite === on) return;
+    bcLite = on;
+    bcApplyLite();
+    try { if (typeof bcDiagPush === "function") bcDiagPush("perf", { at: bcNow(), lite: on, why: String(why || "").slice(0, 40) }); } catch (e) {}
+}
+/* أول 5 ث من البث: لو أكثر من ربع الإطارات تاخذ فوق 50ms، نشغّل الخفيف (وما نرجع، عشان ما يرمش) */
+function bcWatchFrames() {
+    if (bcLite || BC_LITE_FORCED || bcWatchFrames.on) return;
+    bcWatchFrames.on = true;
+    let last = performance.now(), n = 0, slow = 0;
+    const t0 = last;
+    const step = ts => {
+        const dt = ts - last; last = ts; n++;
+        if (dt > 50) slow++;
+        if (ts - t0 < 5000 && !document.hidden) return requestAnimationFrame(step);
+        bcWatchFrames.on = false;
+        if (n > 20 && slow / n > 0.25) bcSetLite(true, "frames " + slow + "/" + n);
+    };
+    requestAnimationFrame(step);
+}
 const CINE = { c: null, bus: null, bed: null };
 
 function cineGraph() {
@@ -114,7 +156,7 @@ function cpResize() {
     CP.cv.width = Math.round(CP.w * dpr); CP.cv.height = Math.round(CP.h * dpr);
     CP.x.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-function cpMax() { return CINE_REDUCED ? 60 : 650; }
+function cpMax() { return CINE_REDUCED ? 60 : (bcLite ? 120 : 650); }
 function cpSpark(x, y, n, colors, speed) {
     return;   /* الشرارات شلناها عشان البث يكون أقرب للتلفزيون */
     colors = colors || CP_GOLD;

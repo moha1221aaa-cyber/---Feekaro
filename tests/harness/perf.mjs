@@ -1,0 +1,51 @@
+/* جوال ضعيف: المعالج أبطأ 6 مرات (CDP)، ونقيس في وقت السؤال: نسبة الإطارات البطيئة (> 50ms)، والمهام الطويلة،
+   وزمن الرد المحلي للجرس. مرة بالشكل الكامل (?lite=0) ومرة بالخفيف (?lite=1)، وبعدها الكشف التلقائي (بدون lite).
+   node tests/harness/perf.mjs [مجلد] */
+import { serve, FakeDB, seed, launch, device, until, sleep } from "./harness.mjs";
+import fs from "node:fs";
+
+const out = process.argv[2] || "/tmp/harness-perf";
+fs.mkdirSync(out, { recursive: true });
+const srv = await serve(8787);
+let ok = true;
+const check = (name, v, extra) => { if (!v) ok = false; console.log((v ? "PASS " : "FAIL ") + name + (extra !== undefined ? " " + JSON.stringify(extra) : "")); };
+const res = {};
+for (const mode of ["lite=0", "lite=1", "auto"]) {
+    const db = new FakeDB(60);
+    const now = Date.now();
+    seed(db, "playing", { phase: "buzz", qIndex: 0, qAt: now + 4000, deadline: now + 60000, ready1: true, ready2: true });
+    const browser = await launch({ wav: "silence.wav" });
+    try {
+        const p1 = await device(browser, db, "p1", { api: { ai: async () => ({ ok: false }) }, query: mode === "auto" ? "" : mode });
+        const cdp = await p1.context().newCDPSession(p1);
+        await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+        await until(() => p1.$("#lvBell"), 20000);
+        await sleep(6000);   /* الكشف التلقائي ياخذ أول 5 ث */
+        const m = await p1.evaluate(() => new Promise(done => {
+            let last = performance.now(), n = 0, slow = 0, long = 0;
+            const t0 = last;
+            try { new PerformanceObserver(l => { for (const e of l.getEntries()) long += e.duration; }).observe({ type: "longtask" }); } catch (e) {}
+            const step = ts => { const dt = ts - last; last = ts; n++; if (dt > 50) slow++; if (ts - t0 < 4000) requestAnimationFrame(step); else done({ frames: n, slowPct: Math.round(slow / n * 100), longMs: Math.round(long), lite: bcLite, cls: document.getElementById("liveScreen").classList.contains("bc-lite"), video: (() => { const v = document.getElementById("stVideo"); return v ? (v.paused ? "paused" : "playing") : "none"; })() }); };
+            requestAnimationFrame(step);
+        }));
+        const bell = await p1.evaluate(() => new Promise(r => {
+            const b = document.getElementById("lvBell");
+            const ev = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+            b.dispatchEvent(ev);
+            requestAnimationFrame(() => r(Math.round(performance.now() - ev.timeStamp)));
+        }));
+        await p1.screenshot({ path: `${out}/${mode.replace("=", "")}.png` });
+        res[mode] = Object.assign(m, { bellMs: bell, errors: p1.__logs.filter(l => /PAGEERROR/.test(l)) });
+        console.log(mode, JSON.stringify(res[mode]));
+    } catch (e) { ok = false; console.log(e); }
+    await browser.close();
+}
+check("lite mode: video paused, class on", res["lite=1"] && res["lite=1"].cls && res["lite=1"].video === "paused");
+/* Chromium هنا بدون H.264 فـ studio.mp4 ما يشتغل أصلاً، فنتأكد بس إن الكامل ما يشغّل الخفيف */
+check("full mode stays full (?lite=0 wins over auto-detect)", res["lite=0"] && !res["lite=0"].cls && !res["lite=0"].lite);
+check("auto mode: this 4-core box is detected as weak", res.auto && res.auto.lite === true, res.auto && res.auto.lite);
+check("lite is smoother than full on a slow CPU", res["lite=1"] && res["lite=0"] && res["lite=1"].slowPct <= res["lite=0"].slowPct, [res["lite=0"] && res["lite=0"].slowPct, res["lite=1"] && res["lite=1"].slowPct]);
+check("no page errors", Object.values(res).every(r => !r.errors.length));
+fs.writeFileSync(out + "/perf.json", JSON.stringify(res, null, 1));
+srv.close();
+process.exit(ok ? 0 : 1);

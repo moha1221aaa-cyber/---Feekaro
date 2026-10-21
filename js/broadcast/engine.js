@@ -815,16 +815,9 @@ function liveBuzz(ev) {
        الحكم مين ضغط أول يظل في الـ transaction تحت، ولو غيري سبقني يتلغى التسجيل */
     if (bell) { bell.classList.add("rung"); const sp = bell.querySelector("span"); if (sp) sp.textContent = "ضغطت!"; }
     bcLocalBuzzQ = id + "|" + d.cur + "|" + d.qIndex;
-    cinePlay("buzz", 0.7);
-    try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
     const bz = BC_BUZZ.cur = { id, q: d.cur + "_" + d.qIndex, t0, at: bcNow(), local: 0, tx: 0, seen: 0, won: null, sent: false };
-    requestAnimationFrame(() => { bz.local = Math.round(performance.now() - t0); });
-    setTimeout(() => bcBuzzDone(bz), 6000);   /* لو ما وصل شي، نسجّل اللي عندنا */
-    if (typeof bcStopSpeech === "function") bcStopSpeech();
-    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
-    if (typeof vaPrime === "function") vaPrime();
-    if (typeof vaArm === "function") vaArm(id, d.qIndex);
-    liveTx(id, (x, now) => {
+    /* طلب الجرس يطلع للسيرفر أول شي (مين أسرع يتحدد هناك)، وبعده الصوت والاهتزاز وتجهيز التسجيل */
+    const txP = liveTx(id, (x, now) => {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
         if (!n) return null;
@@ -834,7 +827,16 @@ function liveBuzz(ev) {
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
         if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
         return u;
-    }).then(u => {
+    });
+    cinePlay("buzz", 0.7);
+    try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+    requestAnimationFrame(() => { bz.local = Math.round(performance.now() - t0); });
+    setTimeout(() => bcBuzzDone(bz), 6000);   /* لو ما وصل شي، نسجّل اللي عندنا */
+    if (typeof bcStopSpeech === "function") bcStopSpeech();
+    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
+    if (typeof vaPrime === "function") vaPrime();
+    if (typeof vaArm === "function") vaArm(id, d.qIndex);
+    txP.then(u => {
         bz.tx = Math.round(performance.now() - t0);
         if (!u) {
             bz.won = false; bcBuzzDone(bz);
