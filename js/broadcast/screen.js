@@ -16,6 +16,7 @@ function openLiveScreen(id) {
     bcRxSeenN = null;
     bcTickerSig = "";
     bcEnterScene = ""; bcEnterPhase = "";
+    TV.boardKey = ""; TV.sec = -1;
     /* فيديو الاستوديو الحقيقي (من Google Flow) خلفية ثابتة للبث */
     if (!document.getElementById("stVideo")) {
         const v = document.createElement("video");
@@ -63,6 +64,7 @@ function closeLiveScreen(fromPop) {
     bedSet("");
     bcTicker(null);
     { const l3 = document.getElementById("stL3"); if (l3) l3.remove(); BC_L3.key = ""; }
+    { const tb = document.getElementById("tvBoard"); if (tb) tb.remove(); if (scr) scr.classList.remove("tv-final"); }
     if (scr) { delete scr.dataset.scene; delete scr.dataset.shot; }
     bcSyncAudio();
 }
@@ -98,6 +100,7 @@ function liveTick() {
     bcAutoPilot(d);
     bcTickMics();
     bcLowerThird(d);
+    tvTick(d);
     liveAdvanceIfDue();
 }
 
@@ -154,7 +157,9 @@ function bcSceneEffects(d) {
     if (d.scene === "opening") {
         cineOpening(d);
     } else if (d.scene === "intro" && o) {
-        cineMatchIntro(d);
+        /* فاصل بين المواجهات (أشرطة الدوري ونتايج الجولة) وبعده مشهد المواجهة */
+        if (prevScene === "result") tvBumper(d, () => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "intro" && x.cur === d.cur) cineMatchIntro(x); });
+        else cineMatchIntro(d);
     } else if (d.scene === "talk") {
         bcTransition("talk");
     } else if (d.scene === "countdown") {
@@ -162,6 +167,7 @@ function bcSceneEffects(d) {
     } else if (d.scene === "playing" && prevScene === "countdown") {
         cineGo();
     } else if (d.scene === "result") {
+        tvWarm();
         setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
         cineResult(d);
     } else if (d.scene === "closing") {
@@ -306,6 +312,7 @@ function liveSoundsOnChange(d) {
     const p = livePrevView;
     livePrevView = view;
     if (!p) return;
+    if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans)) tvBuzzMoment(d);
     if (view.phase === "answer" && (p.phase !== "answer" || p.ans !== view.ans) && !d.passed && bcLocalBuzzQ !== openLiveId + "|" + d.cur + "|" + d.qIndex) cinePlay("buzz", 0.7);
     if (view.phase === "answer" && d.passed && p.ans !== view.ans) cinePlay("wrong", 0.5);
     if (view.phase === "buzz" && p.phase !== "buzz" && view.q > 0) cinePlay("whoosh", 0.4);
@@ -574,7 +581,7 @@ ${lastHTML}
         const okLast = last && last.correct ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : lastHTML;
         html += `
 <div class="st-reveal ${hold ? "hold" : ""}" id="stReveal">
-<div class="st-wait">والإجابة الصحيحة هي<span>.</span><span>.</span><span>.</span></div>
+<div class="st-wait">والإجابة الصحيحة هي<span>.</span><span>.</span><span>.</span><i class="tv-drum" style="animation-delay:${-Math.max(0, 1600 - Math.max(0, bcRevealAt(d) - bcNow()))}ms"></i></div>
 <div class="lv-reveal ${w ? "" : "none"}">
 <div class="t">${w ? ic("check-circle") + " " + escapeHTML(livePlayerName(d, w)) + " جاوب صح! +1" : ic("x-circle") + " محد جاوب صح"}</div>
 <div class="lv-muted">الإجابة الصحيحة</div>

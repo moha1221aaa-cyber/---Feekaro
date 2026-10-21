@@ -219,6 +219,21 @@ function cineOverlay(cls, html, ms) {
     if (!/fxonly/.test(cls || "")) el.addEventListener("click", () => cineClose(el, true));
     return el;
 }
+/* فيديو Remotion (video/ في المستودع) فوق المشهد: صامت وبدون مسار صوت، ولو ما اشتغل يبان المشهد المرسوم تحته */
+function cineVideo(el, src) {
+    if (CINE_REDUCED) return;
+    const v = document.createElement("video");
+    /* webm (VP8) للمتصفحات اللي ما فيها H.264 (Chromium)، و mp4 للباقي (الآيفون) */
+    if (v.canPlayType && v.canPlayType('video/mp4; codecs="avc1.42E01E"') === "" && v.canPlayType("video/webm") !== "") src = src.replace(/\.mp4$/, ".webm");
+    v.className = "cine-vid"; v.src = src; v.muted = true; v.playsInline = true; v.autoplay = true; v.preload = "auto";
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("aria-hidden", "true");
+    v.addEventListener("error", () => v.remove());
+    v.addEventListener("playing", () => el.classList.add("has-vid"));
+    const skip = el.querySelector(".cine-skip");
+    el.insertBefore(v, skip || null);
+    v.play().catch(() => v.remove());
+    return v;
+}
 function cineOn(el, sel) { el.querySelectorAll(sel).forEach(e => e.classList.add("on")); }
 function cineAt(el, sec, fn) {
     el._timers.push(setTimeout(() => { if (el.isConnected && !el._closing) { try { fn(); } catch (e) {} } }, sec * 1000));
@@ -257,6 +272,7 @@ function cineOpening(d) {
 <div class="cine-onair"><span>ON AIR</span></div>
 <div class="cine-skip">اضغط للتخطي</div>`, 6000);
     if (!el) return;
+    cineVideo(el, "media/opening.mp4");
     /* موسيقى افتتاح البرنامج، والخلفية تنخفض لين تخلص */
     const theme = CINE_BUF.show_intro;
     bedHold(theme ? theme.duration : 6);
