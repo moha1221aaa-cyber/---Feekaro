@@ -12,6 +12,9 @@ concurrency:
   group: render-teaser-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -41,3 +44,17 @@ jobs:
           name: masro7-teaser
           path: video/out/masro7-teaser.mp4
           retention-days: 30
+
+      # ريليز ثابت (teaser) عشان رابط التحميل ما يتغير مع كل ريندر
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view teaser >/dev/null 2>&1; then
+            gh release upload teaser out/masro7-teaser.mp4 --clobber
+          else
+            gh release create teaser out/masro7-teaser.mp4 --target "$GITHUB_SHA" \
+              --title "تيزر دوري بنو مسروح للنخبة" \
+              --notes "فيديو عمودي 1080×1920، 30 ثانية. يتحدث تلقائياً مع كل تعديل في video/." \
+              --prerelease
+          fi
