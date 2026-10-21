@@ -20,6 +20,8 @@ const VA_ARM_MS = 5000;          /* التسجيل المبكر ينلغى لو 
 const VA_PARTIAL_MS = 1200;      /* كلام أطول من كذا: نعرض نص مباشر قبل ما يخلص */
 const VA_PAD_MS = 300;           /* نخلي 0.3 ث قبل أول كلمة وبعد آخر كلمة في الملف المرسل */
 const VA_LOUD = 0.08;            /* صوت أعلى من كذا بدون ما ينكشف كلام: ينرسل للسيرفر احتياط */
+const VA_SOFT_MS = 250;          /* الكاشف الحساس (احتياط): كلام واطي أو مقطّع بهالطول ينرسل للسيرفر بدل الكتابة */
+const VA_SOFT_IGNORE_MS = 500;   /* أول نص ثانية من الضغط: صوت الجرس ودقة الإصبع ما تنحسب للحساس */
 const VA_QUIET_MS = 5000;        /* 5 ث بدون أي كلام من بداية الدور: نطلّع الكتابة بدل ما ننتظر نهاية الوقت */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
@@ -130,7 +132,7 @@ async function vaCapture(ctx, src, onFrame) {
         let o = 0;
         for (; o + vad.N <= all.length; o += vad.N) {
             const f = all.slice(o, o + vad.N), talking = vad.frame(f);
-            onFrame({ pcm: f, talking, rms: vad.rms, e: vad.e, floor: vad.floor, speechMs: vad.speechMs, peak: vad.peak });
+            onFrame({ pcm: f, talking, soft: vad.soft, softMs: vad.softMs, rms: vad.rms, e: vad.e, floor: vad.floor, speechMs: vad.speechMs, peak: vad.peak });
         }
         rest = all.slice(o);
     };
@@ -165,6 +167,7 @@ async function vaStart(key) {
     if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
     const frames = [];               /* كل إطار: { pcm, talking } */
     let speechMs = 0, peak = 0, floor = 0, lastVoiceAt = 0, firstVoiceAt = 0, firstIdx = -1, lastIdx = -1, partial = false;
+    let eMax = 0, softMs = 0, softFirstAt = 0, softLastAt = 0, softFirstIdx = -1, softLastIdx = -1;
     const startedAt = performance.now();
     /* نهاية وقت الإجابة من الوثيقة نفسها (تتحدث لو الوقت تمدد)، وقبل التأكيد ما فيه نهاية */
     const stopAt = () => {
@@ -174,7 +177,8 @@ async function vaStart(key) {
     /* الجزء اللي فيه كلام بس (مع هامش)، عشان الملف أصغر و Whisper ما يتخيّل كلام من السكوت */
     const clip = () => {
         const pad = Math.ceil(VA_PAD_MS / 20);
-        const a = firstIdx >= 0 ? Math.max(0, firstIdx - pad) : 0, b = lastIdx >= 0 ? Math.min(frames.length, lastIdx + pad + 1) : frames.length;
+        const fi = firstIdx >= 0 ? firstIdx : softFirstIdx, li = Math.max(lastIdx, softLastIdx);
+        const a = fi >= 0 ? Math.max(0, fi - pad) : 0, b = li >= 0 ? Math.min(frames.length, li + pad + 1) : frames.length;
         return frames.slice(a, b).map(f => f.pcm);
     };
 
@@ -190,13 +194,14 @@ async function vaStart(key) {
         if (typeof bedApply === "function") bedApply();
         const key = rec.key;
         if (!send || VA.key !== key || key.indexOf("arm|") === 0) return;
-        const info = { frames: frames.length, speechMs: Math.round(speechMs), peak: +peak.toFixed(3), noise: +floor.toFixed(4) };
+        const info = { frames: frames.length, speechMs: Math.round(speechMs), softMs: Math.round(softMs), eMax: +eMax.toFixed(4), peak: +peak.toFixed(3), noise: +floor.toFixed(4) };
         if (!frames.length) { vaDiag("no-audio", info); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
         /* لو الكاشف لقط كلام قصير بس الصوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب.
            وموسيقى أو ضجة بدون أي كلام ما تنرسل (Whisper يتخيّل منها كلام) */
         /* شبكة أمان (تجربة 21 أكتوبر: صوت واضح 0.13 وما انحسب كلام): صوت عالي بدون كلام مكشوف ينرسل كامل،
            والسيرفر يحكم (يرفض أي جواب ما هو من كلام المتسابق) */
-        if (speechMs < VA_MIN_SPEECH_MS && !(peak >= VA_LOUD || (peak >= 0.05 && firstIdx >= 0))) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
+        /* وتجربة 21 أكتوبر الثانية: كلام واطي (0.024) ومقطّع من إلغاء الصدى، الأساسي ما سمعه والحساس يسمعه */
+        if (speechMs < VA_MIN_SPEECH_MS && softMs < VA_SOFT_MS && !(peak >= VA_LOUD || (peak >= 0.05 && firstIdx >= 0))) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
         /* رد فوري إن الجواب وصل قبل ما يرد السيرفر */
         if (typeof bcTap === "function") bcTap(document.getElementById("vaBox"), "tapped", "tick", 20);
         vaDiag("sent", info);
@@ -208,8 +213,12 @@ async function vaStart(key) {
         if (rec.stop === null) return;
         const now = performance.now();
         frames.push({ pcm: f.pcm, talking: f.talking });
-        speechMs = f.speechMs; peak = f.peak; floor = f.floor;
+        speechMs = f.speechMs; peak = f.peak; floor = f.floor; if (f.e > eMax) eMax = f.e;
         if (f.talking) { lastVoiceAt = now; lastIdx = frames.length - 1; if (!firstVoiceAt) { firstVoiceAt = now; firstIdx = frames.length - 1; } }
+        if (f.soft && now - startedAt > VA_SOFT_IGNORE_MS) {
+            softMs += f.pcm.length / ctx.sampleRate * 1000; softLastAt = now; softLastIdx = frames.length - 1;
+            if (!softFirstAt) { softFirstAt = now; softFirstIdx = frames.length - 1; }
+        }
         /* نص مباشر: الكلام طويل، نعرض اللي انقال للحين (مرة وحدة، وبس بعد ما يتأكد إني فزت بالجرس) */
         if (!partial && f.talking && speechMs >= VA_PARTIAL_MS && rec.key.indexOf("arm|") !== 0) { partial = true; vaPartial(rec.key, clip(), ctx.sampleRate); }
         /* المتسابق يشوف إن صوته واصل: المؤشر يتحرك والدائرة تكبر والنص يتغير */
@@ -217,7 +226,7 @@ async function vaStart(key) {
         const bar = document.getElementById("vaLevel"); if (bar) bar.style.transform = "scaleX(" + Math.max(0.04, level).toFixed(2) + ")";
         const box = document.getElementById("vaBox");
         if (box) {
-            const on = now - lastVoiceAt < 350;
+            const on = now - Math.max(lastVoiceAt, softLastAt) < 350;
             box.classList.toggle("talking", on);
             box.style.setProperty("--lvl", level.toFixed(2));
             const t = document.getElementById("vaT");
@@ -245,7 +254,11 @@ async function vaStart(key) {
             return;
         }
         if (!frames.length && now - startedAt > 1500) finish(true);
-        else if (!firstVoiceAt && now - startedAt > VA_QUIET_MS) finish(true);
+        else if (!firstVoiceAt && !softFirstAt && now - startedAt > VA_QUIET_MS) finish(true);
+        /* الأساسي ما سمع شي بس الحساس سمع كلام واطي أو مقطّع وسكت بعده 0.8 ث: نرسله (السيرفر يحكم) */
+        else if (!firstVoiceAt && softMs >= VA_SOFT_MS && now - softLastAt > 800) finish(true);
+        else if (!firstVoiceAt && softFirstAt && now - softFirstAt > VA_MAX_MS) finish(true);
+        else if (!firstVoiceAt && softFirstAt && softMs < VA_SOFT_MS && now - softLastAt > VA_QUIET_MS) finish(true);
         else if (speechMs >= VA_MIN_SPEECH_MS && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
         /* كلمة قصيرة قالها مع الجرس: ما ننتظر 5 ث. بس لازم 200ms كلام وآخره بعد 0.6 ث من الضغط،
            عشان صوت الجرس أو دقة الإصبع ما تنحسب جواب وتقفل التسجيل وهو للحين يفكر */
@@ -263,6 +276,9 @@ function vaWav(chunks, rate) {
     let n = 0; chunks.forEach(c => n += c.length);
     const all = new Float32Array(n); let o = 0; chunks.forEach(c => { all.set(c, o); o += c.length; });
     const ratio = rate / VA_RATE, len = Math.floor(n / ratio);
+    /* صوت واطي (جوال بدون رفع صوت تلقائي، أعلى إطار 0.024): نكبّره لين أعلى نقطة 0.7 (حد 16 مرة) عشان Whisper يسمعه زين */
+    let mx = 0; for (let i = 0; i < n; i++) { const a = Math.abs(all[i]); if (a > mx) mx = a; }
+    const gain = mx > 0 ? Math.min(16, Math.max(1, 0.7 / mx)) : 1;
     const view = new DataView(new ArrayBuffer(44 + len * 2));
     const w = (p, s) => { for (let i = 0; i < s.length; i++) view.setUint8(p + i, s.charCodeAt(i)); };
     w(0, "RIFF"); view.setUint32(4, 36 + len * 2, true); w(8, "WAVE"); w(12, "fmt ");
@@ -272,7 +288,7 @@ function vaWav(chunks, rate) {
     for (let i = 0; i < len; i++) {
         const a = Math.floor(i * ratio), b = Math.min(n, Math.floor((i + 1) * ratio));
         let s = 0; for (let j = a; j < b; j++) s += all[j];
-        const v = Math.max(-1, Math.min(1, s / Math.max(1, b - a)));
+        const v = Math.max(-1, Math.min(1, gain * s / Math.max(1, b - a)));
         view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
     }
     return new Uint8Array(view.buffer);

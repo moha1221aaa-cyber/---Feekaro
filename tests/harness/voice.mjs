@@ -16,8 +16,12 @@ const CASES = [
     { name: "phone-mic", wav: "phone.wav", expect: "voice" },
     { name: "phone-quiet", wav: "phone_quiet.wav", expect: "voice" },
     { name: "phone-music", wav: "phone_music.wav", expect: "voice" },
+    /* تجربة 21 أكتوبر الثانية: جوال صوته واطي (0.024) والكلام مقطّع من إلغاء الصدى، بدون رفع صوت من المتصفح */
+    { name: "phone-soft-raw", wav: "phone_soft.wav", expect: "voice", raw: true },
+    { name: "phone-choppy-raw", wav: "phone_choppy.wav", expect: "voice", raw: true },
     { name: "silence", wav: "silence.wav", expect: "type" },
-    { name: "music-only", wav: "music_only.wav", expect: "type" },
+    /* موسيقى عالية بس: الكاشف الحساس ممكن يرسلها، و Whisper ما يسمع فيها كلام، فتطلع الكتابة */
+    { name: "music-only", wav: "music_only.wav", expect: "type", maySend: true, empty: true },
     { name: "self-muted", wav: "speech.wav", expect: "voice", mute: true },
     { name: "mic-denied", wav: "speech.wav", expect: "type", allowMic: false }
 ];
@@ -33,6 +37,10 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         reqs.push(r);
         if (b.audio) fs.writeFileSync(`${out}/${c.name}-${b.task}-${reqs.length}.wav`, Buffer.from(b.audio, "base64"));
         if (b.task === "hear") return { heard: "مساء الخير مساء" };
+        if (b.task === "voice" && c.empty) {
+            const lines = [{ heard: "" }, { final: true, heard: "", said: "", ok: false }];
+            return b.stream ? { raw: { status: 200, contentType: "application/x-ndjson", body: lines.map(l => JSON.stringify(l)).join("\n") + "\n" } } : lines[1];
+        }
         if (b.task === "voice") {
             const lines = [{ heard: "مساء الخير" }, { final: true, heard: "مساء الخير", said: "الرياض", ok: true }];
             return b.stream ? { raw: { status: 200, contentType: "application/x-ndjson", body: lines.map(l => JSON.stringify(l)).join("\n") + "\n" } } : lines[1];
@@ -42,7 +50,7 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
     const browser = await launch({ wav: c.wav, allowMic: c.allowMic });
     const r = { case: c.name, expect: c.expect };
     try {
-        const p1 = await device(browser, db, "p1", { api, allowMic: c.allowMic });
+        const p1 = await device(browser, db, "p1", { api, allowMic: c.allowMic, query: c.raw ? "rawmic=1" : "" });
         await until(() => p1.$("#lvBell"), 15000);
         /* الوقت للإجابة يكون كافي (الاختبار يقيس سلوك التسجيل مو نهاية الوقت) */
         await until(() => p1.evaluate(() => typeof bcTrack !== "undefined" && !!bcTrack || !!bcMicErr), 8000);
@@ -51,7 +59,7 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
             /* كلام فوري: ننتظر لين يبدأ الكلام في الملف ونضغط الجرس معه (أول كلمة لازم ما تضيع) */
             r.waitSpeech = !!(await until(() => p1.evaluate(() => {
                 if (!window.__lvl) { const t = bcTrack.getMediaStreamTrack(); const was = t.enabled; t.enabled = true; const ctx = new AudioContext(); const an = ctx.createAnalyser(); ctx.createMediaStreamSource(new MediaStream([t.clone()])).connect(an); const buf = new Float32Array(an.fftSize); window.__lvl = () => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length); }; t.enabled = was; }
-                return window.__lvl() > 0.012;
+                return window.__lvl() > (/rawmic=1/.test(location.search) ? 0.004 : 0.012);
             }), 9000, 20));
         } else await sleep(500);
         const t0 = Date.now();
@@ -84,8 +92,8 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         r.reqs = reqs.map(x => x.task + ":" + x.sec + "s");
         r.errors = p1.__logs.filter(l => /PAGEERROR/.test(l));
         r.pass = c.expect === "voice"
-            ? r.sent && r.committed && r.wavSec > 0.9 && r.wavSec < (c.live ? 4.5 : 3.5) && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || (r.liveText && r.reqs.some(x => /^hear/.test(x)))) && !r.errors.length
-            : r.typeBox && !r.voiceSent && !r.errors.length;
+            ? r.sent && r.committed && r.sentAfterMs < (c.live ? 4500 : 3500) && r.wavSec > 0.9 && r.wavSec < (c.live ? 4.5 : 3.5) && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || (r.liveText && r.reqs.some(x => /^hear/.test(x)))) && !r.errors.length
+            : r.typeBox && (c.maySend || !r.voiceSent) && r.typeAfterMs < 9000 && !(liveDoc(db).lastAnswer || {}).correct && !r.errors.length;
     } catch (e) { r.pass = false; r.err = String(e.stack || e); }
     results.push(r);
     console.log((r.pass ? "PASS " : "FAIL ") + c.name + " " + JSON.stringify(r));

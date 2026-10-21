@@ -33,22 +33,27 @@ function offsetOf(x, rate) {
     return off;
 }
 
-const NAMES = { speech: true, speech_music: true, silence: false, music_only: false, phone: true, phone_quiet: true, phone_music: true, phone_music_only: false };
+const NAMES = { speech: true, speech_music: true, silence: false, music_only: false, phone: true, phone_quiet: true, phone_music: true, phone_music_only: false, phone_soft: true, phone_soft_music: true, phone_choppy: true };
 const runs = [];
 for (const [n, sp] of Object.entries(NAMES)) {
     runs.push({ f: path.join(HERE, "audio", n + ".wav"), name: n, sp, cap: false });
     const c = path.join(HERE, "audio", "captured", n + ".wav");
     if (fs.existsSync(c)) runs.push({ f: c, name: "captured/" + n, sp, cap: true });
 }
-let ok = true;
-for (const r of runs) {
+/* مرتين: الكاشف الأساسي (لنهاية الكلام) على كل الملفات، والحساس (احتياط) لازم يلقط الكلام المقطّع والواطي.
+   الحساس مسموح له يغلط في الموسيقى (السيرفر يحكم)، بس ما يفوّت كلام */
+let ok = true, SOFT = false;
+for (const pass of ["strict", "soft"]) {
+SOFT = pass === "soft";
+console.log("== " + pass);
+for (const r of runs.filter(x => SOFT ? x.sp : !/choppy/.test(x.name))) {
     if (!fs.existsSync(r.f)) { console.log("SKIP " + r.name + " (شغّل gen.py أو capture.mjs)"); continue; }
     const { rate, data } = readWav(r.f);
     const off = r.sp && r.cap ? offsetOf(data, rate) : 0;
     const v = ctx.vaVadCreate(rate);
     const segs = []; let cur = null;
     for (let i = 0; i + v.N <= data.length; i += v.N) {
-        const t = v.frame(data.subarray(i, i + v.N)), at = i / rate;
+        const t0 = v.frame(data.subarray(i, i + v.N)), t = SOFT ? v.soft : t0, at = i / rate;
         if (t && !cur) cur = { from: at };
         if (!t && cur) { cur.to = at; segs.push(cur); cur = null; }
     }
@@ -61,9 +66,10 @@ for (const r of runs) {
     }
     const total = r.sp ? Math.floor((data.length / rate - (r.cap ? 1.5 : 0) - off) / 4) : 0;
     const missed = r.sp ? Math.max(0, total - 1 - cycles.size) : 0;
-    const allowFa = (!r.sp && r.cap && /music/.test(r.name)) ? 1 : 0;
+    const allowFa = SOFT ? 99 : ((!r.sp && r.cap && /music/.test(r.name)) ? 1 : 0);
     const pass = missed === 0 && fa <= allowFa && longTail === 0;
     if (!pass) ok = false;
-    console.log(`${pass ? "PASS" : "FAIL"} ${r.name}: كلام ${cycles.size}${r.sp ? "/" + total : ""}، ناقص ${missed}، غلط ${fa}، نهاية متأخرة ${longTail}`);
+    console.log(`${pass ? "PASS" : "FAIL"} ${SOFT ? "soft " : ""}${r.name}: كلام ${cycles.size}${r.sp ? "/" + total : ""}، ناقص ${missed}، غلط ${fa}، نهاية متأخرة ${longTail}`);
+}
 }
 process.exit(ok ? 0 : 1);
