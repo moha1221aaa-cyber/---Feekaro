@@ -15,18 +15,29 @@ const bcTtsBuf = {};               /* النص ← Promise<AudioBuffer> */
 let bcSpeechSrc = null;
 let bcLastSpokenKey = "";
 
-function bcTtsUrl(text) { return "/tts?t=" + encodeURIComponent(text); }
+/* w=1: مو جهاز المنظم، فالسيرفر ينتظر نسخة المنظم في الكاش بدل ما يولّدها مرة ثانية بنفس اللحظة */
+function bcTtsUrl(text) {
+    const d = openLiveId ? liveMatchesCache[openLiveId] : null;
+    /* المنظم غايب (الطيار الآلي): محد بيولّدها قبلنا، فلا ننتظر */
+    return "/tts?t=" + encodeURIComponent(text) + (!d || amBcHost(d) || bcHostGone(d) ? "" : "&w=1");
+}
 
 /* نحمّل الصوت مسبقاً عشان يطلع على كل الأجهزة بنفس اللحظة تقريباً */
 function bcTtsLoad(text) {
     if (!text || !bcTtsServerOk) return Promise.reject(new Error("off"));
     if (!bcTtsBuf[text]) {
-        bcTtsBuf[text] = authHeaders().then(h => fetch(bcTtsUrl(text), { headers: h }))
+        /* لو ما وصل (401 لأنه لسا ما انولّد، 5xx، أو النت): نحاول مرتين بعد 0.8 و 1.6 ث، عشان المذيع ما يسكت عند أحد */
+        const once = () => authHeaders().then(h => fetch(bcTtsUrl(text), { headers: h }))
             .then(r => {
-                if (r.status === 503) bcTtsServerOk = false;
-                if (!r.ok || (r.headers.get("Content-Type") || "").indexOf("audio") === -1) throw new Error("tts " + r.status);
+                if (r.status === 503) { bcTtsServerOk = false; const e = new Error("tts 503"); e.final = true; throw e; }
+                if (!r.ok || (r.headers.get("Content-Type") || "").indexOf("audio") === -1) { const e = new Error("tts " + r.status); e.final = r.status === 400 || r.status === 403; throw e; }
                 return r.arrayBuffer();
-            })
+            });
+        const tryN = n => once().catch(e => {
+            if (e.final || n >= 2) throw e;
+            return new Promise(res => setTimeout(res, 800 * (n + 1))).then(() => tryN(n + 1));
+        });
+        bcTtsBuf[text] = tryN(0)
             .then(ab => new Promise((res, rej) => liveCtx().decodeAudioData(ab, res, rej)))
             .catch(e => { delete bcTtsBuf[text]; throw e; });
     }
@@ -40,9 +51,12 @@ function bcStopSpeech() {
     bedDuck(false);
 }
 
-/* يقرا جملة أو أكثر ورا بعض (الجواب ثم الموقف). أي جملة ما توصل من السيرفر تنتخطى بصمت */
+/* يقرا جملة أو أكثر ورا بعض (الجواب ثم الموقف). أي جملة ما توصل من السيرفر تنتخطى بصمت.
+   at: وقت البداية بساعة السيرفر (bcNow)، عشان كل الجوالات تبدأ الجملة الأولى بنفس اللحظة مهما تأخر وصول التحديث لها:
+   لو الجهاز متأخر شوي (لين 1.2 ث) يبدأ من نص الجملة بنفس مكان الباقين، ولو متأخر أكثر يقراها من أولها (أحسن من جملة مقطوعة أو ما تنقرا) */
+const BC_SPEAK_SEEK_MAX = 1.2;
 let bcSpeakSeq = 0;
-function bcSpeak(text, then) {
+function bcSpeak(text, at, joinedLate) {
     const list = (Array.isArray(text) ? text : [text]).filter(Boolean);
     if (!bcVoiceOn || !list.length) return;
     bcStopSpeech();
@@ -59,7 +73,11 @@ function bcSpeak(text, then) {
             const g = c.createGain(); g.gain.value = 1.0;
             src.buffer = buf; src.connect(g); g.connect(c.destination);
             src.onended = () => { if (bcSpeechSrc === src) { bcSpeechSrc = null; setTimeout(() => playAt(i + 1), 250); } };
-            src.start();
+            const late = i === 0 && at ? (bcNow() - at) / 1000 : 0;
+            if (joinedLate && late > buf.duration + 1) return playAt(i + 1);   /* فتح البث متأخر والجملة خلصت عند الكل */
+            if (late < -0.02) src.start(c.currentTime - late);
+            else if (late > 0.15 && late <= BC_SPEAK_SEEK_MAX && late < buf.duration - 0.4) src.start(0, late);
+            else src.start();
             bcSpeechSrc = src;
             bedDuck(true);
         });
@@ -76,8 +94,14 @@ function bcToggleVoice() {
 
 /* أول ما تبدأ المواجهة، جهاز المنظم بس يجهّز أصوات الأسئلة مسبقاً (تنحفظ في الكاش)،
    وبعدها كل الأجهزة تاخذها من الكاش. كذا كل جملة تنحسب من رصيد الأصوات مرة وحدة بس */
+let bcPrefetchKey = "";
 function bcPrefetchVoice(d) {
-    if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d) || !amBcHost(d)) return;
+    if (!bcVoiceOn || !bcTtsServerOk || !bcInMatch(d)) return;
+    /* المنظم يجهّزها أول (تنولّد مرة وحدة)، والباقين بعده بـ 3 ث من الكاش، عشان أول ما يجي السؤال الصوت جاهز عند الكل بنفس اللحظة */
+    const pk = openLiveId + ":" + d.cur;
+    if (bcPrefetchKey === pk) return;
+    bcPrefetchKey = pk;
+    if (!amBcHost(d)) { setTimeout(() => { const x = liveMatchesCache[openLiveId]; if (x && x.cur === d.cur) (x.questions || []).forEach((q, i) => { bcTtsLoad(bcQText(x, i, true)).catch(() => {}); }); }, 3000); return; }
     /* الأسئلة بس. جملة الجواب ما تتجهز قبل وقتها: كاش /tts عام، فلو انطلبت قبل الكشف أي أحد يقدر يجرّب
        "والإجابة الصحيحة هي: ..." ويعرف من الكاش (200) إن تخمينه صح. تنطلب من جهاز المنظم أول ما يبدأ الكشف (تحت) */
     (d.questions || []).forEach((q, i) => { bcTtsLoad(bcQText(d, i, true)).catch(() => {}); });
@@ -119,6 +143,9 @@ function bcAnnouncer(d) {
         key = "close"; delay = 2500; text = bcCloseText(d);
     }
     if (!key || key === bcLastSpokenKey) return;
+    /* وقت البداية من وقت اللحظة نفسها في الوثيقة (بساعة السيرفر)، مو من وقت وصول التحديث للجهاز */
+    const anchor = key[0] === "q" ? Number(d.qAt) : (key[0] === "a" ? (Number(d.deadline) || 0) - LIVE_REVEAL_MS : Number(d.sceneAt));
+    const at = anchor > 0 ? anchor + delay : bcNow() + delay;
     const first = bcLastSpokenKey === "";
     bcLastSpokenKey = key;
     /* لو فتحت البث في نص سؤال، ما نقرا شي قديم إلا السؤال الحالي */
@@ -134,12 +161,12 @@ function bcAnnouncer(d) {
             const wait = () => {
                 const x = liveMatchesCache[openLiveId];
                 const t0 = x && x.cur === d.cur && x.qIndex === d.qIndex ? bcRevealText(x, d.qIndex, true) : "";
-                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]]); return; }
+                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]], at, first); return; }
                 setTimeout(wait, 200);
             };
             wait();
             return;
         }
-        bcSpeak(text);
-    }, delay);
+        bcSpeak(text, at, first);
+    }, Math.max(0, at - bcNow() - 120));
 }

@@ -12,7 +12,7 @@ const env = { AGORA_APP_CERTIFICATE: "0123456789abcdef0123456789abcdef", AI: { r
     return { response: '{"ok":false}' };
 } } };
 const ID = "round_7";
-let DOC = null;
+let DOC = null, BOXES = null;
 /* وثيقة Firestore REST من object عادي */
 const enc = v => v === null || v === undefined ? { nullValue: null } : typeof v === "string" ? { stringValue: v } : typeof v === "boolean" ? { booleanValue: v }
     : typeof v === "number" ? (Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v }) : Array.isArray(v) ? { arrayValue: { values: v.map(enc) } }
@@ -20,6 +20,7 @@ const enc = v => v === null || v === undefined ? { nullValue: null } : typeof v 
 let reads = 0;
 auth.routes.push({ match: u => u.startsWith("https://firestore.googleapis.com/"), handle: async u => {
     reads++;
+    if (BOXES && u.includes("/liveBoxes/" + ID + "?")) return new Response(JSON.stringify({ fields: enc(BOXES).mapValue.fields }));
     if (!DOC || !u.includes("/liveMatches/" + ID + "?")) return new Response("{}", { status: 404 });
     return new Response(JSON.stringify({ fields: enc(DOC).mapValue.fields }));
 } });
@@ -115,6 +116,13 @@ check("open: refused mid-match", (await post({ action: "open", id: ID, m: 1 }, p
 DOC = od({ hostSeen: Date.now(), scene: "playing" });
 check("open: admin any time", (await (await post({ action: "open", id: ID, m: 1 }, admin)).json()).qs[0].text === "م2 سؤال");
 check("open: guest refused (401)", (await post({ action: "open", id: ID, m: 1 })).status === 401);
+/* الصناديق في وثيقة liveBoxes/<id> لحالها (وثيقة البث فيها boxed بس) */
+BOXES = { boxes: box };
+DOC = od({ order: [{ state: "done", boxed: true }, { state: "pending", boxed: true }] });
+j = await (await post({ action: "open", id: ID, m: 1 }, p1)).json();
+check("open: box from liveBoxes doc", j.qs && j.qs[0].text === "م2 سؤال", j);
+BOXES = null;
+check("open: boxed but no boxes doc → 404", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 404);
 
 check("bad origin refused", (await onRequestPost(ctxFor(new Request("https://masro7-league.pages.dev/answer", { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }), env))).status === 403);
 auth.restore(); done();

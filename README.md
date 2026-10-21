@@ -74,6 +74,14 @@ AUDIT.md                نتايج الفحص الشامل وحالة كل بن�
 
 مكتبة Firebase من gstatic ممكن تكون محجوبة في بيئة Claude، والحل: نسخة `firebase@10.12.0` من npm، و Playwright يحوّل طلبات `gstatic.com/firebasejs/10.12.0/*` لها، والموقع يشتغل من `python3 -m http.server`. Firestore نفسه يتوصل له، فالبيانات حقيقية (قراءة بس). لا تجرب أزرار المنظم بهالطريقة لأنها تكتب في قاعدة البيانات الحقيقية.
 
+## ثبات البث بين الجوالات (21 أكتوبر 2026)
+
+- وثيقة البث (room/main/liveMatches/<id>) صغيرة: كل تغيير فيها ينرسل كامل لكل جوال. صناديق الأسئلة في `liveBoxes/<id>` (السيرفر يقراها في answer.js open)، والتشخيص في `liveDiag/<id>` (لوحة المنظم تسمعه وهي مفتوحة بس). لا ترجع تحط شي كبير في الوثيقة.
+- الانتقالات بالوقت (نهاية السؤال، الكشف) يسويها جهاز واحد: المنظم فوراً، والمتسابقين بعد 1.2 ث احتياط، والمشاهدين 2.5 ث (bcAdvanceLag). لو المنظم غايب المتسابقين أول.
+- المذيع يبدأ بوقت السيرفر (bcSpeak(text, at)): الجهاز المتأخر يدخل من نص الجملة. /tts للزائر ينتظر نسخة المنظم في الكاش لين 2.4 ث، و w=1 للأجهزة الثانية.
+- أجورا: انقطاع كامل يرجع يدخل القناة وينشر نفس المايك (connection-state-change في js/broadcast/voice.js).
+- الوضع الخفيف (bcLite في cinema.js، كلاس bc-lite): الجوالات الضعيفة بدون فيديو الاستوديو المتحرك ولا الزجاج. ?lite=1 أو ?lite=0 للتجربة.
+
 ## الاختبار المحلي للبث (بدون أي كتابة في القاعدة الحقيقية)
 
 `tests/harness`: الموقع نفسه في Chromium (Playwright) بـ Firebase وأجورا بديلين، وكل الأجهزة تشترك بقاعدة وحدة في Node. المايك وهمي (`--use-file-for-fake-audio-capture`)، وملفاته تتولد بـ `python3 tests/harness/audio/gen.py`.
@@ -81,9 +89,12 @@ AUDIT.md                نتايج الفحص الشامل وحالة كل بن�
 ```bash
 node tests/harness/smoke.mjs speech.wav /tmp/out      # مواجهة كاملة + زمن الجرس
 node tests/harness/voice.mjs /tmp/out                 # الجواب الصوتي: كلام، موسيقى، سكوت، مكتوم، مرفوض
-node tests/harness/vad.mjs                            # كاشف الكلام على الملفات بدون متصفح
+node tests/harness/capture.mjs                        # (اختياري) يسجّل ملفات المايك عبر معالجة Chromium لـ vad.mjs
+node tests/harness/vad.mjs                            # كاشف الكلام على الملفات (الخام والمعالجة) بدون متصفح
 node tests/harness/tv.mjs /tmp/out                    # الإخراج التلفزيوني بالحركة وبدونها
-node tests/harness/announcer.mjs /tmp/out             # جمل المذيع وطلبات /tts
+node tests/harness/announcer.mjs /tmp/out             # جمل المذيع وطلبات /tts وتزامنه مع جهاز متأخر
+node tests/harness/net.mjs                            # انقطاع النت: صوت البث يرجع لحاله
+node tests/harness/perf.mjs /tmp/out                  # جوال ضعيف (معالج أبطأ 6 مرات) والوضع الخفيف
 node tests/harness/secure.mjs /tmp/out                # الأجوبة المختومة (functions/answer.js الحقيقي)
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال
 ```

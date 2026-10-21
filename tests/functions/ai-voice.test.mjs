@@ -62,4 +62,29 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     x = await go("أظن والله إنها يمكن تكون مدينة جدة اللي على البحر", "ما عاصمة السعودية؟", "الرياض");
     check("long rambling → extraction path", x.r.ok === false && x.r.t.path === "extract", x);
 }
+{
+    /* تجربة 21 أكتوبر الحقيقية: Whisper طلّع السؤال نفسه والموديل جاوب "206" من عنده وانحسب صح */
+    const mk = (text, said) => { const c = []; return { c, env: { AI: { run: async (m, i) => { c.push({ m, i }); if (m.includes("whisper")) return { text }; return { response: JSON.stringify({ said, ok: true }) }; } } } }; };
+    let k = mk("مرد عظام جسم الإنسان", "206");
+    let r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206", audio }), k.env))).json();
+    check("question echo + model self-answer → NOT accepted", r.ok === false && !r.said, r);
+    k = mk("أظن والله إنها يمكن تكون مدينة جدة اللي على البحر", "الرياض");
+    r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما عاصمة السعودية؟", answer: "الرياض", audio }), k.env))).json();
+    check("extracted word not in speech → rejected", r.ok === false && r.t.path === "extract-rejected", r);
+    k = mk("ميتين وست", "206");
+    r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206", audio }), k.env))).json();
+    check("number said in words goes to the judge (not blocked)", r.ok === true && r.said === "ميتين وست", r);
+    k = mk("سورة البقرة", "");
+    r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة", audio }), k.env))).json();
+    check("answer that shares a question word (سورة البقرة) still accepted fast", r.ok === true && r.t.path === "fast", r);
+    const w = k.c.find(x => x.m.includes("whisper"));
+    check("whisper prompt no longer contains the question", w && w.i.initial_prompt.indexOf("عظام") === -1, w && w.i.initial_prompt);
+    /* مراجعة الكود: جواب صح فيه كلمة من السؤال ما ينرفض */
+    k = mk("سبعة أيام", "سبعة");
+    r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد أيام الأسبوع؟", answer: "7", audio }), k.env))).json();
+    check("two-word answer sharing a question word (سبعة أيام) goes to the judge, not echo", r.ok === true && r.t.path !== "echo", r);
+    k = mk("انا متأكد مية بالمية انها سورة البقرة", "سورة البقرة");
+    r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما هي أطول سورة في القرآن الكريم؟", answer: "البقرة", audio }), k.env))).json();
+    check("extracted answer with a question word (سورة البقرة) accepted", r.ok === true && r.t.path !== "extract-rejected", r);
+}
 auth.restore(); done();

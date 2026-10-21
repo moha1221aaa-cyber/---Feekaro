@@ -157,7 +157,7 @@ async function doOpen(env, b, user) {
   if (!d || d.status !== "live") return json(409, { error: "البث مو شغال" });
   const order = Array.isArray(d.order) ? d.order : [];
   const it = order[m];
-  if (!it || !it.box) return json(404, { error: "ما فيه صندوق" });
+  if (!it || !(it.box || it.boxed)) return json(404, { error: "ما فيه صندوق" });
   const admin = String(user.email || "").toLowerCase() === ADMIN_EMAIL;
   if (!admin) {
     /* الطيار الآلي: المنظم غايب، ومشهد يقدر ينتقل منه، والمواجهة هي الجاية فعلاً */
@@ -168,7 +168,11 @@ async function doOpen(env, b, user) {
     if (next !== m) return json(409, { error: "مو المواجهة الجاية" });
   }
   const key = await sealKey(env);
-  const raw = key ? await unseal(key, id, "\u0001box" + m, it.box) : null;
+  /* الصناديق في room/main/liveBoxes/<id> (وثيقة البث فيها boxed بس)، والوثائق القديمة فيها box نفسه */
+  let sealed = it.box;
+  if (!sealed) { const bd = await readPublicDoc("room/main/liveBoxes/" + id); sealed = bd && Array.isArray(bd.boxes) ? bd.boxes[m] : null; }
+  if (!sealed) return json(404, { error: "ما فيه صندوق" });
+  const raw = key ? await unseal(key, id, "\u0001box" + m, sealed) : null;
   if (!raw) return json(500, { error: "ما قدرت أفتح الأسئلة" });
   let box; try { box = JSON.parse(raw); } catch (e) { return json(500, { error: "bad box" }); }
   return json(200, { qs: box.qs || [], gold: box.gold || [] });

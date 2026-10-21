@@ -7,6 +7,14 @@ let bcTrack = null, bcPubPromise = null, bcSelfMuted = false;
 let bcMicFailAt = 0, bcMicErr = "", bcAudioErr = "";
 let bcSyncBusy = false, bcSyncAgain = false;
 let bcMyUid = null;
+let bcConnState = "", bcNetQ = 0, bcRejoinT = 0, bcRepub = false, bcRejoinN = 0;
+/* نعيد بعد 1.5 ث، وكل مرة تفشل الضعف (لين 30 ث) */
+function bcRejoinLater() {
+    clearTimeout(bcRejoinT);
+    const wait = Math.min(30000, 1500 * Math.pow(2, bcRejoinN++));
+    bcRejoinT = setTimeout(() => { bcAudioErr = ""; bcSyncAudio(); }, wait);
+}
+function bcNetDiag(ev) { try { if (typeof bcDiagPush === "function") bcDiagPush("net", { at: bcNow(), ev: String(ev).slice(0, 40), q: bcNetQ }); } catch (e) {} }
 
 /* أجورا يبي رقم، فنحوّل حساب Firebase لرقم ثابت عشان نعرف مين يتكلم */
 function bcNumUid(uid) {
@@ -36,7 +44,27 @@ async function bcJoin() {
             try { await bcClient.renewToken(await fetchAgoraToken(BC_CHANNEL)); } catch (e) { console.error("بث: فشل تجديد Token", e); }
         };
         bcClient.on("token-privilege-will-expire", renew);
-        bcClient.on("token-privilege-did-expire", renew);
+        /* انقطع الاتصال نهائياً (تغيّر النت من واي فاي لبيانات، أو التوكن خلص): كان bcJoined يبقى true فالصوت يسكت لين يحدّث الصفحة.
+           الحين نرجع ندخل لحالنا (أجورا يعيد الاتصال بنفسه في RECONNECTING، وهذا بس للانقطاع الكامل) */
+        const rejoin = why => {
+            bcNetDiag("rejoin:" + why);
+            if (/BANNED/.test(why)) { bcAudioErr = "تعذّر الاتصال بصوت البث"; return; }   /* سبب دائم: ما نعيد */
+            bcJoined = false;
+            if (bcTrack) bcRepub = true;   /* نفس المايك ينعاد نشره (ما نقفله، عشان لو المتسابق يسجّل جوابه ما ينقطع) */
+            bcAudioErr = "انقطع صوت البث، نرجع نوصله...";
+            bcRejoinLater();
+        };
+        bcClient.on("token-privilege-did-expire", () => rejoin("token"));
+        bcClient.on("connection-state-change", (cur, prev, reason) => {
+            bcConnState = cur;
+            if (cur === "CONNECTED") bcRejoinN = 0;
+            /* بس لو كان متصل وانقطع (مو join فشل من أوله) */
+            if (cur === "DISCONNECTED" && reason && reason !== "LEAVE" && (prev === "CONNECTED" || prev === "RECONNECTING")) rejoin(reason);
+            else if (cur === "RECONNECTING") bcNetDiag("reconnecting");
+            if (openLiveId) { liveLastSig = ""; renderLiveScreen(); }
+        });
+        /* جودة النت (0 ما يعرف، 1 ممتاز ... 6 مقطوع): تطلع للمتسابق والمنظم تحذير لو النت ضعيف */
+        bcClient.on("network-quality", q => { bcNetQ = Math.max(q.uplinkNetworkQuality || 0, q.downlinkNetworkQuality || 0); });
     }
     if (bcJoined) return;
     if (!bcJoinPromise) {
@@ -77,7 +105,7 @@ async function bcPublish() {
 
 async function bcUnpublish() {
     if (!bcTrack) return;
-    const t = bcTrack; bcTrack = null;
+    const t = bcTrack; bcTrack = null; bcRepub = false;
     try { await bcClient.unpublish([t]); } catch (e) {}
     t.close();
     bcSelfMuted = false;
@@ -86,7 +114,7 @@ async function bcUnpublish() {
 async function bcLeave() {
     await bcUnpublish();
     if (bcClient && bcJoined) { try { await bcClient.leave(); } catch (e) {} }
-    bcJoined = false;
+    bcJoined = false; bcRepub = false;
     bcMyUid = null;
 }
 
@@ -109,6 +137,12 @@ function bcSyncAudio() {
             try {
                 if (!listen) { if (bcJoined || bcTrack) await bcLeave(); continue; }
                 await bcJoin();
+                if (bcRepub && bcTrack) {
+                    bcRepub = false;
+                    try { await bcClient.unpublish([bcTrack]); } catch (e) {}   /* لو أجورا للحين يحسبه منشور من الجلسة اللي انقطعت */
+                    try { await agoraUpgradeToken(bcClient, BC_CHANNEL); await bcClient.publish([bcTrack]); bcNetDiag("republished"); }
+                    catch (e) { bcRepub = true; bcNetDiag("republish-failed"); bcRejoinLater(); }   /* المايك يظل مفتوح (التسجيل ما ينقطع) ونحاول بعدين */
+                }
                 const want = bcShouldPublish(d);
                 if (want && !bcTrack && bcNow() - bcMicFailAt > 10000) {
                     try { await bcPublish(); }

@@ -93,12 +93,23 @@ export async function onRequestGet(context) {
      وكاش اللي بعده يُستخدم بس لو الأول فشل.
      جملة جديدة تصرف من الرصيد: لازم مستخدم مسجّل دخول (توكن Firebase).
      فحص Origin بروحه ينتجاوز بأي أداة، والجمل المحفوظة في الكاش مجانية فتطلع للكل */
-  let authed = null;
+  let authed = null, waited = false;
   const errors = [];
+  /* ننتظر لين 2.4 ث إن الجملة توصل الكاش من جهاز ثاني (جهاز المنظم يولّدها)، بدون أي صرف من الرصيد */
+  const pollCache = async (list) => {
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 400));
+      for (const e of list) { const hit = await cache.match(keyFor(e)); if (hit) return hit; }
+    }
+    return null;
+  };
+  /* w=1: الجهاز مو جهاز المنظم، فينتظر توليد المنظم أول بدل ما يولّدها مرة ثانية بنفس اللحظة (رصيد مرتين وتأخير) */
+  const waitFirst = url.searchParams.get("w") === "1";
   for (const e of engines) {
-    const hit = await cache.match(keyFor(e));
+    let hit = await cache.match(keyFor(e));
     if (hit) return hit;
     if (authed === null) authed = !!(await verifyFirebaseToken(bearer(request)));
+    if (authed && waitFirst && !waited) { waited = true; hit = await pollCache([e]); if (hit) return hit; }
     if (!authed) continue;
     try {
       const audio = await e.run();
@@ -111,6 +122,10 @@ export async function onRequestGet(context) {
       errors.push(String((x && x.message) || x));
     }
   }
-  if (!authed) return err(401, "login required");
+  if (!authed) {
+    /* زائر بدون حساب طلب الجملة بنفس اللحظة اللي جهاز المنظم يولّدها فيها: كان يرجع 401 والمذيع يسكت عنده */
+    const hit = await pollCache(engines);
+    return hit || err(401, "login required");
+  }
   return err(502, errors.join(" | "));
 }

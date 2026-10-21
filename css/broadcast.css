@@ -691,3 +691,8 @@
 /* الفيديو شغال: نخفي المشهد المرسوم تحته (يظل ON AIR وزر التخطي) */
 .cine.has-vid>:not(.cine-vid):not(.cine-skip):not(.cine-onair):not(.cine-cv){opacity:0!important;}
 .cine.has-vid .cine-skip,.cine.has-vid .cine-onair{z-index:4;}
+
+/* ===== الوضع الخفيف للجوالات الضعيفة (bcLite في cinema.js): نفس الشكل، بدون زجاج ولا حركة خلفية ولا فلاتر متحركة ===== */
+#liveScreen.bc-lite *,#liveScreen.bc-lite *::before,#liveScreen.bc-lite *::after{-webkit-backdrop-filter:none !important;backdrop-filter:none !important;}
+#liveScreen.bc-lite .st-shots img{transition:opacity .4s ease;}
+#liveScreen.bc-lite .st-shots img.on{animation:none;}

@@ -20,4 +20,13 @@ wr("speech_long.wav", lng + noise)
 wr("speech_music.wav", cyc + m + noise)
 wr("silence.wav", noise)
 wr("music_only.wav", m + noise)
+# مايك جوال حقيقي (بعد تجربة 21 أكتوبر): نطاق الهاتف 300-3400 هرتز وصوت أوطى، مرة لحاله ومرة مع موسيقى
+def phone(x, gain):
+    raw = (np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes()
+    out = subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ar", str(R), "-ac", "1", "-i", "-", "-af", "highpass=f=300,lowpass=f=3400,volume=%s" % gain, "-f", "s16le", "-"], input=raw, capture_output=True, check=True).stdout
+    return np.frombuffer(out, np.int16).astype(np.float32) / 32768
+wr("phone.wav", phone(cyc + noise, 0.6))
+wr("phone_quiet.wav", phone(cyc + noise, 0.25))
+wr("phone_music.wav", phone(cyc + m * 0.5 + noise, 0.6))
+wr("phone_music_only.wav", phone(m * 0.5 + noise, 0.6))
 print("ok")

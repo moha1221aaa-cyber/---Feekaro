@@ -22,8 +22,8 @@ function openLiveScreen(id) {
         const v = document.createElement("video");
         v.id = "stVideo"; v.className = "st-video";
         v.src = "media/studio.mp4"; v.poster = "media/studio.jpg";
-        v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
-        v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", "auto");
+        v.muted = true; v.loop = true; v.autoplay = !bcLite; v.playsInline = true;
+        v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", bcLite ? "none" : "auto");   /* الخفيف: صورة poster بس */
         scr.insertBefore(v, scr.firstChild);
     }
     /* لقطات الاستوديو الثانية (صور من Google Flow بحركة كاميرا بطيئة) */
@@ -35,7 +35,9 @@ function openLiveScreen(id) {
         scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
     }
     scr.classList.add("open");
-    try { const v = document.getElementById("stVideo"); if (v && v.paused) v.play().catch(() => {}); } catch (e) {}
+    try { const v = document.getElementById("stVideo"); if (v && v.paused && !bcLite) v.play().catch(() => {}); } catch (e) {}
+    bcApplyLite();
+    bcWatchFrames();
     document.body.classList.add("live-open");
     try { liveCtx(); if (liveAudioCtx.state === "suspended") liveAudioCtx.resume(); } catch (e) {}
     cineLoadSamples(CINE_CORE);
@@ -235,7 +237,7 @@ function renderLiveScreen() {
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return;
     liveLastSig = sig;
 
@@ -353,11 +355,13 @@ ${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()"
 }
 /* تحكم مايكي: يطلع بس في صفحة بداية المواجهة */
 function bcMicCtlHTML(d) {
-    if (bcTrack) return `<button class="bc-mybtn ${bcSelfMuted ? "muted" : ""}" onclick="bcToggleSelfMute()">${ic(bcSelfMuted ? "mic-off" : "mic")} ${bcSelfMuted ? "مايكك مكتوم · اضغط للفتح" : "مايكك مفتوح · اضغط للكتم"}</button>`;
+    const net = bcConnState === "RECONNECTING" ? `<div class="bc-note">${ic("alert")} النت تقطّع، نرجع نوصل الصوت...</div>`
+        : (bcNetQ >= 5 && bcTrack ? `<div class="bc-note">${ic("alert")} النت عندك ضعيف، صوتك ممكن يتقطع</div>` : "");
+    if (bcTrack) return net + `<button class="bc-mybtn ${bcSelfMuted ? "muted" : ""}" onclick="bcToggleSelfMute()">${ic(bcSelfMuted ? "mic-off" : "mic")} ${bcSelfMuted ? "مايكك مكتوم · اضغط للفتح" : "مايكك مفتوح · اضغط للكتم"}</button>`;
     if (bcShouldPublish(d)) return bcMicErr
         ? `<button class="bc-mybtn err" onclick="bcToggleSelfMute()">${ic("alert")} ${escapeHTML(bcMicErr)} · اضغط للمحاولة</button>`
         : `<div class="bc-note">${ic("hourglass")} جاري فتح مايكك...</div>`;
-    return bcAudioErr ? `<div class="bc-note">${ic("alert")} ${escapeHTML(bcAudioErr)}</div>` : "";
+    return bcAudioErr ? `<div class="bc-note">${ic("alert")} ${escapeHTML(bcAudioErr)}</div>` : net;
 }
 
 function bcFixturesHTML(d, withScores) {
@@ -601,19 +605,30 @@ function bcRevealAt(d) { return (d.deadline || 0) - LIVE_REVEAL_MS + 1600; }
 
 /* ===== لوحة التشخيص (للمنظم): زمن الجرس وآخر محاولات الجواب الصوتي لكل متسابق ===== */
 let bcDiagOpen = false;
+let bcDiagDoc = null, bcDiagSub = null, bcDiagSubId = "";
 function bcToggleDiag() { bcDiagOpen = !bcDiagOpen; liveLastSig = ""; renderLiveScreen(); }
+/* اللوحة مفتوحة بس: نسمع liveDiag/<id> (برا وثيقة البث) */
+function bcDiagListen(id) {
+    if (bcDiagSubId === id) return;
+    if (bcDiagSub) { bcDiagSub(); bcDiagSub = null; }
+    bcDiagSubId = id || ""; bcDiagDoc = null;
+    if (!id || !firebaseDB) return;
+    bcDiagSub = liveDiagRef(id).onSnapshot(s => { bcDiagDoc = s.exists ? s.data() : null; const d = liveMatchesCache[openLiveId]; if (d) bcDiagPanel(d); }, () => {});
+}
 function bcDiagPanel(d) {
     let el = document.getElementById("bcDiag");
-    if (!bcDiagOpen || !isAdmin || !d || !openLiveId) { if (el) el.remove(); return; }
+    if (!bcDiagOpen || !isAdmin || !d || !openLiveId) { if (el) el.remove(); bcDiagListen(""); return; }
+    bcDiagListen(openLiveId);
+    const dd = bcDiagDoc || d;   /* وثائق قديمة: التشخيص كان داخل وثيقة البث */
     const o = bcCur(d) || {};
-    const diag = d.bcDiag || {};
+    const diag = dd.bcDiag || {};
     const ms = v => v > 0 ? v + "ms" : (v < 0 ? "فشل" : "—");
     const ql = q => { const p = String(q || "").split("_"); return p.length === 2 ? "م" + (+p[0] + 1) + " س" + (+p[1] + 1) : escapeHTML(String(q || "")); };
     const who = [[o.uid1, o.p1], [o.uid2, o.p2]].filter(x => x[0]);
     const rows = who.map(([uid, name]) => {
         const x = diag[uid] || {};
         const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
-        const vd = (d.vaDiag || {})[uid];
+        const vd = (dd.vaDiag || {})[uid];
         const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}${v.ms ? ` · الحكم بعد ${v.ms}ms` : ""}${v.srv ? ` (Whisper ${+v.srv.stt || 0} · ${escapeHTML(String(v.srv.path || ""))})` : ""}</li>`).join("");
         return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>
 ${bz ? `<table><tr><th>السؤال</th><th>محلي</th><th>السيرفر</th><th>وصل</th><th></th></tr>${bz}</table>` : `<div class="bd-e">ما ضغط الجرس للحين</div>`}
