@@ -107,6 +107,10 @@ function bcAnnouncer(d) {
     } else if (d.scene === "playing" && d.phase === "buzz") {
         key = "q" + d.cur + "_" + d.qIndex; text = bcQText(d, d.qIndex);
         if (bcIsDecider(d)) delay = 600;
+    } else if (d.scene === "playing" && d.phase === "answer") {
+        /* أحد ضغط الجرس: المذيع يسكت على طول، عشان صوته ما يدخل مايك اللي يجاوب ويخرب جوابه الصوتي */
+        bcStopSpeech();
+        return;
     } else if (d.scene === "playing" && d.phase === "reveal") {
         key = "a" + d.cur + "_" + d.qIndex; delay = 1750;   /* بعد لحظة التشويق */
         text = bcRevealText(d, d.qIndex);
@@ -120,5 +124,10 @@ function bcAnnouncer(d) {
     bcLastSpokenKey = key;
     /* لو فتحت البث في نص سؤال، ما نقرا شي قديم إلا السؤال الحالي */
     if (first && key !== "open" && key[0] !== "q") return;
-    setTimeout(() => bcSpeak(text), delay);
+    setTimeout(() => {
+        /* سؤال انضغط جرسه قبل ما يبدأ المذيع يقراه: ما نقراه */
+        const x = liveMatchesCache[openLiveId];
+        if (key[0] === "q" && x && x.phase !== "buzz") return;
+        bcSpeak(text);
+    }, delay);
 }
