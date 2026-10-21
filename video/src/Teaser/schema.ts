@@ -19,16 +19,28 @@ export const teaserSchema = z.object({
   }),
   categories: z.array(z.string()),
   audio: z.object({
-    voiceoverFile: z.string(),
+    voiceEnabled: z.boolean(),
+    voiceVolume: z.number().min(0).max(1),
+    // موسيقى خاصة في public (اختيارية). لو موجودة تحل محل موسيقى البرنامج
     musicFile: z.string(),
-    voiceoverVolume: z.number().min(0).max(1),
     musicVolume: z.number().min(0).max(1),
     sfxEnabled: z.boolean(),
     sfxVolume: z.number().min(0).max(1),
   }),
-  // يعبّيها calculateMetadata: هل ملفات الصوت موجودة في public؟
-  audioFound: z
-    .object({ voiceover: z.boolean(), music: z.boolean() })
+  // يعبّيها calculateMetadata
+  computed: z
+    .object({
+      sceneFrames: z.array(z.number()),
+      starts: z.array(z.number()),
+      voice: z.array(
+        z.object({
+          id: z.string(),
+          from: z.number(),
+          durationInFrames: z.number(),
+        }),
+      ),
+      customMusic: z.boolean(),
+    })
     .optional(),
 });
 

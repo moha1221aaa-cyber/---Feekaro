@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import { cairo, tajawal } from "../fonts";
 import { goldText } from "../goldText";
-import { RevealText } from "../RevealText";
+import { WordReveal } from "../WordReveal";
 import type { TeaserColors } from "../schema";
 
 const CARD_W = 410;
@@ -30,7 +30,7 @@ export const CategoriesScene: React.FC<{
           const col = i % 2; // RTL: أول بطاقة يمين
           const row = Math.floor(i / 2);
           const tx = width / 2 + (col === 0 ? 225 : -225) - CARD_W / 2;
-          const ty = 400 + row * 300;
+          const ty = 330 + row * 300;
           const p = spring({
             frame: frame - (4 + i * 7),
             fps,
@@ -135,24 +135,22 @@ export const CategoriesScene: React.FC<{
         style={{
           justifyContent: "flex-end",
           alignItems: "center",
-          paddingBottom: 250,
+          paddingBottom: 400,
         }}
       >
-        <RevealText
-          delay={2 * fps}
+        <WordReveal
+          text={text}
+          delay={2.2 * fps}
           style={{
             fontFamily: cairo,
             fontWeight: 900,
-            fontSize: 90,
+            fontSize: 92,
             color: "#fff",
             lineHeight: 1.45,
-            padding: "0 80px",
+            padding: "0 90px",
           }}
-        >
-          <span style={{ filter: `drop-shadow(0 0 22px ${colors.gold}aa)` }}>
-            {text}
-          </span>
-        </RevealText>
+          wordStyle={{ filter: `drop-shadow(0 0 22px ${colors.gold}aa)` }}
+        />
       </AbsoluteFill>
     </AbsoluteFill>
   );

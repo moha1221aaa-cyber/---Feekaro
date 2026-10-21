@@ -62,4 +62,15 @@ npm run dev   # يفتح Remotion Studio، اختر LeagueTeaser
 ```
 
 النصوص والألوان والتصنيفات ومستوى الصوت تتعدل من لوحة Props يمين الـ Studio.
-حط `voiceover.mp3` و `music.mp3` في `public/` (اختياري).
+
+### التعليق الصوتي (فصحى)
+
+النص المشكول في `src/Teaser/voiceover.json`. بعد أي تعديل:
+
+```bash
+ELEVEN_KEY=... npm run voiceover        # أو AZURE_TTS_KEY=... AZURE_TTS_REGION=...
+```
+
+على GitHub يتولّد لحاله لو أسرار `ELEVEN_KEY` أو `AZURE_TTS_KEY` و `AZURE_TTS_REGION` موجودة في إعدادات المستودع.
+
+موسيقى خاصة (اختياري): حط `music.mp3` في `public/` وتحل محل موسيقى البرنامج.

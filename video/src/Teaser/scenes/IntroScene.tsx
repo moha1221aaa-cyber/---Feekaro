@@ -7,63 +7,80 @@ import {
 } from "remotion";
 import { cairo } from "../fonts";
 import { goldGlow, goldText } from "../goldText";
+import { LensFlare } from "../LensFlare";
 import { Particles } from "../Particles";
-import { RevealText } from "../RevealText";
+import { WordReveal } from "../WordReveal";
 import type { TeaserColors } from "../schema";
 
-// مشهد 1: شاشة سوداء + جزيئات ذهبية + فلاش خفيف + "استعدّوا..."
+// مشهد 1: شاشة سوداء + جزيئات ذهبية + فلاش ووهج عدسة + "استعدّوا..."
 export const IntroScene: React.FC<{ colors: TeaserColors; text: string }> = ({
   colors,
   text,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const flash = interpolate(
+    frame,
+    [0.4 * fps, 0.55 * fps, 1.6 * fps],
+    [0, 1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.quad),
+    },
+  );
+  const line = interpolate(frame, [1.3 * fps, 2.4 * fps], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
+  });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      <Particles
+        count={110}
+        gold={colors.gold}
+        goldLight={colors.goldLight}
+        seed="intro"
+      />
       <AbsoluteFill
         style={{
-          scale: String(interpolate(frame, [0, durationInFrames], [1, 1.12])),
-        }}
-      >
-        <Particles
-          count={90}
-          gold={colors.gold}
-          goldLight={colors.goldLight}
-          seed="intro"
-        />
-      </AbsoluteFill>
-      {/* فلاش ضوئي */}
-      <AbsoluteFill
-        style={{
-          backgroundImage: `radial-gradient(circle at 50% 45%, #fff8e0 0%, ${colors.goldLight}88 25%, transparent 60%)`,
-          opacity: interpolate(
-            frame,
-            [0.4 * fps, 0.6 * fps, 1.4 * fps],
-            [0, 0.75, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.out(Easing.quad),
-            },
-          ),
+          backgroundImage: `radial-gradient(circle at 50% 46%, #fff8e0 0%, ${colors.goldLight}88 22%, transparent 58%)`,
+          opacity: flash * 0.8,
           mixBlendMode: "screen",
         }}
       />
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
-        <RevealText
-          delay={1 * fps}
+      <LensFlare y={46} intensity={flash} color={colors.goldLight} />
+      <AbsoluteFill
+        style={{
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+          gap: 30,
+        }}
+      >
+        <WordReveal
+          text={text}
+          delay={0.9 * fps}
           style={{
             fontFamily: cairo,
             fontWeight: 900,
-            fontSize: 150,
-            lineHeight: 1.4,
+            fontSize: 170,
+            lineHeight: 1.35,
           }}
-        >
-          <span style={{ ...goldText(colors), filter: goldGlow(colors) }}>
-            {text}
-          </span>
-        </RevealText>
+          wordStyle={{
+            ...goldText(colors, 180, frame / 120),
+            filter: goldGlow(colors, 40),
+          }}
+        />
+        <div
+          style={{
+            width: 520 * line,
+            height: 3,
+            background: `linear-gradient(90deg, transparent, ${colors.goldLight}, transparent)`,
+            boxShadow: `0 0 18px ${colors.gold}`,
+          }}
+        />
       </AbsoluteFill>
     </AbsoluteFill>
   );

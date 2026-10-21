@@ -1,6 +1,6 @@
 // ملف مولّد: npm run sfx:catalog
 export const SFX_CATALOG = {
-  "casino": [
+  casino: [
     "card-fan-1",
     "card-fan-2",
     "card-place-1",
@@ -56,7 +56,7 @@ export const SFX_CATALOG = {
     "die-throw-3",
     "die-throw-4",
   ],
-  "digital": [
+  digital: [
     "highdown",
     "highup",
     "laser1",
@@ -121,7 +121,7 @@ export const SFX_CATALOG = {
     "zaptwotone",
     "zaptwotone2",
   ],
-  "impact": [
+  impact: [
     "footstep-carpet-000",
     "footstep-carpet-001",
     "footstep-carpet-002",
@@ -253,7 +253,7 @@ export const SFX_CATALOG = {
     "impactwood-medium-003",
     "impactwood-medium-004",
   ],
-  "interface": [
+  interface: [
     "back-001",
     "back-002",
     "back-003",
@@ -355,7 +355,7 @@ export const SFX_CATALOG = {
     "toggle-003",
     "toggle-004",
   ],
-  "jingles": [
+  jingles: [
     "8-bit-nes00",
     "8-bit-nes01",
     "8-bit-nes02",
@@ -442,7 +442,7 @@ export const SFX_CATALOG = {
     "steel-steel15",
     "steel-steel16",
   ],
-  "rpg": [
+  rpg: [
     "belthandle1",
     "belthandle2",
     "bookclose",
@@ -496,7 +496,7 @@ export const SFX_CATALOG = {
     "metalpot3",
     "preview",
   ],
-  "scifi": [
+  scifi: [
     "computernoise-000",
     "computernoise-001",
     "computernoise-002",
@@ -571,7 +571,7 @@ export const SFX_CATALOG = {
     "thrusterfire-003",
     "thrusterfire-004",
   ],
-  "voiceover": [
+  voiceover: [
     "female-1",
     "female-10",
     "female-2",

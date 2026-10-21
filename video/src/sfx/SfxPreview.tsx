@@ -9,7 +9,10 @@ export const sfxPreviewSchema = z.object({
 });
 
 // لتجربة أي صوت من المكتبة في Studio: غيّر pack و name من Props
-export const SfxPreview: React.FC<z.infer<typeof sfxPreviewSchema>> = ({ pack, name }) => {
+export const SfxPreview: React.FC<z.infer<typeof sfxPreviewSchema>> = ({
+  pack,
+  name,
+}) => {
   const names: readonly string[] = SFX_CATALOG[pack];
   const valid = names.includes(name);
 
@@ -27,8 +30,12 @@ export const SfxPreview: React.FC<z.infer<typeof sfxPreviewSchema>> = ({ pack, n
       }}
     >
       <div>{pack}</div>
-      <div style={{ fontSize: 56, color: valid ? "#fff" : "#ff6b6b" }}>{valid ? name : `${name} (غير موجود)`}</div>
-      <div style={{ fontSize: 28, opacity: 0.7, marginTop: 30 }}>{names.length} صوت في هذي الحزمة</div>
+      <div style={{ fontSize: 56, color: valid ? "#fff" : "#ff6b6b" }}>
+        {valid ? name : `${name} (غير موجود)`}
+      </div>
+      <div style={{ fontSize: 28, opacity: 0.7, marginTop: 30 }}>
+        {names.length} صوت في هذي الحزمة
+      </div>
       {valid ? <Audio src={sfx(pack, name as never)} /> : null}
     </AbsoluteFill>
   );

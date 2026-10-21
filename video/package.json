@@ -32,7 +32,8 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "sfx:catalog": "node scripts/gen-sfx-catalog.mjs"
+    "sfx:catalog": "node scripts/gen-sfx-catalog.mjs",
+    "voiceover": "node scripts/gen-voiceover.mjs"
   },
   "allowScripts": {
     "esbuild": false
