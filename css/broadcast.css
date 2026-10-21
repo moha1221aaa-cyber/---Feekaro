@@ -538,6 +538,8 @@
 .va-meter{width:80%;height:8px;border-radius:4px;background:#1e293b;overflow:hidden;}
 .va-meter i{display:block;height:100%;width:100%;background:#22c55e;transform:scaleX(.04);transform-origin:right;transition:transform .08s linear;}
 .va-sub{font-size:12px;color:#94a3b8;}
+.va-live{min-height:1.4em;font-size:15px;color:#fde68a;text-align:center;opacity:0;transition:opacity .2s;}
+.va-live:not(:empty){opacity:1;}
 /* المتسابق يتكلم: الدائرة تكبر مع صوته وتوهج، عشان يعرف إن صوته واصل */
 .va-box.rec .va-mic{transition:transform .08s linear,box-shadow .08s linear;}
 .va-box.talking{border-color:#4ade80;}

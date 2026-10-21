@@ -14,6 +14,9 @@ cyc = np.zeros(N, np.float32)
 for k in range(0, 32, 4): cyc[k * R:k * R + len(sp)] += sp      # كلام 1.15 ث كل 4 ث
 m = rd(os.path.join(D, "..", "..", "..", "audio", "think2.mp3")); m = np.tile(m, N // len(m) + 1)[:N]; m = m / np.max(np.abs(m)) * 0.12
 wr("speech.wav", cyc + noise)
+lng = np.zeros(N, np.float32); two = np.concatenate([sp, np.zeros(int(0.1 * R), np.float32), sp])
+for k in range(0, 30, 6): lng[k * R:k * R + len(two)] += two  # جواب طويل 2.4 ث كل 6 ث (للنص المباشر)
+wr("speech_long.wav", lng + noise)
 wr("speech_music.wav", cyc + m + noise)
 wr("silence.wav", noise)
 wr("music_only.wav", m + noise)

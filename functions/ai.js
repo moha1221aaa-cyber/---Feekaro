@@ -2,7 +2,9 @@
    POST /ai  بجسم JSON فيه task:
    - questions: يولّد أسئلة جديدة لبنك الأسئلة      { category, count, avoid: [نصوص أسئلة موجودة] }
    - grade:     يحكم هل إجابة المتسابق صحيحة         { q, answer, given }
-   - voice:     جواب المتسابق بالصوت: يحوّله نص (Whisper)، يطلّع الجواب من كلامه، ويحكم   { q, answer, audio: WAV base64 }
+   - voice:     جواب المتسابق بالصوت: يحوّله نص (Whisper)، يطلّع الجواب من كلامه، ويحكم   { q, answer, audio: WAV base64, stream? }
+                مع stream: true الرد NDJSON على دفعتين: {"heard"} أول ما يخلص Whisper (نص مباشر عند المتسابق)، وبعدها {"final":true,...}
+   - hear:      نص مباشر وقت الكلام (Whisper بس، بدون حكم)                                   { q, audio }
    - host:      جمل جديدة للمقدم في بداية الجولة     { round, matches: [{ p1, p2, ctx }] }
    - chat:      مساعد الموقع                         { messages: [{ role, content }], context }
    الحماية: بس صفحات موقع الدوري، وحد للطلبات لكل جهاز بالدقيقة، وكل المدخلات مقصوصة */
@@ -12,7 +14,7 @@ import { verifyFirebaseToken, bearer, jwksCount } from "../lib/firebase-auth.js"
 /* FAST: سريع (التصحيح وجمل المقدم). SMART: أدق في المعلومات (الأسئلة ومراجعتها والمساعد) */
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const SMART = "@cf/openai/gpt-oss-120b";
-const LIMIT_PER_MIN = { questions: 4, grade: 40, host: 4, chat: 12, voice: 30 };
+const LIMIT_PER_MIN = { questions: 4, grade: 40, host: 4, chat: 12, voice: 30, hear: 20 };
 const STT = "@cf/openai/whisper-large-v3-turbo";
 const CATEGORIES = ["علوم", "ثقافة عامة", "دين", "تاريخ", "رياضة", "جغرافيا"];
 
@@ -182,14 +184,28 @@ function answerMatches(given, answer) {
 
 /* جواب بالصوت على خطوتين: (1) يطلّع الجواب من كلام المتسابق بدون ما يعرف الإجابة الصحيحة (عشان ما يميل لها)،
    و(2) يحكم عليه (مطابقة عادية أول، وبعدها taskGrade). أول جواب ينحسب، والتغيير بعده ما ينقبل */
-async function taskVoice(env, b) {
-  const q = clip(b.q, 200), answer = clip(b.answer, 160);
+/* الصوت (WAV base64) ← نص. نص السؤال (مو الجواب) كسياق يساعد Whisper في الأجوبة القصيرة (كلمة وحدة) */
+function audioOf(b) {
   const audio = typeof b.audio === "string" ? b.audio.replace(/^data:[^,]*,/, "") : "";
-  if (!q || !answer || audio.length < 2000 || audio.length > 1200000 || !/^[A-Za-z0-9+/=]+$/.test(audio.slice(0, 200))) return { ok: false, heard: "", said: "" };
-  /* نص السؤال (مو الجواب) كسياق يساعد Whisper في الأجوبة القصيرة (كلمة وحدة) */
-  const stt = await env.AI.run(STT, { audio, language: "ar", task: "transcribe", initial_prompt: "مسابقة ثقافية. " + q });
-  const heard = clip(stt && stt.text, 300);
+  return (audio.length < 2000 || audio.length > 1200000 || !/^[A-Za-z0-9+/=]+$/.test(audio.slice(0, 200))) ? "" : audio;
+}
+async function transcribe(env, audio, q) {
+  const stt = await env.AI.run(STT, { audio, language: "ar", task: "transcribe", initial_prompt: "مسابقة ثقافية. " + q, condition_on_previous_text: false });
+  return clip(stt && stt.text, 300);
+}
+async function taskHear(env, b) {
+  const audio = audioOf(b);
+  if (!audio) return { heard: "" };
+  return { heard: await transcribe(env, audio, clip(b.q, 200)) };
+}
+
+async function taskVoice(env, b, onHeard) {
+  const q = clip(b.q, 200), answer = clip(b.answer, 160);
+  const audio = audioOf(b);
+  if (!q || !answer || !audio) return { ok: false, heard: "", said: "" };
+  const heard = await transcribe(env, audio, q);
   if (!heard) return { ok: false, heard: "", said: "" };
+  if (onHeard) await onHeard(heard);
   const system = [
     "قدامك سؤال مسابقة ثقافية، وكلام المتسابق بعد ما ضغط الجرس، مكتوب آلياً من تسجيل صوتي (ممكن فيه أخطاء سمع).",
     "المتسابق ممكن يقول كلام عادي قبل الجواب أو بعده (مثل: امم، خلني أفكر، أظن، يمكن، الجواب هو، صح؟). هذا مو جواب، تجاهله.",
@@ -253,7 +269,24 @@ async function taskChat(env, b) {
   return { reply: plain.slice(0, 1500) };
 }
 
-const TASKS = { questions: taskQuestions, grade: taskGrade, voice: taskVoice, host: taskHost, chat: taskChat };
+const TASKS = { questions: taskQuestions, grade: taskGrade, voice: taskVoice, hear: taskHear, host: taskHost, chat: taskChat };
+
+/* الجواب الصوتي على دفعتين (NDJSON): النص أول، والحكم بعده. الخطأ يطلع سطر {"final":true,"error"} */
+function streamVoice(context, env, b) {
+  const { readable, writable } = new TransformStream();
+  const w = writable.getWriter(), enc = new TextEncoder();
+  const line = o => w.write(enc.encode(JSON.stringify(o) + "\n"));
+  context.waitUntil((async () => {
+    try {
+      const r = await taskVoice(env, b, heard => line({ heard }));
+      await line(Object.assign({ final: true }, r));
+    } catch (e) {
+      await line({ final: true, error: String((e && e.message) || e).slice(0, 200) }).catch(() => {});
+    }
+    await w.close().catch(() => {});
+  })());
+  return new Response(readable, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -270,6 +303,7 @@ export async function onRequestPost(context) {
   if (!fn) return json(400, { error: "unknown task" });
   if (await overLimit(request, url, b.task)) return json(429, { error: "كثرت الطلبات، جرّب بعد دقيقة" });
 
+  if (b.task === "voice" && b.stream === true) return streamVoice(context, env, b);
   try {
     return json(200, await fn(env, b));
   } catch (e) {

@@ -603,7 +603,8 @@ function bcDiagPanel(d) {
     const rows = who.map(([uid, name]) => {
         const x = diag[uid] || {};
         const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
-        const va = (x.voice || []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}</li>`).join("");
+        const vd = (d.vaDiag || {})[uid];
+        const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}</li>`).join("");
         return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>
 ${bz ? `<table><tr><th>السؤال</th><th>محلي</th><th>السيرفر</th><th>وصل</th><th></th></tr>${bz}</table>` : `<div class="bd-e">ما ضغط الجرس للحين</div>`}
 ${va ? `<ul>${va}</ul>` : ""}</div>`;
