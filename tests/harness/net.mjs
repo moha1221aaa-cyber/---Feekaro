@@ -25,6 +25,12 @@ try {
     const net = ((diag.bcDiag || {}).u_p1 || {}).net || [];
     check("network events in liveDiag (not the live doc)", net.some(x => /rejoin:NETWORK_ERROR/.test(x.ev)) && !(db.data("room/main/liveMatches/round_2") || {}).bcDiag, net.map(x => x.ev));
     check("leave on LEAVE does not rejoin", await p1.evaluate(async () => { const j = window.__agora.joins; window.__agora.emit("connection-state-change", "DISCONNECTED", "CONNECTED", "LEAVE"); await new Promise(r => setTimeout(r, 2500)); return window.__agora.joins === j; }));
+    /* إعادة النشر فشلت مرة: المايك ما يتقفل (التسجيل يكمل)، ويحاول بعدين */
+    const pub0 = await p1.evaluate(() => { window.__agora.failPublish = 1; return window.__agora.publishes; });
+    await p1.evaluate(() => { window.__agora.emit("connection-state-change", "CONNECTED", "CONNECTING"); window.__agora.emit("connection-state-change", "DISCONNECTED", "CONNECTED", "NETWORK_ERROR"); });
+    check("failed republish keeps the mic track alive", await until(() => p1.evaluate(id => window.__agora.publishes >= 2 + 1 && !!bcTrack && bcTrack.getMediaStreamTrack().readyState === "live" && bcTrack.getMediaStreamTrack().id === id, before.id), 6000));
+    check("retries and republishes after the failure", await until(() => p1.evaluate(n => window.__agora.publishes >= n + 2 && !bcRepub, pub0), 12000));
+    check("banned: no rejoin loop", await p1.evaluate(async () => { window.__agora.emit("connection-state-change", "CONNECTED", "CONNECTING"); const j = window.__agora.joins; window.__agora.emit("connection-state-change", "DISCONNECTED", "CONNECTED", "UID_BANNED"); await new Promise(r => setTimeout(r, 4000)); return window.__agora.joins === j; }));
     const errs = p1.__logs.filter(l => /PAGEERROR/.test(l));
     check("no page errors", !errs.length, errs.slice(0, 3));
 } catch (e) { ok = false; console.log(e); }

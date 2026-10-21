@@ -247,7 +247,9 @@ async function vaStart(key) {
         if (!frames.length && now - startedAt > 1500) finish(true);
         else if (!firstVoiceAt && now - startedAt > VA_QUIET_MS) finish(true);
         else if (speechMs >= VA_MIN_SPEECH_MS && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
-        else if (speechMs >= 100 && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS * 2) finish(true);   /* كلمة قصيرة قالها مع الجرس: ما ننتظر 5 ث */
+        /* كلمة قصيرة قالها مع الجرس: ما ننتظر 5 ث. بس لازم 200ms كلام وآخره بعد 0.6 ث من الضغط،
+           عشان صوت الجرس أو دقة الإصبع ما تنحسب جواب وتقفل التسجيل وهو للحين يفكر */
+        else if (speechMs >= 200 && lastVoiceAt && lastVoiceAt - startedAt > 600 && now - lastVoiceAt > VA_SILENCE_MS * 2) finish(true);
         else if (firstVoiceAt && now - firstVoiceAt > VA_MAX_MS) finish(true);
         else if (bcNow() >= stopAt()) finish(true);
     }, 100);

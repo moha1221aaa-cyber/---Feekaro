@@ -30,7 +30,7 @@ for (const mode of ["full", "reduced"]) {
     const now = Date.now();
     seed(db, "playing", { phase: "buzz", qIndex: 1, qAt: now, deadline: now + 9000, ready1: true, ready2: true, s1: 1, s2: 0, log: [1, -1, -1, -1, -1] });
     const browser = await launch({ wav: "speech.wav" });
-    const opts = { api, reducedMotion: mode === "reduced" ? "reduce" : "no-preference" };
+    const opts = { api, reducedMotion: mode === "reduced" ? "reduce" : "no-preference", query: process.env.TV_QUERY || "" };
     const fan = await device(browser, db, "fan", opts);
     const p1 = await device(browser, db, "p1", opts);
     const p2 = await device(browser, db, "p2", Object.assign({ video: mode === "full" ? dir + "/video" : undefined }, opts));
@@ -50,14 +50,16 @@ for (const mode of ["full", "reduced"]) {
         step("buzz band leaves", await until(async () => !(await fan.$(".tv-buzz")), 3000));
         /* الكشف: لوحة الجواب، ولوحة النتيجة بعد ثانيتين */
         step("reveal", await until(() => liveDoc(db).phase === "reveal", 15000));
-        await sleep(500);
+        /* لوحة النتيجة تطلع من 3.8 لين 6.25 ث بعد الكشف، والصور هنا تاخذ ثانية وأكثر: نراقبها من الجهاز نفسه بنفس الوقت */
+        await fan.evaluate(() => { window.__board = null; const t = setInterval(() => { const b = document.getElementById("tvBoard"); if (b && b.classList.contains("on") && !window.__board) { window.__board = b.innerText.replace(/\s+/g, " "); clearInterval(t); } }, 50); });
+        await sleep(300);
         await fan.screenshot({ path: dir + "/3-reveal-suspense.png" });
-        await sleep(1500);
+        await sleep(900);
         await fan.screenshot({ path: dir + "/4-reveal-answer.png" });
-        step("scoreboard", await until(() => fan.evaluate(() => { const b = document.getElementById("tvBoard"); return b && b.classList.contains("on"); }), 4000));
-        await sleep(1100);
-        await fan.screenshot({ path: dir + "/5-scoreboard.png" });
-        res.board = await fan.evaluate(() => document.getElementById("tvBoard").innerText.replace(/\s+/g, " "));
+        const board = await until(() => fan.evaluate(() => window.__board), 6000);
+        step("scoreboard", !!board);
+        if (await fan.evaluate(() => { const b = document.getElementById("tvBoard"); return b && b.classList.contains("on"); })) { await sleep(500); await fan.screenshot({ path: dir + "/5-scoreboard.png" }); }
+        res.board = board;
         step("board hides before next q", await until(() => fan.evaluate(() => { const b = document.getElementById("tvBoard"); return !b.classList.contains("on"); }), 5000));
         /* الفاصل: ننهي المواجهة وننتقل للي بعدها */
         const d = liveDoc(db);

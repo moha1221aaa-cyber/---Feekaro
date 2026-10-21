@@ -7,7 +7,13 @@ let bcTrack = null, bcPubPromise = null, bcSelfMuted = false;
 let bcMicFailAt = 0, bcMicErr = "", bcAudioErr = "";
 let bcSyncBusy = false, bcSyncAgain = false;
 let bcMyUid = null;
-let bcConnState = "", bcNetQ = 0, bcRejoinT = 0, bcRepub = false;
+let bcConnState = "", bcNetQ = 0, bcRejoinT = 0, bcRepub = false, bcRejoinN = 0;
+/* نعيد بعد 1.5 ث، وكل مرة تفشل الضعف (لين 30 ث) */
+function bcRejoinLater() {
+    clearTimeout(bcRejoinT);
+    const wait = Math.min(30000, 1500 * Math.pow(2, bcRejoinN++));
+    bcRejoinT = setTimeout(() => { bcAudioErr = ""; bcSyncAudio(); }, wait);
+}
 function bcNetDiag(ev) { try { if (typeof bcDiagPush === "function") bcDiagPush("net", { at: bcNow(), ev: String(ev).slice(0, 40), q: bcNetQ }); } catch (e) {} }
 
 /* أجورا يبي رقم، فنحوّل حساب Firebase لرقم ثابت عشان نعرف مين يتكلم */
@@ -41,17 +47,19 @@ async function bcJoin() {
         /* انقطع الاتصال نهائياً (تغيّر النت من واي فاي لبيانات، أو التوكن خلص): كان bcJoined يبقى true فالصوت يسكت لين يحدّث الصفحة.
            الحين نرجع ندخل لحالنا (أجورا يعيد الاتصال بنفسه في RECONNECTING، وهذا بس للانقطاع الكامل) */
         const rejoin = why => {
-            bcJoined = false; bcJoinPromise = null;
+            bcNetDiag("rejoin:" + why);
+            if (/BANNED/.test(why)) { bcAudioErr = "تعذّر الاتصال بصوت البث"; return; }   /* سبب دائم: ما نعيد */
+            bcJoined = false;
             if (bcTrack) bcRepub = true;   /* نفس المايك ينعاد نشره (ما نقفله، عشان لو المتسابق يسجّل جوابه ما ينقطع) */
             bcAudioErr = "انقطع صوت البث، نرجع نوصله...";
-            bcNetDiag("rejoin:" + why);
-            clearTimeout(bcRejoinT);
-            bcRejoinT = setTimeout(() => { bcAudioErr = ""; bcSyncAudio(); }, 1500);
+            bcRejoinLater();
         };
         bcClient.on("token-privilege-did-expire", () => rejoin("token"));
         bcClient.on("connection-state-change", (cur, prev, reason) => {
             bcConnState = cur;
-            if (cur === "DISCONNECTED" && reason && reason !== "LEAVE") rejoin(reason);
+            if (cur === "CONNECTED") bcRejoinN = 0;
+            /* بس لو كان متصل وانقطع (مو join فشل من أوله) */
+            if (cur === "DISCONNECTED" && reason && reason !== "LEAVE" && (prev === "CONNECTED" || prev === "RECONNECTING")) rejoin(reason);
             else if (cur === "RECONNECTING") bcNetDiag("reconnecting");
             if (openLiveId) { liveLastSig = ""; renderLiveScreen(); }
         });
@@ -97,7 +105,7 @@ async function bcPublish() {
 
 async function bcUnpublish() {
     if (!bcTrack) return;
-    const t = bcTrack; bcTrack = null;
+    const t = bcTrack; bcTrack = null; bcRepub = false;
     try { await bcClient.unpublish([t]); } catch (e) {}
     t.close();
     bcSelfMuted = false;
@@ -106,7 +114,7 @@ async function bcUnpublish() {
 async function bcLeave() {
     await bcUnpublish();
     if (bcClient && bcJoined) { try { await bcClient.leave(); } catch (e) {} }
-    bcJoined = false;
+    bcJoined = false; bcRepub = false;
     bcMyUid = null;
 }
 
@@ -131,8 +139,9 @@ function bcSyncAudio() {
                 await bcJoin();
                 if (bcRepub && bcTrack) {
                     bcRepub = false;
+                    try { await bcClient.unpublish([bcTrack]); } catch (e) {}   /* لو أجورا للحين يحسبه منشور من الجلسة اللي انقطعت */
                     try { await agoraUpgradeToken(bcClient, BC_CHANNEL); await bcClient.publish([bcTrack]); bcNetDiag("republished"); }
-                    catch (e) { const t = bcTrack; bcTrack = null; try { t.close(); } catch (x) {} }
+                    catch (e) { bcRepub = true; bcNetDiag("republish-failed"); bcRejoinLater(); }   /* المايك يظل مفتوح (التسجيل ما ينقطع) ونحاول بعدين */
                 }
                 const want = bcShouldPublish(d);
                 if (want && !bcTrack && bcNow() - bcMicFailAt > 10000) {

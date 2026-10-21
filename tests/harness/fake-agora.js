@@ -29,7 +29,7 @@
                 remoteUsers: [],
                 on: (e, f) => { h[e] = f; },
                 join: (app, ch, tok, uid) => { st.joins++; return Promise.resolve(uid || Math.floor(Math.random() * 1e6)); },
-                publish: tr => { st.publishes++; st.published = tr; return Promise.resolve(); }, unpublish: () => Promise.resolve(),
+                publish: tr => { st.publishes++; if (st.failPublish > 0) { st.failPublish--; return Promise.reject(new Error("CAN_NOT_PUBLISH_MULTIPLE_TRACKS")); } st.published = tr; return Promise.resolve(); }, unpublish: () => Promise.resolve(),
                 subscribe: () => Promise.resolve(), renewToken: () => Promise.resolve(), leave: () => Promise.resolve(),
                 enableAudioVolumeIndicator() {}
             };

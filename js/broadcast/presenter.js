@@ -18,7 +18,8 @@ let bcLastSpokenKey = "";
 /* w=1: مو جهاز المنظم، فالسيرفر ينتظر نسخة المنظم في الكاش بدل ما يولّدها مرة ثانية بنفس اللحظة */
 function bcTtsUrl(text) {
     const d = openLiveId ? liveMatchesCache[openLiveId] : null;
-    return "/tts?t=" + encodeURIComponent(text) + (d && amBcHost(d) ? "" : "&w=1");
+    /* المنظم غايب (الطيار الآلي): محد بيولّدها قبلنا، فلا ننتظر */
+    return "/tts?t=" + encodeURIComponent(text) + (!d || amBcHost(d) || bcHostGone(d) ? "" : "&w=1");
 }
 
 /* نحمّل الصوت مسبقاً عشان يطلع على كل الأجهزة بنفس اللحظة تقريباً */
@@ -52,10 +53,10 @@ function bcStopSpeech() {
 
 /* يقرا جملة أو أكثر ورا بعض (الجواب ثم الموقف). أي جملة ما توصل من السيرفر تنتخطى بصمت.
    at: وقت البداية بساعة السيرفر (bcNow)، عشان كل الجوالات تبدأ الجملة الأولى بنفس اللحظة مهما تأخر وصول التحديث لها:
-   لو الجهاز متأخر شوي (لين 1.2 ث) يبدأ من نص الجملة بنفس مكان الباقين، ولو متأخر أكثر يقراها من أولها (أحسن من جملة مقطوعة) */
+   لو الجهاز متأخر شوي (لين 1.2 ث) يبدأ من نص الجملة بنفس مكان الباقين، ولو متأخر أكثر يقراها من أولها (أحسن من جملة مقطوعة أو ما تنقرا) */
 const BC_SPEAK_SEEK_MAX = 1.2;
 let bcSpeakSeq = 0;
-function bcSpeak(text, at) {
+function bcSpeak(text, at, joinedLate) {
     const list = (Array.isArray(text) ? text : [text]).filter(Boolean);
     if (!bcVoiceOn || !list.length) return;
     bcStopSpeech();
@@ -73,7 +74,7 @@ function bcSpeak(text, at) {
             src.buffer = buf; src.connect(g); g.connect(c.destination);
             src.onended = () => { if (bcSpeechSrc === src) { bcSpeechSrc = null; setTimeout(() => playAt(i + 1), 250); } };
             const late = i === 0 && at ? (bcNow() - at) / 1000 : 0;
-            if (late > buf.duration + 1) return playAt(i + 1);   /* الجملة خلصت عند الكل (الجهاز فتح البث متأخر أو كان بالخلفية) */
+            if (joinedLate && late > buf.duration + 1) return playAt(i + 1);   /* فتح البث متأخر والجملة خلصت عند الكل */
             if (late < -0.02) src.start(c.currentTime - late);
             else if (late > 0.15 && late <= BC_SPEAK_SEEK_MAX && late < buf.duration - 0.4) src.start(0, late);
             else src.start();
@@ -160,12 +161,12 @@ function bcAnnouncer(d) {
             const wait = () => {
                 const x = liveMatchesCache[openLiveId];
                 const t0 = x && x.cur === d.cur && x.qIndex === d.qIndex ? bcRevealText(x, d.qIndex, true) : "";
-                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]], at); return; }
+                if (t0 || ++n > 15) { if (bcLastSpokenKey === key && (t0 || text[1])) bcSpeak([t0, text[1]], at, first); return; }
                 setTimeout(wait, 200);
             };
             wait();
             return;
         }
-        bcSpeak(text, at);
+        bcSpeak(text, at, first);
     }, Math.max(0, at - bcNow() - 120));
 }
