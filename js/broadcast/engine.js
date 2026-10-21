@@ -59,6 +59,10 @@ const bcEndedStale = {};
 
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
 function liveRef(id) { return liveCol().doc(id); }
+/* وثائق جنب وثيقة البث عشان تبقى صغيرة (كل تغيير فيها ينرسل كامل لكل جوال فاتح البث، وكانت 73KB):
+   liveBoxes/<id> صناديق أسئلة المواجهات (السيرفر بس يقراها)، liveDiag/<id> التشخيص (المنظم يقراها لما يفتح اللوحة) */
+function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
+function liveDiagRef(id) { return firebaseDB.collection("room").doc("main").collection("liveDiag").doc(id); }
 function bcId(r) { return "round_" + r; }
 /* ===== وقت السيرفر: فرق ساعة الجوال عن السيرفر، عشان المؤقتات تكون عادلة للكل ===== */
 let bcClockOffset = 0, bcClockSynced = false;
@@ -311,6 +315,7 @@ async function bcStartRound(r) {
             const snap = await tx.get(liveRef(id));
             if (snap.exists && isLiveActive(snap.data())) return false;
             tx.set(liveRef(id), data);
+            if (secret && secret.boxes) tx.set(liveBoxesRef(id), { boxes: secret.boxes, at: bcNow() });
             return true;
         });
         if (secret && wrote) bcSaveSecret(id, secret);
@@ -379,11 +384,12 @@ async function bcSealRound(id, order) {
         /* نص أسئلة كل مواجهة نفسه مختوم (box): ما ينفتح إلا لما يجي دور المواجهة (bcOpenNext)، عشان محد يقرا أسئلته من بداية البث */
         const bx = await answerPost({ action: "seal", id, boxes: mplan.map(m => JSON.stringify(m)) }, 12000);
         if (!bx.boxes || bx.boxes.length !== order.length) throw new Error("box count");
-        order.forEach((o, i) => { o.box = bx.boxes[i]; });
-        return { answers, plan: mplan };
+        /* الصناديق في liveBoxes/<id> (تنكتب مع وثيقة البث بنفس الـ transaction)، والوثيقة فيها علامة بس */
+        order.forEach(o => { o.boxed = true; });
+        return { answers, plan: mplan, boxes: bx.boxes };
     } catch (e) {
         console.log("seal:", e && e.message);
-        order.forEach(o => { delete o.box; });
+        order.forEach(o => { delete o.box; delete o.boxed; });
         return null;
     }
 }
@@ -402,9 +408,10 @@ function bcNextIndex(x) {
     if (n === -1) n = order.findIndex((o, i) => o.state === "pending" && i !== x.cur);
     return n;
 }
+function bcBoxed(o) { return !!(o && (o.boxed || o.box)); }   /* box: وثائق قبل 21 أكتوبر */
 function bcOpenedFor(id, x, i) {
     const o = (x.order || [])[i] || {};
-    if (!o.box) return null;
+    if (!bcBoxed(o)) return null;
     return (bcOpened[id] || {})[i] || ((bcPlans[id] || [])[i]) || null;
 }
 async function bcOpenNext(id, skip) {
@@ -412,7 +419,7 @@ async function bcOpenNext(id, skip) {
     if (!x) return;
     const tmp = Object.assign({}, x, { order: (x.order || []).map((o, i) => i === x.cur && skip && o.state === "pending" ? Object.assign({}, o, { state: "skipped" }) : o) });
     const n = bcNextIndex(tmp);
-    if (n === -1 || !(tmp.order[n] || {}).box || bcOpenedFor(id, x, n)) return;
+    if (n === -1 || !bcBoxed(tmp.order[n]) || bcOpenedFor(id, x, n)) return;
     if (isAdmin) { await bcLoadSecret(id, true); if (bcOpenedFor(id, x, n)) return; }
     try {
         const r = await answerPost({ action: "open", id, m: n }, 8000);
@@ -555,11 +562,20 @@ function liveNextStep(d, now) {
     return null;
 }
 
+/* سائق واحد للانتقالات بالوقت: كانت كل الجوالات تسوي transaction على نفس الوثيقة بنفس اللحظة،
+   فتتعارض وتعيد (Firestore يعيد المحاولة بتأخير)، والانتقال يتأخر ويوصل للجوالات بأوقات مختلفة.
+   الحين: المنظم أول (فوراً)، والمتسابقين احتياط بعده، والمشاهدين آخر شي. ولو المنظم غايب: المتسابقين أول. */
+function bcAdvanceLag(d) {
+    const gone = bcHostGone(d);
+    if (!gone && amBcHost(d)) return 0;
+    if (myLiveNum(d)) return gone ? 250 : 1200;
+    return gone ? 1200 : 2500;
+}
 function liveAdvanceIfDue() {
     const d = liveMatchesCache[openLiveId];
     if (!d || liveAdvanceBusy || d.status !== "live") return;
     if (!(d.scene === "countdown" || d.scene === "playing")) return;
-    if (bcNow() < (d.deadline || 0) + 250) return;
+    if (bcNow() < (d.deadline || 0) + bcAdvanceLag(d)) return;
     if (bcNow() - liveLastAdvanceTry < 900) return;
     liveLastAdvanceTry = bcNow();
     liveAdvanceBusy = true;
@@ -650,8 +666,8 @@ function bcNextUpd(x, now, skip) {
     if (next === -1) return { scene: "closing", order: order, phase: "done", deadline: 0, sceneAt: now };
     const used = (x.usedQ || []).concat((x.questions || []).map(q => q.text)).slice(-300);
     /* المواجهة أسئلتها مختومة (box) وما انفتحت للحين على هالجهاز: ما ننتقل (bcOpenNext يفتحها قبل) */
-    const opened = order[next].box ? bcOpenedFor(openLiveId, x, next) : null;
-    if (order[next].box && !opened) return null;
+    const opened = bcBoxed(order[next]) ? bcOpenedFor(openLiveId, x, next) : null;
+    if (bcBoxed(order[next]) && !opened) return null;
     return Object.assign(bcQuizReset(), {
         scene: "intro", cur: next, order: order, sceneAt: now,
         usedQ: used, questions: opened ? opened.qs.slice() : pickLiveQuestions(used), gold: opened ? opened.gold.slice() : null
@@ -725,14 +741,22 @@ function bcTap(el, cls, sound, vib) {
     try { if (vib && navigator.vibrate) navigator.vibrate(vib); } catch (e) {}
 }
 
-/* ===== التشخيص: آخر 5 قياسات لكل نوع (الجرس، الجواب الصوتي) في وثيقة البث bcDiag.<uid>.<نوع> ===== */
+/* ===== التشخيص: آخر 5 قياسات لكل نوع (الجرس، الجواب الصوتي) في liveDiag/<id> → bcDiag.<uid>.<نوع> =====
+   برا وثيقة البث: كتابته وقت الجرس والجواب كانت ترسل الوثيقة كاملة لكل الجوالات في أحرج لحظة */
+const bcDiagMine = {};   /* id|نوع ← آخر 5 (الجهاز يعرف قياساته، فما يحتاج يقرا) */
+function bcDiagWrite(id, field, list) {
+    if (!firebaseDB || !currentUser || !id) return;
+    liveDiagRef(id).set({ [field]: { [currentUser.uid]: list }, at: bcNow() }, { merge: true }).catch(() => {});
+}
 function bcDiagPush(kind, entry) {
     try {
         if (!openLiveId || !currentUser) return;
-        const d = liveMatchesCache[openLiveId] || {};
-        const prev = (((d.bcDiag || {})[currentUser.uid] || {})[kind]) || [];
-        const list = prev.filter(x => x && x.at !== entry.at).concat([entry]).slice(-5);
-        liveRef(openLiveId).update({ ["bcDiag." + currentUser.uid + "." + kind]: list }).catch(() => {});
+        const k = openLiveId + "|" + kind;
+        const list = (bcDiagMine[k] || []).filter(x => x && x.at !== entry.at).concat([entry]).slice(-5);
+        bcDiagMine[k] = list;
+        const all = {};
+        for (const kk in bcDiagMine) if (kk.indexOf(openLiveId + "|") === 0 && kk.slice(openLiveId.length + 1) !== "va") all[kk.slice(openLiveId.length + 1)] = bcDiagMine[kk];
+        bcDiagWrite(openLiveId, "bcDiag", all);
     } catch (e) {}
 }
 

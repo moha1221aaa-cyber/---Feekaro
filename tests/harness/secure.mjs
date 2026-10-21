@@ -28,7 +28,8 @@ auth.routes.push({ match: u => u.startsWith("https://firestore.googleapis.com/")
 const truth = {};   /* نص السؤال ← الجواب (من طلب الختم نفسه، عشان الذكاء الوهمي يعرف وش يقول) */
 /* NO_SEAL=1: تجربة عكسية (بدون سر الختم = الطريقة القديمة)، لازم يفشل فحص التسريب */
 const env = { AGORA_APP_CERTIFICATE: process.env.NO_SEAL ? "" : "test-secret-0123456789abcdef", AI: { run: async (model, input) => {
-    if (model.includes("whisper")) return { text: "امم الجواب" };
+    /* Whisper الوهمي يقول جواب السؤال الحالي (التصحيح يرفض أي جواب مو في الكلام نفسه) */
+    if (model.includes("whisper")) { const d = db.data("room/main/liveMatches/round_2") || {}; const q = (d.questions || [])[d.qIndex || 0] || {}; return { text: "امم الجواب " + String(truth[q.text] || "").split("|")[0] }; }
     const m = /السؤال: (.*)\n/.exec(input.messages[1].content);
     const sys = input.messages[0].content;
     if (sys.indexOf("طلّع أول جواب") !== -1) return { response: JSON.stringify({ said: String(truth[m && m[1]] || "").split("|")[0] }) };
@@ -68,7 +69,9 @@ try {
         const j = (typeof doc === "string" ? doc : JSON.stringify(doc)).replace(/\\?"seal\\?":\\?"[^"\\]*\\?"/g, "");
         return answers.filter(a => new RegExp("(^|[^\\p{L}\\p{N}])" + esc(a) + "([^\\p{L}\\p{N}]|$)", "u").test(j));
     };
-    check("every match has a sealed box (question texts hidden too)", d0.order.every(o => /^v1\./.test(o.box || "") && !o.qs && !o.gold));
+    const bxd = db.data("room/main/liveBoxes/round_2") || {};
+    check("every match has a sealed box in liveBoxes (question texts hidden too)", d0.order.every((o, i) => o.boxed && !o.box && /^v1\./.test((bxd.boxes || [])[i] || "") && !o.qs && !o.gold));
+    check("live doc is small (no boxes, no diag)", JSON.stringify(d0).length < 12000, JSON.stringify(d0).length);
     const allTexts = Object.keys(truth);
     const docTexts = allTexts.filter(t => JSON.stringify(d0).replace(/"box":"[^"]*"/g, "").includes(t));
     check("no question text of any match in the public doc at start", docTexts.length === 0, docTexts);

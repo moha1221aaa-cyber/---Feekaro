@@ -8,7 +8,7 @@
    - نص مباشر: لو الكلام طويل (1.2 ث) نرسل اللي انقال للحين لـ Whisper ونعرضه، وبعد ما يخلص السيرفر يرد على دفعتين:
      أول شي النص اللي سمعه (يطلع على طول)، وبعدها الحكم.
    - لو الصوت ما اشتغل (ما فيه مايك، ما سمع شي، السيرفر تعطل) يطلع مربع الكتابة احتياط.
-   - التشخيص: آخر 5 محاولات في vaDiag.<uid> (كل محاولة: خطواتها، طريقة التسجيل، مدة الكلام، اللي انسمع، والحكم). */
+   - التشخيص: آخر 5 محاولات في liveDiag/<id> → vaDiag.<uid> (كل محاولة: خطواتها، طريقة التسجيل، مدة الكلام، اللي انسمع، والحكم). */
 
 const VA_RATE = 16000;           /* Whisper يشتغل على 16 كيلوهرتز */
 const VA_SILENCE_MS = 550;       /* سكوت بعد الكلام = خلص جوابه (أول جواب ينحسب، فما نستنى). كان 800 ومحمد قال يتأخر */
@@ -43,7 +43,7 @@ function vaWorkletReady(ctx) {
     return vaWorkletP;
 }
 
-/* تشخيص: كل محاولة (دور) لها سجل، وآخر 5 محاولات تنكتب في وثيقة البث (vaDiag.<uid>) عشان نعرف وش صار لو ما اشتغل */
+/* تشخيص: كل محاولة (دور) لها سجل، وآخر 5 محاولات تنكتب في liveDiag/<id> (vaDiag.<uid>) عشان نعرف وش صار لو ما اشتغل */
 function vaDiag(st, extra) {
     try {
         if (!openLiveId || !currentUser) return;
@@ -52,11 +52,12 @@ function vaDiag(st, extra) {
         const t = VA.try;
         t.steps.push(st);
         Object.assign(t, extra || {}, { ctx: VA.ctx ? VA.ctx.state : "" });
-        const prev = ((d.vaDiag || {})[currentUser.uid]);
-        const list = (Array.isArray(prev) ? prev : []).filter(x => x && x.at !== t.at);
+        const k = openLiveId + "|va";
+        const list = (bcDiagMine[k] || []).filter(x => x && x.at !== t.at);
         const entry = Object.assign({}, t); delete entry.key;
         list.push(entry);
-        liveRef(openLiveId).update({ ["vaDiag." + currentUser.uid]: list.slice(-5) }).catch(() => {});
+        bcDiagMine[k] = list.slice(-5);
+        bcDiagWrite(openLiveId, "vaDiag", bcDiagMine[k]);
     } catch (e) {}
 }
 

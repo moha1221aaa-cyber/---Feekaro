@@ -23,11 +23,13 @@
     window.AgoraRTC = {
         createClient() {
             const h = {};
+            /* window.__agora: عدد الدخول والنشر، و emit يطلق حدث (مثلاً انقطاع النت) للاختبار */
+            const st = window.__agora = { joins: 0, publishes: 0, published: [], emit: (e, ...a) => h[e] && h[e](...a) };
             return {
                 remoteUsers: [],
                 on: (e, f) => { h[e] = f; },
-                join: (app, ch, tok, uid) => Promise.resolve(uid || Math.floor(Math.random() * 1e6)),
-                publish: () => Promise.resolve(), unpublish: () => Promise.resolve(),
+                join: (app, ch, tok, uid) => { st.joins++; return Promise.resolve(uid || Math.floor(Math.random() * 1e6)); },
+                publish: tr => { st.publishes++; st.published = tr; return Promise.resolve(); }, unpublish: () => Promise.resolve(),
                 subscribe: () => Promise.resolve(), renewToken: () => Promise.resolve(), leave: () => Promise.resolve(),
                 enableAudioVolumeIndicator() {}
             };

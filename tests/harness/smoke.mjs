@@ -48,7 +48,7 @@ try {
     await sleep(700);
     await p2.screenshot({ path: out + "/04-buzz-p2.png" });
     await p1.screenshot({ path: out + "/05-recording-p1.png" });
-    step("buzz diag written", await until(() => { const x = liveDoc(db).bcDiag; return x && x.u_p1 && x.u_p1.buzz && x.u_p1.buzz.length && x.u_p1.buzz[0].seen > 0; }, 8000));
+    step("buzz diag written", await until(() => { const x = (db.data("room/main/liveDiag/round_2") || {}).bcDiag; return x && x.u_p1 && x.u_p1.buzz && x.u_p1.buzz.length && x.u_p1.buzz[0].seen > 0; }, 8000));
     step("reveal", await until(() => liveDoc(db).phase === "reveal", 20000));
     await sleep(2200);
     await host.screenshot({ path: out + "/06-reveal-host.png" });
@@ -58,11 +58,11 @@ try {
     const press = p => p.evaluate(() => { const b = document.getElementById("lvBell"); if (b) b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true })); });
     await Promise.all([press(p1), press(p2)]);
     step("one winner", await until(() => liveDoc(db).phase === "answer" && liveDoc(db).tried1 !== liveDoc(db).tried2, 5000));
-    step("loser diag", await until(() => { const x = liveDoc(db).bcDiag || {}; const all = [].concat((x.u_p1 || {}).buzz || [], (x.u_p2 || {}).buzz || []).filter(b => b.q === "0_1"); return all.length === 2 && all.filter(b => b.won).length === 1; }, 8000));
+    step("loser diag", await until(() => { const x = (db.data("room/main/liveDiag/round_2") || {}).bcDiag || {}; const all = [].concat((x.u_p1 || {}).buzz || [], (x.u_p2 || {}).buzz || []).filter(b => b.q === "0_1"); return all.length === 2 && all.filter(b => b.won).length === 1; }, 8000));
     await host.click('button[aria-label="التشخيص"]');
     await sleep(500);
     await host.screenshot({ path: out + "/07-diag-host.png" });
-    res.doc = (({ s1, s2, lastAnswer, vaDiag, bcDiag }) => ({ s1, s2, lastAnswer, vaDiag, bcDiag }))(liveDoc(db));
+    res.doc = (({ s1, s2, lastAnswer }) => ({ s1, s2, lastAnswer }))(liveDoc(db)); res.diag = db.data("room/main/liveDiag/round_2");
     res.ai = ai;
     for (const [n, p] of [["host", host], ["p1", p1], ["p2", p2]]) {
         const errs = p.__logs.filter(l => /PAGEERROR|error:/i.test(l) && !/Failed to load resource|ERR_FAILED|net::/.test(l));

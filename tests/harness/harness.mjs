@@ -56,8 +56,9 @@ export class FakeDB {
         else if (w.op === "set") {
             const base = w.merge && cur ? cur.data : {};
             const d = FakeDB.fv(w.data);
-            const out = w.merge ? Object.assign({}, base) : {};
-            for (const k in d) { if (d[k] && d[k].__fv === "del") delete out[k]; else out[k] = d[k]; }
+            /* set مع merge في Firestore يدمج الخرائط المتداخلة (والمصفوفات تنستبدل) */
+            const deep = (o, x) => { for (const k in x) { const v = x[k]; if (v && v.__fv === "del") delete o[k]; else if (w.merge && v && typeof v === "object" && !Array.isArray(v) && o[k] && typeof o[k] === "object" && !Array.isArray(o[k])) { o[k] = Object.assign({}, o[k]); deep(o[k], v); } else o[k] = v; } return o; };
+            const out = deep(w.merge ? JSON.parse(JSON.stringify(base)) : {}, d);
             this.docs.set(w.path, { data: out, ver: (cur ? cur.ver : 0) + 1 });
         } else if (w.op === "update") {
             if (!cur) { const e = new Error("not-found"); e.code = "not-found"; throw e; }
