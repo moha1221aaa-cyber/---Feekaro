@@ -1,0 +1,173 @@
+[
+ {
+  "case": "speech-now",
+  "expect": "voice",
+  "waitSpeech": true,
+  "sent": true,
+  "sentAfterMs": 2077,
+  "wavSec": 1.42,
+  "committed": true,
+  "lastAnswer": {
+   "by": 1,
+   "text": "الرياض",
+   "correct": true
+  },
+  "diag": [
+   {
+    "steps": "rec>won>sent>heard>result",
+    "via": "worklet+bcTrack",
+    "speechMs": 760,
+    "said": "الرياض",
+    "ok": true
+   }
+  ],
+  "reqs": [
+   "voice:1.42s"
+  ],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "long-answer",
+  "expect": "voice",
+  "waitSpeech": true,
+  "liveText": "«مساء الخير مساء»",
+  "sent": true,
+  "sentAfterMs": 3357,
+  "wavSec": 2.68,
+  "committed": true,
+  "lastAnswer": {
+   "by": 1,
+   "text": "الرياض",
+   "correct": true
+  },
+  "diag": [
+   {
+    "steps": "rec>won>sent>heard>result",
+    "via": "worklet+bcTrack",
+    "speechMs": 1560,
+    "said": "الرياض",
+    "ok": true
+   }
+  ],
+  "reqs": [
+   "hear:1.74s",
+   "voice:2.68s"
+  ],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "speech-music",
+  "expect": "voice",
+  "waitSpeech": true,
+  "sent": true,
+  "sentAfterMs": 2137,
+  "wavSec": 1.46,
+  "committed": true,
+  "lastAnswer": {
+   "by": 1,
+   "text": "الرياض",
+   "correct": true
+  },
+  "diag": [
+   {
+    "steps": "rec>won>sent>heard>result",
+    "via": "worklet+bcTrack",
+    "speechMs": 800,
+    "said": "الرياض",
+    "ok": true
+   }
+  ],
+  "reqs": [
+   "voice:1.46s"
+  ],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "silence",
+  "expect": "type",
+  "typeBox": true,
+  "typeAfterMs": 5150,
+  "voiceSent": false,
+  "note": "ما سمعت جواب، اكتبه",
+  "diag": [
+   {
+    "steps": "rec>won>no-speech",
+    "via": "worklet+bcTrack",
+    "speechMs": 0
+   }
+  ],
+  "reqs": [],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "music-only",
+  "expect": "type",
+  "typeBox": true,
+  "typeAfterMs": 5093,
+  "voiceSent": false,
+  "note": "ما سمعت جواب، اكتبه",
+  "diag": [
+   {
+    "steps": "rec>won>no-speech",
+    "via": "worklet+bcTrack",
+    "speechMs": 0
+   }
+  ],
+  "reqs": [],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "self-muted",
+  "expect": "voice",
+  "mutedBefore": true,
+  "waitSpeech": true,
+  "sent": true,
+  "sentAfterMs": 1848,
+  "wavSec": 1.1,
+  "committed": true,
+  "lastAnswer": {
+   "by": 1,
+   "text": "الرياض",
+   "correct": true
+  },
+  "mutedAfter": true,
+  "diag": [
+   {
+    "steps": "rec>won>sent>heard>result",
+    "via": "worklet+bcTrack",
+    "speechMs": 440,
+    "said": "الرياض",
+    "ok": true
+   }
+  ],
+  "reqs": [
+   "voice:1.1s"
+  ],
+  "errors": [],
+  "pass": true
+ },
+ {
+  "case": "mic-denied",
+  "expect": "type",
+  "typeBox": true,
+  "typeAfterMs": 1489,
+  "voiceSent": false,
+  "note": "ما قدرت أفتح المايك، اكتب جوابك",
+  "diag": [
+   {
+    "steps": "mic-error"
+   },
+   {
+    "steps": "mic-error"
+   }
+  ],
+  "reqs": [],
+  "errors": [],
+  "pass": true
+ }
+]
