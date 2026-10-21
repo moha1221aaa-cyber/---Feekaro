@@ -83,7 +83,8 @@ export class FakeDB {
         }
     }
     push(s, payload) {
-        setTimeout(() => { s.page.evaluate(([id, pl]) => window.__dbPush && window.__dbPush(id, pl), [s.id, payload]).catch(() => {}); }, this.latency);
+        /* page.__extraLat: جهاز نته أبطأ (التحديثات توصله متأخرة) */
+        setTimeout(() => { s.page.evaluate(([id, pl]) => window.__dbPush && window.__dbPush(id, pl), [s.id, payload]).catch(() => {}); }, this.latency + (s.page.__extraLat || 0));
     }
     async op(page, op, a) {
         await new Promise(r => setTimeout(r, this.latency));
