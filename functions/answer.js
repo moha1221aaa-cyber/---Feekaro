@@ -5,7 +5,7 @@
              البث شغال، المرحلة جواب، رقم السؤال نفسه، والتوكن لنفس المتسابق اللي ضغط الجرس (أو انتقل له السؤال)، والوقت ما خلص.
              بعدها يفتح الختم ويصحح: كتابة (مطابقة ثم ذكاء اصطناعي) أو صوت (Whisper ثم استخراج الجواب ثم الحكم)
              { id, qIndex, given } أو { id, qIndex, audio, stream? } ← { ok, heard?, said? }
-             أول حكم في الدور هو اللي ينحسب: نفس الدور ما ينعاد تصحيحه (يرجع نفس الحكم)، عشان محد يجرّب أجوبة لين يصيب.
+             أول حكم هو اللي ينحسب: كل متسابق ياخذ حكم واحد لكل سؤال (يرجع نفسه لو انعاد)، عشان محد يجرّب أجوبة لين يصيب.
    - reveal: للكل (حتى الضيف). الأجوبة اللي انكشفت بس حسب الوثيقة (السؤال الحالي بعد مرحلة الكشف، واللي قبله)  { id } ← { answers: { "0": "..." } }
    GET /answer: هل الختم شغال (بدون أسرار).
    لو الختم مو متاح (ما فيه سر)، seal يرجع 503 والبث يكمل بالطريقة القديمة. */
@@ -73,8 +73,10 @@ async function doGrade(context, env, b, user) {
   }
   if (!q.text || !answer) return json(500, { error: "ما قدرت أفتح جواب السؤال" });
 
-  /* أول حكم في الدور: محفوظ في كاش Cloudflare دقيقتين */
-  const turn = new Request(new URL(context.request.url).origin + "/answer-turn/" + [id, d.cur, d.qIndex, n, d.passed ? 1 : 0, user.uid].map(encodeURIComponent).join("/"));
+  /* أول حكم ينحسب: لكل متسابق حكم واحد لكل سؤال (بنص السؤال، مو بحقول الدور اللي ممكن تتغير في الوثيقة المفتوحة)،
+     محفوظ في كاش Cloudflare 10 دقايق. الكاش لكل مركز بيانات، فهذي حماية تخفف التجريب مو تمنعه 100% */
+  const qh = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(q.text)))).slice(0, 12).map(x => x.toString(16).padStart(2, "0")).join("");
+  const turn = new Request(new URL(context.request.url).origin + "/answer-turn/" + [id, qh, user.uid].map(encodeURIComponent).join("/"));
   const prev = await caches.default.match(turn);
   if (prev) {
     const r = await prev.json();
@@ -82,7 +84,7 @@ async function doGrade(context, env, b, user) {
     return json(200, Object.assign({ repeat: true }, r));
   }
   const remember = r => {
-    if (r && (r.said || r.given)) context.waitUntil(caches.default.put(turn, new Response(JSON.stringify(r), { headers: { "Cache-Control": "max-age=120" } })));
+    if (r && (r.said || r.given)) context.waitUntil(caches.default.put(turn, new Response(JSON.stringify(r), { headers: { "Cache-Control": "max-age=600" } })));
     return r;
   };
 

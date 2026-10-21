@@ -66,13 +66,17 @@ check("grade: time over (409)", (await post({ action: "grade", id: ID, qIndex: 0
 DOC = Object.assign(base(), { qIndex: 1, questions: [{ text: "x", seal: sealed[0].seal }, { text: "كم عدد قارات العالم؟", answer: "7|سبعة" }] });
 r = await post({ action: "grade", id: ID, qIndex: 1, given: "سبعه" }, p1); j = await r.json();
 check("grade: legacy plaintext doc still graded on server", j.ok === true, j);
-DOC = Object.assign(base(), { cur: 0, qIndex: 0, passed: false, answerer: 1, deadline: now + 9000, questions: sealed.map(x => ({ text: x.text, seal: x.seal })), order: [{ uid1: "u_p1", uid2: "u_p2" }, {}] });
-DOC.cur = 0; DOC.order = [{ uid1: "u_p1", uid2: "u_p2" }]; DOC.qIndex = 0; DOC.answerer = 1;
-/* دور جديد (سؤال ثاني في الكاش) عشان ما يرجع الحكم القديم: نغيّر cur */
-DOC.order = [{}, { uid1: "u_p1", uid2: "u_p2" }]; DOC.cur = 1;
+/* متسابق ثالث (ما أخذ حكم على هالسؤال) يجاوب بالصوت */
+const p3 = await auth.token("u_p3");
+DOC = Object.assign(base(), { order: [{ uid1: "u_p3", uid2: "u_p2" }] });
 const audio = Buffer.alloc(4000, 1).toString("base64");
-const lines = await readNdjson(await post({ action: "grade", id: ID, qIndex: 0, audio, stream: true }, p1));
+const lines = await readNdjson(await post({ action: "grade", id: ID, qIndex: 0, audio, stream: true }, p3));
 check("grade voice stream: heard then verdict", lines[0].heard === "امم الرياض" && lines[1].final && lines[1].ok === true && lines[1].said === "الرياض", lines);
+
+/* المتسابق نفسه ما يقدر يجرّب مرة ثانية حتى لو انعبث بحقول الدور (passed/cur) */
+DOC = Object.assign(base(), { passed: true, cur: 0, order: [{ uid1: "u_p1", uid2: "u_p2" }] });
+r = await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1); j = await r.json();
+check("grade: tampered turn fields don't reset the first verdict", j.repeat === true && j.ok === false, j);
 
 /* --- reveal --- */
 DOC = Object.assign(base(), { qIndex: 1, phase: "answer" });
