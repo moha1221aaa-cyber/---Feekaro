@@ -134,13 +134,13 @@ export const TeaserAudio: React.FC<{
             name="Riser"
             from={trophyBurst - 2 * fps}
             src={staticFile("show/riser.mp3")}
-            volume={0.6 * fx}
+            volume={0.4 * fx}
           />
           <Audio
             name="Braam (trophy)"
             from={trophyBurst}
             src={staticFile("show/braam.mp3")}
-            volume={0.8 * fx}
+            volume={0.55 * fx}
           />
           <Audio
             name="Trophy shine"
