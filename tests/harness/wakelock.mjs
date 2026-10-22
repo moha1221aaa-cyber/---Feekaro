@@ -3,7 +3,9 @@
    - الموقع يروح للخلفية (القفل يروح لحاله) ← يرجع للواجهة ← ينطلب من جديد.
    - متصفح بدون wakeLock (آيفون قديم): الفيديو الصامت الصغير يشتغل وقت البث ويوقف بعده.
    navigator.wakeLock و visibilityState وهميين (Chromium بدون شاشة ما يعطي القفل).  node tests/harness/wakelock.mjs */
-import { serve, FakeDB, seed, launch, device, until, sleep } from "./harness.mjs";
+import { serve, FakeDB, seed, launch, device, until, sleep, PORT } from "./harness.mjs";
+/* البث يشيل ?live= من الرابط بعد ما يفتح، فـ reload ما يرجّعه: نفتح الرابط كامل */
+const reopen = (p, who) => p.goto(`http://127.0.0.1:${PORT}/index.html?as=${who}&live=round_2`);
 
 const srv = await serve(8787);
 let ok = true;
@@ -27,14 +29,17 @@ function fakeEnv(support) {
         };
         const wl = { request: async () => {
             if (vis !== "visible") throw new DOMException("not visible", "NotAllowedError");
-            await new Promise(r => setTimeout(r, 30));
+            const h0 = window.__wl.hides || 0;
+            await new Promise(r => setTimeout(r, window.__wl.delay || 30));
+            /* راح للخلفية والطلب معلّق: المتصفح يرفضه */
+            if ((window.__wl.hides || 0) !== h0) throw new DOMException("hidden while pending", "NotAllowedError");
             window.__wl.req++;
             const l = mk(); window.__wl.active = l; return l;
         } };
         Object.defineProperty(Navigator.prototype, "wakeLock", { get: () => wl, configurable: true });
     }
     /* المتصفح يفك القفل لحاله لما الصفحة تختفي */
-    window.__setVis = v => { vis = v; if (v !== "visible" && window.__wl.active) window.__wl.active.release(); document.dispatchEvent(new Event("visibilitychange")); };
+    window.__setVis = v => { vis = v; if (v !== "visible") window.__wl.hides = (window.__wl.hides || 0) + 1; if (v !== "visible" && window.__wl.active) window.__wl.active.release(); document.dispatchEvent(new Event("visibilitychange")); };
 }
 const held = p => p.evaluate(() => !!window.__wl.active && !window.__wl.active.released);
 const wl = p => p.evaluate(() => ({ req: window.__wl.req, released: window.__wl.released, held: !!window.__wl.active, plays: window.__wl.plays }));
@@ -46,7 +51,7 @@ try {
     /* ===== متصفح يدعم wakeLock ===== */
     const p = await device(browser, db, "fan", { api: { ai: async () => ({ ok: false }) } });
     await p.context().addInitScript(fakeEnv, true);
-    await p.reload();
+    await reopen(p, "fan");
     await until(() => p.evaluate(() => document.getElementById("liveScreen").classList.contains("open")), 15000);
     check("live open: lock requested", await until(() => held(p), 3000), await wl(p));
     check("live open: one request only", (await wl(p)).req === 1, await wl(p));
@@ -82,12 +87,25 @@ try {
     check("live closed but room still open: lock kept", await held(p), await wl(p));
     await p.evaluate(() => closeRoomScreen(true));
     check("room closed: lock released", await until(async () => !(await held(p)), 3000), await wl(p));
+    /* النظام فك القفل والموقع قدام: ينطلب من جديد */
+    await p.evaluate(() => openLiveScreen("round_2"));
+    await until(() => held(p), 3000);
+    const r2 = (await wl(p)).req;
+    await p.evaluate(() => window.__wl.active.release());
+    check("system release while visible: lock re-requested", await until(async () => (await held(p)) && (await wl(p)).req === r2 + 1, 4000), await wl(p));
+    await p.evaluate(() => closeLiveScreen(true));
+    await until(async () => !(await held(p)), 3000);
+    /* خلفية ثم واجهة والطلب لسا معلّق: ينطلب مرة ثانية (مو الفيديو) */
+    await p.evaluate(() => { window.__wl.delay = 600; openLiveScreen("round_2"); window.__setVis("hidden"); window.__setVis("visible"); });
+    check("hidden+visible while request pending: lock re-requested", await until(() => held(p), 4000), await wl(p));
+    await p.evaluate(() => { window.__wl.delay = 30; closeLiveScreen(true); });
+    await until(async () => !(await held(p)), 3000);
     check("no fallback video when wakeLock works", (await wl(p)).plays === 0, await wl(p));
 
     /* ===== متصفح بدون wakeLock: الفيديو الصامت ===== */
     const q = await device(browser, db, "p2", { api: { ai: async () => ({ ok: false }) } });
     await q.context().addInitScript(fakeEnv, false);
-    await q.reload();
+    await reopen(q, "p2");
     await until(() => q.evaluate(() => document.getElementById("liveScreen").classList.contains("open")), 15000);
     const vid = () => q.evaluate(() => { const v = document.getElementById("wakeVideo"); return v ? { paused: v.paused, muted: v.muted, loop: v.loop, src: v.currentSrc.split("/").pop(), w: v.getBoundingClientRect().width, err: v.error && v.error.code } : null; });
     check("no wakeLock: muted looping fallback video plays while live is open", await until(async () => { const v = await vid(); return v && !v.paused && v.muted && v.loop; }, 4000), await vid());

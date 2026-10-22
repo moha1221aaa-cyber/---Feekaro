@@ -36,7 +36,7 @@ function openLiveScreen(id) {
         scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
     }
     scr.classList.add("open");
-    screenAwake("live", true);
+    if (typeof screenAwake === "function") screenAwake("live", true);
     try { const v = document.getElementById("stVideo"); if (v && v.paused && !bcLite) v.play().catch(() => {}); } catch (e) {}
     bcApplyLite();
     bcWatchFrames();
@@ -60,7 +60,6 @@ function closeLiveScreen(fromPop) {
         return;
     }
     openLiveId = null;
-    screenAwake("live", false);
     const scr = document.getElementById("liveScreen");
     if (scr) scr.classList.remove("open");
     document.body.classList.remove("live-open");
@@ -72,6 +71,7 @@ function closeLiveScreen(fromPop) {
     { const tb = document.getElementById("tvBoard"); if (tb) tb.remove(); if (scr) scr.classList.remove("tv-final"); }
     if (scr) { delete scr.dataset.scene; delete scr.dataset.shot; }
     bcSyncAudio();
+    if (typeof screenAwake === "function") screenAwake("live", false);
 }
 
 function liveTick() {

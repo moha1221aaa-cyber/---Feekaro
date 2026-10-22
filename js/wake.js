@@ -5,7 +5,16 @@
    - المتصفح اللي ما يدعمه (آيفون قبل iOS 16.4) أو رفض الطلب: فيديو صامت 16×16 (2KB، media/awake.mp4 أو webm)
      يشتغل بتكرار ومخفي (نفس فكرة NoSleep.js)، وما يشتغل إلا والبث أو الغرفة مفتوحة والموقع قدام.
    ===================================================================== */
-const WAKE = { want: new Set(), lock: null, pending: null, video: null };
+const WAKE = { want: new Set(), lock: null, pending: null, video: null, retried: false };
+/* التطبيق المثبّت على الشاشة الرئيسية في iOS 16.4 لين 18.3: الطلب ينجح بس ما يسوي شي (خلل WebKit 254545)،
+   فنشغّل الفيديو الصامت معه */
+const WAKE_IOS_PWA_BROKEN = (() => {
+    try {
+        const m = /OS (\d+)_(\d+)/.exec(navigator.userAgent || "");
+        if (!m || !/iPhone|iPad|iPod/.test(navigator.userAgent) || !navigator.standalone) return false;
+        return Number(m[1]) < 18 || (Number(m[1]) === 18 && Number(m[2]) < 4);
+    } catch (e) { return false; }
+})();
 function screenAwake(why, on) {
     if (on) WAKE.want.add(why); else WAKE.want.delete(why);
     wakeSync();
@@ -18,12 +27,16 @@ function wakeSync() {
     WAKE.pending = navigator.wakeLock.request("screen").then(l => {
         WAKE.pending = null;
         if (!wakeOn()) { l.release().catch(() => {}); return; }   /* طلع أو راح للخلفية قبل ما يوصل القفل */
-        WAKE.lock = l;
-        wakeVideo(false);
-        l.addEventListener("release", () => { if (WAKE.lock === l) WAKE.lock = null; });
-    }).catch(() => {
+        WAKE.lock = l; WAKE.retried = false;
+        wakeVideo(WAKE_IOS_PWA_BROKEN);
+        /* النظام فك القفل والموقع لسا قدام (توفير البطارية مثلاً): نطلبه من جديد */
+        l.addEventListener("release", () => { if (WAKE.lock === l) { WAKE.lock = null; setTimeout(wakeSync, 1000); } });
+    }).catch(e => {
         WAKE.pending = null;
-        if (wakeOn()) wakeVideo(true);
+        if (!wakeOn()) return;
+        /* رجع للواجهة والطلب لسا معلّق من قبل ما يروح للخلفية فانرفض: نطلب مرة ثانية قبل الفيديو */
+        if (e && e.name === "NotAllowedError" && !WAKE.retried) { WAKE.retried = true; wakeSync(); return; }
+        wakeVideo(true);
     });
 }
 function wakeRelease() {
@@ -46,8 +59,8 @@ function wakeVideo(on) {
         document.body.appendChild(v);
     }
     if (v.paused) v.play().catch(() => {
-        /* بعض المتصفحات تبي لمسة قبل أي فيديو: نجرب مع أول لمسة */
-        document.addEventListener("pointerdown", wakeSync, { once: true, capture: true });
+        /* بعض المتصفحات تبي لمسة قبل أي فيديو: نجرب مع أول ضغطة (click، لأن pointerdown باللمس ما يعتبر تفاعل) */
+        document.addEventListener("click", wakeSync, { once: true, capture: true });
     });
 }
 document.addEventListener("visibilitychange", wakeSync);
