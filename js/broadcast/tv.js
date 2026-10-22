@@ -81,7 +81,8 @@ function tvBoard(d) {
 <div class="tv-bd-p r ${d.outcome === 2 ? "up" : ""}">${num(p2, s2)}<span class="nm">${escapeHTML(o.p2)}</span><img src="${safeSrc(bcAv(o, 2))}" alt=""></div>
 </div>
 <div class="tv-bd-lead">${escapeHTML(lead)}</div>`;
-        b.classList.remove("on");
+        bcRestartAnim(b, "on", () => TV.boardKey === key, true);
+        return;
     }
     b.classList.add("on");
 }

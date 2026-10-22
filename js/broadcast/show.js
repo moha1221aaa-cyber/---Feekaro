@@ -45,7 +45,7 @@ function showTick(d) {
     if (!o) return;
     /* السؤال الذهبي / سؤال الحسم: شريط أول ما يبدأ السؤال */
     if (d.scene === "playing" && d.phase === "buzz" && bcIsDecider(d)) {
-        const k = d.cur + "_" + d.qIndex;
+        const k = openLiveId + ":" + d.cur + "_" + d.qIndex;
         if (SHOW.goldKey !== k) {
             SHOW.goldKey = k;
             const gold = bcIsGolden(d);
@@ -54,7 +54,7 @@ function showTick(d) {
     }
     /* شريط الموقف: بعد قلب لوحة الجواب، وقبل لوحة النتيجة */
     if (d.scene === "playing" && d.phase === "reveal" && d.outcome) {
-        const k = d.cur + "_" + d.qIndex, at = bcRevealAt(d) + 600;
+        const k = openLiveId + ":" + d.cur + "_" + d.qIndex, at = bcRevealAt(d) + 600;
         if (SHOW.situKey !== k && bcNow() >= at - 100) {
             SHOW.situKey = k;
             const kind = typeof bcSituKind === "function" ? bcSituKind(d) : "";
@@ -112,9 +112,10 @@ function showScoreHTML(d, n) {
     const k = openLiveId + ":" + d.cur + ":" + n;
     /* نفس الكود لين يتغير الرقم مرة ثانية، عشان أي رسم ثاني للمنصة ما يعيد الحركة ولا يشيلها */
     const st = SHOW.scores[k];
-    if (!st) { SHOW.scores[k] = { v, from: v }; return `<b>${v}</b>`; }
-    if (st.v !== v) { st.from = st.v; st.v = v; }
-    return st.from === v ? `<b>${v}</b>` : `<b class="tv-roll"><span>${st.from}</span><span>${v}</span></b>`;
+    if (!st) { SHOW.scores[k] = { v, from: v, at: 0 }; return `<b>${v}</b>`; }
+    if (st.v !== v) { st.from = st.v; st.v = v; st.at = bcNow(); }
+    /* التدحرج بس أول 1.5 ث بعد التغيير (المنصة ينعاد رسمها مع كل مرحلة، فما يتكرر) */
+    return st.from === v || bcNow() - st.at > 1500 ? `<b>${v}</b>` : `<b class="tv-roll"><span>${st.from}</span><span>${v}</span></b>`;
 }
 
 /* ===== شريط الأخبار: إحصائيات المواجهة الحية ===== */

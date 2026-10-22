@@ -278,7 +278,7 @@
 #liveScreen[data-decider] .st-shots img[data-shot="podium"]{filter:brightness(.4) sepia(.55) hue-rotate(-45deg) saturate(2.2);}
 #liveScreen[data-scene="waiting"] .st-shots img.on{opacity:.5;}
 @media (prefers-reduced-motion: reduce){.st-shots img.on{animation:none;}}
-#liveScreen:not([data-scene="waiting"]):not([data-scene="ended"])::before{opacity:0;}
+#liveScreen:not([data-scene="waiting"]):not([data-scene="ended"])::before{opacity:0;animation:none;will-change:auto;}
 /* المشاهد السينمائية: الاستوديو الحقيقي يبان من وراها بدل خلفية مرسومة */
 .cine{background:linear-gradient(to bottom,rgba(2,6,23,.55),rgba(2,6,23,.35) 45%,rgba(2,6,23,.65));}
 .cine-beam{display:none;}

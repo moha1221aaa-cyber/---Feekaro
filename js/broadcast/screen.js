@@ -9,6 +9,7 @@ function openLiveScreen(id) {
     }
     openLiveId = id;
     liveLastSig = "";
+    { const b = document.getElementById("liveScreenBody"); if (b) b.__bcR = null; }   /* الرسم الجزئي يبدأ من جديد مع كل فتح */
     livePrevView = null;
     bcPrevKey = null;
     bcLastSpokenKey = "";
@@ -236,8 +237,7 @@ function bcTransition(kind, at) {
 /* القياس (bcPerf في cinema.js): كم ياخذ رسم الشاشة كل مرة */
 function renderLiveScreen() {
     const t0 = performance.now();
-    renderLiveScreenNow();
-    bcPerfRender(performance.now() - t0);
+    if (renderLiveScreenNow()) bcPerfRender(performance.now() - t0);
 }
 function renderLiveScreenNow() {
     const body = document.getElementById("liveScreenBody");
@@ -253,7 +253,7 @@ function renderLiveScreenNow() {
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
         bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
-    if (sig === liveLastSig) return;
+    if (sig === liveLastSig) return false;
     liveLastSig = sig;
 
     if (!d) {
@@ -330,11 +330,19 @@ ${pod(2)}
     const inp = document.getElementById("lvAnswerInput");
     if (inp) setTimeout(() => inp.focus(), 60);
     liveTick();
+    return true;
 }
 
 /* الشاشة 5 أجزاء ثابتة (display:contents فالشكل ما يتغير)، وكل جزء ينعاد رسمه بس لو تغيّر.
    كان كل تحديث يعيد بناء الشاشة كاملة: 200ms على معالج أبطأ 6 مرات، ولحظة الجرس على كل الجوالات */
 const BC_REGIONS = ["wave", "top", "host", "pods", "stage"];
+/* إعادة بناء كاملة: بعد تعديل مباشر في الصفحة (الجرس "ضغطت!"، مربع التسجيل) أو فتح الشاشة من جديد */
+function bcRedrawAll() {
+    const body = document.getElementById("liveScreenBody");
+    if (body) body.__bcR = null;
+    liveLastSig = "";
+    setTimeout(renderLiveScreen, 0);
+}
 function bcPatchRegions(body, R) {
     if (!body.__bcR || !body.__bcR.stage || !body.__bcR.stage.isConnected) {
         body.innerHTML = BC_REGIONS.map(k => `<div class="bc-r" data-r="${k}"></div>`).join("");

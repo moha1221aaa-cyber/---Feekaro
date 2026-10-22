@@ -53,6 +53,10 @@ function bcPerfTick(d) {
     if (!BC_PERF.last) { BC_PERF.last = now; return; }
     if (now - BC_PERF.last < 30000 || !d || d.status !== "live") return;
     const p = BC_PERF;
+    /* المتسابقين والمنظم بس (اللوحة تعرضهم)، وبس لو فيه شي جديد: كل مشاهد يكتب كل 30 ث = كتابات كثير على وثيقة وحدة */
+    const sig = [Math.round(p.renderMax / 10), p.longN, Math.round(p.tapMax / 10), bcLite].join("|");
+    if (!(isAdmin || myLiveNum(d)) || sig === p.sig) { p.renderMax = 0; p.renders = 0; p.longMs = 0; p.longN = 0; p.tapMax = 0; p.last = now; return; }
+    p.sig = sig;
     try { if (typeof bcDiagPush === "function") bcDiagPush("perf", { at: now, scene: d.scene + (d.phase ? "/" + d.phase : ""), lite: bcLite, renderMax: Math.round(p.renderMax), renders: p.renders, longMs: Math.round(p.longMs), longN: p.longN, tapMax: Math.round(p.tapMax) }); } catch (e) {}
     p.renderMax = 0; p.renders = 0; p.longMs = 0; p.longN = 0; p.tapMax = 0; p.last = now;
 }
@@ -144,6 +148,8 @@ function cineS(id, t, v, o) {
         const G = cineGraph(), c = G.c;
         try { if (c.state === "suspended") c.resume(); } catch (e) {}
         const src = c.createBufferSource(); src.buffer = b;
+        /* متى يخلص آخر مؤثر صوتي (الكاشف الحساس في voice-answer.js ما يحسب صوته كلام) */
+        CINE.fxUntil = Math.max(CINE.fxUntil || 0, performance.now() + (Math.max(0, t - c.currentTime) + b.duration) * 1000);
         const g = c.createGain();
         const vol = (v == null ? 1 : v) * ((CINE_FILES[id] || {}).g || 1);
         g.gain.value = vol;

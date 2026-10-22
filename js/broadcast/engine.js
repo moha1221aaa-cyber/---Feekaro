@@ -737,9 +737,10 @@ function bcEnd() {
 /* إعادة تشغيل حركة CSS بدون قراءة offsetWidth: القراءة تجبر المتصفح يرتّب الصفحة كاملة على طول
    (قسناها ~100ms على معالج أبطأ 6 مرات، وكانت داخل ضغطة الجرس). لو الكلاس مو موجود يتضاف فوراً،
    ولو موجود يتشال ويرجع بعد إطارين */
-function bcRestartAnim(el, cls, after) {
+function bcRestartAnim(el, cls, after, transition) {
     if (!el) return;
-    if (!el.classList.contains(cls)) { el.classList.add(cls); return; }
+    /* transition (مو keyframes): لازم إطار والكلاس مشال عشان الانتقال يشتغل، حتى لو العنصر جديد */
+    if (!transition && !el.classList.contains(cls)) { el.classList.add(cls); return; }
     el.classList.remove(cls);
     requestAnimationFrame(() => requestAnimationFrame(() => { if (!after || after()) el.classList.add(cls); }));
 }
@@ -761,6 +762,8 @@ function bcDiagWrite(id, field, list) {
 function bcDiagPush(kind, entry) {
     try {
         if (!openLiveId || !currentUser) return;
+        /* المتسابقين والمنظم بس: المشاهدين ما يظهرون في اللوحة، وكتاباتهم تثقّل الوثيقة على الفاضي */
+        if (!(isAdmin || myLiveNum(liveMatchesCache[openLiveId]))) return;
         const k = openLiveId + "|" + kind;
         const list = (bcDiagMine[k] || []).filter(x => x && x.at !== entry.at).concat([entry]).slice(-5);
         bcDiagMine[k] = list;
@@ -851,11 +854,13 @@ function liveBuzz(ev) {
         if (!u) {
             bz.won = false; bcBuzzDone(bz);
             if (typeof vaDisarm === "function") vaDisarm();
+            bcRedrawAll();   /* الجرس "ضغطت!" يرجع (الرسم الجزئي ما يلمس الجزء اللي انعدّل مباشرة) */
         } else if (bz.seen) bcBuzzDone(bz);
     }).catch(err => {
         console.log("buzz:", err);
         bz.tx = -1; bz.won = false; bcBuzzDone(bz);
         if (typeof vaDisarm === "function") vaDisarm();
+        bcRedrawAll();
     });
 }
 
