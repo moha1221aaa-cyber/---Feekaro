@@ -68,8 +68,8 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         await p1.evaluate(() => document.getElementById("lvBell").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true })));
         await until(() => liveDoc(db).phase === "answer", 5000);
         await sleep(400);
-        /* وقت جوابي: صوت الثاني والموسيقى ساكتين عندي */
-        r.quietDuring = await p1.evaluate(() => ({ remote: window.__remoteVol, bed: typeof bedTarget === "function" ? bedTarget() : -1, rec: !!VA.rec }));
+        /* وقت جوابي: صوت الثاني ساكت عندي (والموسيقى انشالت من البث، فـ bed دايماً 0) */
+        r.quietDuring = await p1.evaluate(() => ({ remote: window.__remoteVol, bed: typeof bedTarget === "function" ? bedTarget() : 0, rec: !!VA.rec }));
         await p1.screenshot({ path: `${out}/${c.name}-1-rec.png` });
         if (c.live) {
             r.liveText = await until(() => p1.evaluate(() => { const e = document.getElementById("vaLive"); return e && e.textContent.trim(); }), 6000);

@@ -1,14 +1,12 @@
-/* المشاهد السينمائية والأصوات الحقيقية والموسيقى */
+/* المشاهد السينمائية والأصوات الحقيقية (مؤثرات قصيرة بس، بدون موسيقى) */
 /* =====================================================================
    المشاهد السينمائية + الأصوات الحقيقية للبث
    - كل الأصوات تسجيلات حقيقية (mp3 في مجلد audio/ مولّدة بـ ElevenLabs)، وما فيه أي صوت من المتصفح
    - مشهد سينمائي بين كل مواجهة، "انطلق!"، احتفال النتيجة، ألعاب نارية في الختام
-   - موسيقى خلفية حقيقية: انتظار قبل البث، ملحمية بين المواجهات، تشويق وقت الأسئلة
+   - بدون موسيقى أبد (22 أكتوبر 2026): لا خلفية ولا مقاطع موسيقية طويلة في المشاهد، بس المؤثرات القصيرة
    - مكساج منظم: كل صوت له مستوى ثابت، وما يتراكب أكثر من صوتين بنفس اللحظة
    ===================================================================== */
 const CINE_REDUCED = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
-let cineBgOn = true;
-try { cineBgOn = localStorage.getItem("bcBgOn") !== "0"; } catch (e) {}
 /* ===== الوضع الخفيف للجوالات الضعيفة =====
    فيديو الاستوديو المتكرر + لقطات بحركة كاميرا وفلاتر + زجاج (backdrop-filter) + جزيئات: على جوال ضعيف تاخذ المعالج كله،
    فالجرس يتأخر (قسنا 300ms على أندرويد 10) والصوت يتقطع. الوضع الخفيف يوقف الفيديو على صورة ثابتة ويشيل الحركة والزجاج،
@@ -75,7 +73,7 @@ function bcWatchFrames() {
     };
     requestAnimationFrame(step);
 }
-const CINE = { c: null, bus: null, bed: null };
+const CINE = { c: null, bus: null };
 
 function cineGraph() {
     const c = liveCtx();
@@ -86,8 +84,7 @@ function cineGraph() {
     const master = c.createGain(); master.gain.value = 0.9;
     comp.connect(master); master.connect(c.destination);
     const bus = c.createGain(); bus.connect(comp);
-    const bed = c.createGain(); bed.gain.value = 0; bed.connect(comp);
-    Object.assign(CINE, { c, bus, bed });
+    Object.assign(CINE, { c, bus });
     return CINE;
 }
 function cineNow() { return cineGraph().c.currentTime + 0.02; }
@@ -98,29 +95,17 @@ const CINE_FILES = {
     braam: { g: 0.4 }, riser: { g: 0.65 }, impact: { g: 0.53 }, whoosh: { g: 1 }, slam: { g: 0.57 },
     heartbeat: { g: 1 }, fireworks: { g: 0.7 },
     buzz: { g: 1.3 }, correct: { g: 1 }, wrong: { g: 0.78 }, tick: { g: 1.4 }, timeout: { g: 0.85 },
-    lobby: { g: 0.62 },
-    /* طابع برامج المسابقات */
-    show_intro: { g: 0.62 }, interlude: { g: 0.84 }, decider: { g: 0.79 }, reveal: { g: 0.83 },
-    match_end: { g: 0.81 }, applause: { g: 1 }, think2: { g: 0.72 }, start_q: { g: 0.87 }, outro: { g: 0.89 }, big_win: { g: 0.63 }
+    /* طابع برامج المسابقات (مؤثرات قصيرة). الموسيقى (lobby، show_intro، interlude، decider، think2، outro، big_win) انشالت */
+    reveal: { g: 0.83 }, match_end: { g: 0.81 }, applause: { g: 1 }, start_q: { g: 0.87 }
 };
 const CINE_BUF = {};
 const CINE_LOADING = {};
-/* الأصوات تتحمل حسب الحاجة: المؤثرات الصغيرة أول ما يفتح البث، والموسيقى (الملفات الكبيرة) لما يقرب مشهدها */
+/* الأصوات تتحمل حسب الحاجة: المؤثرات الصغيرة أول ما يفتح البث، والألعاب النارية (أكبر ملف) لما يقرب الختام */
 const CINE_CORE = ["buzz", "correct", "wrong", "tick", "timeout", "heartbeat", "whoosh", "riser", "braam", "slam", "impact", "start_q", "reveal", "match_end", "applause"];
 function cineNeedFor(d) {
-    if (!d) return [];
-    if (d.status === "scheduled") return ["lobby", "show_intro"];
-    if (d.status !== "live") return [];
+    if (!d || d.status !== "live") return [];
     const left = (d.order || []).filter((o, i) => o.state === "pending" && i !== d.cur).length;
-    switch (d.scene) {
-        case "opening": return ["show_intro", "interlude"];
-        case "intro": return ["interlude", "think2", "big_win"];
-        case "talk": return ["think2", "decider"];
-        case "countdown": return ["think2", "decider"];
-        case "playing": return ["think2", "decider", "interlude"];
-        case "result": return left ? ["interlude", "big_win"] : ["interlude", "outro", "fireworks"];
-        case "closing": return ["outro", "fireworks"];
-    }
+    if (d.scene === "closing" || (d.scene === "result" && !left)) return ["fireworks"];
     return [];
 }
 function cineLoadSamples(ids) {
@@ -135,7 +120,7 @@ function cineLoadSamples(ids) {
                 return r.arrayBuffer();
             })
             .then(ab => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
-            .then(b => { CINE_BUF[id] = b; if (BED.mood) bedLoopTo(cineBgOn ? BED.mood : ""); })
+            .then(b => { CINE_BUF[id] = b; })
             .catch(() => setTimeout(() => { delete CINE_LOADING[id]; }, 30000));
     });
 }
@@ -343,11 +328,9 @@ function cineOpening(d) {
 <div class="cine-skip">اضغط للتخطي</div>`, 6000);
     if (!el) return;
     cineVideo(el, "media/opening.mp4");
-    /* موسيقى افتتاح البرنامج، والخلفية تنخفض لين تخلص */
-    const theme = CINE_BUF.show_intro;
-    bedHold(theme ? theme.duration : 6);
-    cineAt(el, 0, () => { if (!cinePlay("show_intro", 0.9)) cinePlay("riser", 0.7, { tail: 1.5 }); });
-    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); if (!theme) cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
+    /* بدون موسيقى افتتاح: تصاعد قصير ثم ضربة الشعار */
+    cineAt(el, 0, () => cinePlay("riser", 0.7, { tail: 1.5 }));
+    cineAt(el, 1.5, () => { cineOn(el, ".cine-logo"); cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(10); cpSpark(CP.w / 2, CP.h * 0.37, 90); });
     cineAt(el, 2.3, () => cineOn(el, ".cine-big"));
     cineAt(el, 3.3, () => cineOn(el, ".cine-onair"));
     cineAt(el, 5.3, () => cineFlash(el, 1, 650));
@@ -373,7 +356,6 @@ function cineMatchIntro(d) {
 <div class="cine-of">المواجهة ${n} من ${total} · ${LIVE_Q_COUNT} أسئلة</div>
 <div class="cine-skip">اضغط للتخطي</div>`, 7000);
     if (!el) return;
-    bedHold(7);
     cineAt(el, 0, () => cinePlay("riser", 0.7, { tail: 1.5 }));
     cineAt(el, 1.5, () => { cineOn(el, ".cine-big"); cinePlay("braam", 1); cineFlash(el, 0.85); cineShake(11); cpSpark(CP.w / 2, CP.h * 0.5, 80); });
     cineAt(el, 3.1, () => { cineOn(el, ".cine-p.p1"); cinePlay("whoosh", 0.7); cpSpark(CP.w * 0.78, CP.h * 0.48, 30, ["#38bdf8", "#93c5fd", "#fff"]); });
@@ -400,7 +382,7 @@ function cineGo(at) {
     setTimeout(() => cpSpark(CP.w / 2, CP.h * 0.45, 90, null, 450), 30);
 }
 
-/* ===== احتفال النتيجة: نغمة نهاية المواجهة ← تصفيق استوديو (أو احتفال كبير للفوز الساحق والعودة) ===== */
+/* ===== احتفال النتيجة: نغمة نهاية المواجهة ← تصفيق استوديو (أعلى واحتفال أكبر للفوز الساحق والعودة) ===== */
 function cineResult(d) {
     cineReady();
     const it = d ? Object.assign({}, (d.order || [])[d.cur] || {}, { s1: d.s1 || 0, s2: d.s2 || 0, bh1: d.bh1, bh2: d.bh2 }) : {};
@@ -408,10 +390,8 @@ function cineResult(d) {
     cinePlay("match_end", 0.8);
     const el = cineOverlay("fxonly", "", big ? 8000 : 6500);
     if (!el) return;
-    if (big) bedHold(7);
     cineAt(el, 1.2, () => {
-        if (big) cinePlay("big_win", 0.85);
-        else cinePlay("applause", 0.55);
+        cinePlay("applause", big ? 0.75 : 0.55);
         cineFlash(el, big ? 0.8 : 0.5, 500, "#facc15"); cineShake(big ? 14 : 8);
         cpConfetti(big ? 260 : 150); cpSpark(CP.w / 2, CP.h * 0.35, big ? 160 : 80);
     });
@@ -424,89 +404,8 @@ function cineClosing() {
     cineReady();
     const el = cineOverlay("fxonly", "", 9000);
     if (!el) return;
-    const outro = CINE_BUF.outro;
-    bedHold(outro ? outro.duration : 3);
-    cineAt(el, 0.6, () => { cinePlay("outro", 0.85); cinePlay("fireworks", 0.35); cpConfetti(120); CP.fw = performance.now() + 300; });
+    cineAt(el, 0.6, () => { cinePlay("applause", 0.6); cinePlay("fireworks", 0.35); cpConfetti(120); CP.fw = performance.now() + 300; });
     cineAt(el, 7.5, () => { CP.fw = 0; });
-}
-
-/* ===== الموسيقى الخلفية الحقيقية =====
-   lobby: انتظار قبل البث · epic: بين المواجهات · tension: وقت الأسئلة */
-const BED = { mood: "", duck: false };
-const BEDS = { cur: null };
-/* لكل مود: [قائمة ملفات بالأفضلية، المستوى] */
-const BED_MIX = {
-    lobby:   [[["lobby"], 0.6]],
-    epic:    [[["interlude"], 0.5]],
-    tension: [[["think2"], 0.42]],   /* بدون تكتكة */
-    decider: [[["decider"], 0.5]]
-};
-function bedMoodFor(d) {
-    if (!d) return "";
-    if (d.status === "scheduled") return "lobby";
-    if (d.status !== "live") return "";
-    if (d.scene === "closing" || d.scene === "talk") return "";   /* فقرة الترحيب: بدون موسيقى عشان الكلام يكون واضح */
-    if (bcIsDecider(d)) return "decider";
-    return (d.scene === "countdown" || d.scene === "playing") ? "tension" : "epic";
-}
-function bedTarget() {
-    if (!cineBgOn || !BED.mood) return 0;
-    let v = 0.8;
-    if (bcTrack && !bcSelfMuted) v *= 0.5;   /* مايكك مفتوح: نخفضها عشان ما تدخل المايك */
-    if (BED.duck) v *= 0.3;                   /* المذيع يتكلم */
-    if (typeof VA !== "undefined" && VA.rec) v = 0;   /* أنا أجاوب بصوتي: الموسيقى تسكت (كانت 10% وإلغاء الصدى يقطّع كلامي) */
-    if (typeof bcRemoteTalk !== "undefined" && bcRemoteTalk) v *= 0.35;   /* متسابق أو المنظم يتكلم: صوته أوضح من الموسيقى */
-    if (bcNow() < (BED.holdUntil || 0)) v *= 0.15;   /* موسيقى مشهد خاصة شغالة */
-    return v;
-}
-function bedApply() {
-    try {
-        const G = cineGraph(), t = G.c.currentTime;
-        G.bed.gain.cancelScheduledValues(t);
-        G.bed.gain.setTargetAtTime(bedTarget(), t, 0.35);
-    } catch (e) {}
-}
-function bedHold(sec) {
-    BED.holdUntil = bcNow() + sec * 1000;
-    bedApply();
-    setTimeout(bedApply, sec * 1000 + 60);
-}
-function bedDuck(on) { if (BED.duck !== on) { BED.duck = on; bedApply(); } }
-function bedLoopTo(mood) {
-    try {
-        const G = cineGraph(), c = G.c, t = c.currentTime;
-        const want = (BED_MIX[mood] || []).map(([ids]) => ids.find(x => CINE_BUF[x]) || "").join(",");
-        if (BEDS.cur && BEDS.cur.mood === mood && BEDS.cur.want === want) return;
-        if (BEDS.cur) {
-            BEDS.cur.nodes.forEach(x => { x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0.0001, t, 0.6); try { x.src.stop(t + 3); } catch (e) {} });
-            BEDS.cur = null;
-        }
-        const mix = BED_MIX[mood];
-        if (!mix) return;
-        const nodes = [];
-        mix.forEach(([ids, vol]) => {
-            const id = ids.find(x => CINE_BUF[x]);
-            if (!id) return;
-            const b = CINE_BUF[id];
-            const v = vol * ((CINE_FILES[id] || {}).g || 1);
-            const src = c.createBufferSource(); src.buffer = b; src.loop = true;
-            const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.setTargetAtTime(v, t, 0.8);
-            src.connect(g); g.connect(G.bed); src.start(t);
-            nodes.push({ src, g });
-        });
-        BEDS.cur = { mood, nodes, want };
-    } catch (e) {}
-}
-function bedSet(mood) {
-    BED.mood = mood;
-    bedApply();
-    bedLoopTo(cineBgOn ? mood : "");
-}
-function bcToggleBg() {
-    cineBgOn = !cineBgOn;
-    try { localStorage.setItem("bcBgOn", cineBgOn ? "1" : "0"); } catch (e) {}
-    cineReady(); bedSet(BED.mood);
-    liveLastSig = ""; renderLiveScreen();
 }
 
 /* مؤثرات تلقائية: صوت "انتهى الوقت" مرة وحدة لما يخلص وقت المتسابق */

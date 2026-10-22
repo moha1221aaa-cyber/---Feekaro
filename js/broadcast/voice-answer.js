@@ -147,8 +147,7 @@ async function vaStart(key) {
     VA.st = "rec"; VA.msg = "";
     const rec = { key, stop: null, timer: 0 };
     VA.rec = rec;
-    if (typeof bedApply === "function") bedApply();
-    /* كل الأصوات عندي تسكت وقت جوابي (أصوات المتسابقين والمنظم والموسيقى والمؤثرات): إلغاء الصدى في الجوال
+    /* كل الأصوات عندي تسكت وقت جوابي (أصوات المتسابقين والمنظم والمؤثرات): إلغاء الصدى في الجوال
        يكتم صوتي لما فيه صوت ثاني يطلع من السماعة، فيوصل كلامي مقطّع لـ Whisper */
     if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
     let stream = null, own = false, unmuted = false;
@@ -197,7 +196,6 @@ async function vaStart(key) {
         if (own) stream.getTracks().forEach(x => x.stop());
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
         if (VA.rec === rec) VA.rec = null;
-        if (typeof bedApply === "function") bedApply();
         if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
         const key = rec.key;
         if (!send || VA.key !== key || key.indexOf("arm|") === 0) return;
@@ -252,7 +250,6 @@ async function vaStart(key) {
         if (own) stream.getTracks().forEach(x => x.stop());
         /* لو فتحنا مايكه المكتوم عشان التسجيل، نرجّعه مكتوم (المايك ما يظل مفتوح بسبب خطأ) */
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
-        if (typeof bedApply === "function") bedApply();
         if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
         vaDiag("capture-error", { err: String((e && (e.name || e.message)) || e).slice(0, 80) });
         if (VA.key === rec.key && !VA.arm) vaToType("ما قدرت أسجّل صوتك، اكتب جوابك");

@@ -48,7 +48,6 @@ function bcStopSpeech() {
     bcSpeakSeq++;
     try { if (bcSpeechSrc) bcSpeechSrc.stop(); } catch (e) {}
     bcSpeechSrc = null;
-    bedDuck(false);
 }
 
 /* يقرا جملة أو أكثر ورا بعض (الجواب ثم الموقف). أي جملة ما توصل من السيرفر تنتخطى بصمت.
@@ -65,7 +64,7 @@ function bcSpeak(text, at, joinedLate) {
     try { if (c.state === "suspended") c.resume(); } catch (e) {}
     const loads = list.map(t => bcTtsLoad(t).catch(() => null));
     const playAt = i => {
-        if (i >= loads.length || seq !== bcSpeakSeq) { if (seq === bcSpeakSeq) bedDuck(false); return; }
+        if (i >= loads.length || seq !== bcSpeakSeq) return;
         loads[i].then(buf => {
             if (seq !== bcSpeakSeq) return;
             if (!buf) return playAt(i + 1);
@@ -79,7 +78,6 @@ function bcSpeak(text, at, joinedLate) {
             else if (late > 0.15 && late <= BC_SPEAK_SEEK_MAX && late < buf.duration - 0.4) src.start(0, late);
             else src.start();
             bcSpeechSrc = src;
-            bedDuck(true);
         });
     };
     playAt(0);
