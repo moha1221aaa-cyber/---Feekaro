@@ -105,5 +105,6 @@ node tests/harness/nomusic.mjs                        # البث بدون موس
 node tests/harness/wakelock.mjs                       # الشاشة ما تطفي: القفل ينطلب مع البث والغرفة، وينفك بعدهم، ويرجع بعد الخلفية، والفيديو البديل
 node tests/harness/forgot.mjs                         # نسيت كلمة المرور: الزر، إيميل بالعربي ورابط رجوع، ورسالة لو ما فيه حساب
 node tests/harness/tie.mjs                            # التعادل ينتهي تعادل (بدون سؤال ذهبي) وينكتب في الجدول
+node tests/harness/trial.mjs                          # المسابقة التجريبية: الأصلي ينحفظ ويرجع كامل، وتوقعات التجربة تنحذف، ونتيجة بثها ما تدخل الجدول الحقيقي
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال
 ```
