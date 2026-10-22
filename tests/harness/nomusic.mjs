@@ -1,7 +1,9 @@
 /* البث بدون موسيقى: نمر على كل المشاهد (الانتظار، الافتتاح، المواجهة، الأسئلة، سؤال الحسم، النتيجة، الختام)
    ونتأكد إن ولا ملف موسيقى ينطلب، وولا صوت يشتغل بتكرار (loop) أو أطول من 6 ث، وإن زر الموسيقى انشال،
    والمؤثرات القصيرة (الجرس، صح، غلط، التكتكة، التصفيق، whoosh) لسا تتحمّل.  node tests/harness/nomusic.mjs */
-import { serve, FakeDB, seed, launch, device, until, sleep } from "./harness.mjs";
+import { serve, FakeDB, seed, launch, device, until, sleep, PORT } from "./harness.mjs";
+/* البث يشيل ?live= من الرابط بعد ما يفتح، فـ reload ما يرجّعه: نفتح الرابط كامل */
+const reopen = (p, who) => p.goto(`http://127.0.0.1:${PORT}/index.html?as=${who}&live=round_2`);
 
 const MUSIC = ["lobby", "show_intro", "interlude", "decider", "think2", "outro", "big_win"];
 const KEEP = ["buzz", "correct", "wrong", "tick", "applause", "whoosh"];
@@ -18,14 +20,16 @@ try {
         pages.push(await device(browser, db, who, { api: { ai: async () => ({ ok: false }) } }));
     }
     const reqs = [];
-    for (const p of pages) {
-        p.on("request", r => { const m = /\/audio\/([\w-]+)\.mp3/.exec(r.url()); if (m) reqs.push(m[1]); });
+    for (const [i, p] of pages.entries()) {
+        /* نراقب من أول تحميل (قبل ما يفتح البث بـ ?live=): نسجل الطلبات على مستوى الجهاز ونعيد التحميل */
+        p.context().on("request", r => { const m = /\/audio\/([\w-]+)\.mp3/.exec(r.url()); if (m) reqs.push(m[1]); });
         /* أي صوت يبدأ: نسجل طوله وهل هو متكرر (الموسيقى الخلفية كانت loop) */
-        await p.evaluate(() => {
+        await p.context().addInitScript(() => {
             window.__srcs = [];
             const st = AudioBufferSourceNode.prototype.start;
             AudioBufferSourceNode.prototype.start = function () { window.__srcs.push({ loop: this.loop, dur: this.buffer ? this.buffer.duration : 0 }); return st.apply(this, arguments); };
         });
+        await reopen(p, ["fan", "p1"][i]);
     }
     const fan = pages[0];
     await until(() => fan.evaluate(() => document.getElementById("liveScreen").classList.contains("open")), 15000);
@@ -55,7 +59,7 @@ try {
     check("short effects still load", KEEP.every(k => reqs.includes(k)), KEEP.filter(k => !reqs.includes(k)));
     check("sounds actually played", played.length > 0, played.length);
     const bad = played.filter(x => x.loop || x.dur > 6);
-    check("nothing looping or longer than 6s (except fireworks)", bad.every(x => !x.loop && x.dur < 9), bad);
+    check("nothing looping, nothing longer than 6s except fireworks (8s)", bad.every(x => !x.loop && x.dur < 9), bad);
     const errs = pages.flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
     check("no page errors", !errs.length, errs.slice(0, 3));
 } catch (e) { ok = false; console.log(e); }
