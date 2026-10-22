@@ -65,7 +65,6 @@ function closeLiveScreen(fromPop) {
     if (liveTickTimer) { clearInterval(liveTickTimer); liveTickTimer = null; }
     bcStopSpeech();
     cineCloseAll();
-    bedSet("");
     bcTicker(null);
     { const l3 = document.getElementById("stL3"); if (l3) l3.remove(); BC_L3.key = ""; }
     { const tb = document.getElementById("tvBoard"); if (tb) tb.remove(); if (scr) scr.classList.remove("tv-final"); }
@@ -253,7 +252,7 @@ function renderLiveScreenNow() {
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return false;
     liveLastSig = sig;
 
@@ -275,7 +274,6 @@ function renderLiveScreenNow() {
     bcTicker(d);
     bcClockLast = -1;
     bcSceneEffects(d);
-    bedSet(bedMoodFor(d));
     bcAnnouncer(d);
     bcAutoFx(d);
     if (d.scene === "countdown" || d.scene === "playing") liveSoundsOnChange(d);
@@ -386,14 +384,13 @@ function bcHostHTML(d) {
 <div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b><span>${micOn ? `<i class="bc-st">المايك مقفل</i>` : "مقدم البرنامج"}</span></div>
 </div>`;
 }
-/* أزرار صغيرة على جنب الشاشة: التفاعلات، المقدم، الخلفية */
+/* أزرار صغيرة على جنب الشاشة: التفاعلات، الرابط، المقدم */
 function bcSideCtlHTML() {
     return `<div class="st-side">
 ${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">${e}</button>`).join("")}
 <i class="sep"></i>
 <button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
-<button class="${cineBgOn ? "" : "off"}" onclick="bcToggleBg()" aria-label="الموسيقى">${ic("music")}</button>
 ${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()" aria-label="التشخيص">${ic("chart")}</button>` : ""}
 </div>`;
 }
