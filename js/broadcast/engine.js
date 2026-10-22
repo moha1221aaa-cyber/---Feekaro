@@ -848,7 +848,11 @@ function liveBuzz(ev) {
     if (typeof bcStopSpeech === "function") bcStopSpeech();
     /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
     if (typeof vaPrime === "function") vaPrime();
-    if (typeof vaArm === "function") vaArm(id, d.qIndex);
+    /* تجهيز التسجيل (ربط المايك بالمعالج ومربع التسجيل) بعد أول رسم للجرس المضغوط: كان قبله ويأخّر الرد
+       (تجربة 22 أكتوبر: 319-344ms على أندرويد 10، والقياس هنا: الرسم بعد 100-141ms والمعالجة نفسها 23-44ms).
+       التسجيل يتأخر إطار وحد بس، وأول نص ثانية ما ينحسب للكاشف الحساس أصلاً */
+    const q = d.qIndex;
+    requestAnimationFrame(() => setTimeout(() => { if (typeof vaArm === "function" && BC_BUZZ.cur === bz && bz.won !== false) vaArm(id, q); }, 0));
     txP.then(u => {
         bz.tx = Math.round(performance.now() - t0);
         if (!u) {
