@@ -104,5 +104,6 @@ node tests/harness/secure.mjs /tmp/out                # الأجوبة المخ�
 node tests/harness/nomusic.mjs                        # البث بدون موسيقى: ولا ملف موسيقى ينطلب ولا صوت متكرر، والمؤثرات القصيرة باقية
 node tests/harness/wakelock.mjs                       # الشاشة ما تطفي: القفل ينطلب مع البث والغرفة، وينفك بعدهم، ويرجع بعد الخلفية، والفيديو البديل
 node tests/harness/forgot.mjs                         # نسيت كلمة المرور: الزر، إيميل بالعربي ورابط رجوع، ورسالة لو ما فيه حساب
+node tests/harness/tie.mjs                            # التعادل ينتهي تعادل (بدون سؤال ذهبي) وينكتب في الجدول
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال
 ```
