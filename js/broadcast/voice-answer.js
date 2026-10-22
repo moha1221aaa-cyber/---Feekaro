@@ -52,7 +52,8 @@ function vaDiag(st, extra) {
     try {
         if (!openLiveId || !currentUser) return;
         const d = liveMatchesCache[openLiveId] || {};
-        if (!VA.try || VA.try.key !== VA.key) VA.try = { key: VA.key, at: bcNow(), q: d.cur + "_" + d.qIndex, steps: [], ua: (navigator.userAgent || "").slice(0, 90) };
+        /* v: نسخة الكود (عشان نعرف من التشخيص لو الجوال للحين على النسخة القديمة) */
+        if (!VA.try || VA.try.key !== VA.key) VA.try = { key: VA.key, at: bcNow(), q: d.cur + "_" + d.qIndex, steps: [], v: BC_VER, ua: (navigator.userAgent || "").slice(0, 90) };
         const t = VA.try;
         t.steps.push(st);
         Object.assign(t, extra || {}, { ctx: VA.ctx ? VA.ctx.state : "" });
@@ -232,7 +233,7 @@ async function vaStart(key) {
         /* نشاط = أي كاشف سمع كلام (الأساسي أو الحساس)، والنهاية بسكوت الاثنين */
         if (f.talking || softOk) { actMs += f.pcm.length / ctx.sampleRate * 1000; lastActAt = now; if (!firstActAt) firstActAt = now; }
         /* نص مباشر: الكلام طويل، نعرض اللي انقال للحين (مرة وحدة، وبس بعد ما يتأكد إني فزت بالجرس) */
-        if (!partial && f.talking && speechMs >= VA_PARTIAL_MS && rec.key.indexOf("arm|") !== 0) { partial = true; vaPartial(rec.key, clip(), ctx.sampleRate); }
+        /* النص المباشر انشال (22 أكتوبر): نص Whisper الخام يطلع ملخبط قبل التصحيح، فاللي يطلع على الشاشة الجواب النهائي بس */
         /* المتسابق يشوف إن صوته واصل: المؤشر يتحرك والدائرة تكبر والنص يتغير */
         const level = Math.min(1, f.rms / 0.1);
         const bar = document.getElementById("vaLevel"); if (bar) bar.style.transform = "scaleX(" + Math.max(0.04, level).toFixed(2) + ")";
@@ -298,10 +299,21 @@ function vaWav(chunks, rate) {
     view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
     view.setUint32(24, VA_RATE, true); view.setUint32(28, VA_RATE * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
     w(36, "data"); view.setUint32(40, len * 2, true);
+    /* تحويل 48k (أو 44.1k) إلى 16k بفلتر windowed-sinc (قطع عند 7.2k): المتوسط البسيط اللي قبل كان يخلي
+       الترددات العالية ترجع داخل نطاق الكلام (aliasing) وتخبص الحروف الساكنة على Whisper */
+    const fc = Math.min(1, VA_RATE / rate) * 0.9, half = Math.ceil(4 * ratio);
+    const tap = x => { const sx = x * fc; return (sx === 0 ? 1 : Math.sin(Math.PI * sx) / (Math.PI * sx)) * (0.5 + 0.5 * Math.cos(Math.PI * x / (half + 1))); };
+    /* الجوالات 48k: النسبة 3 بالضبط، فالفلتر نفسه لكل عينة (نحسبه مرة وحدة) */
+    const fixed = Math.abs(ratio - Math.round(ratio)) < 1e-9 ? (() => { const h = []; for (let k = -half + 1; k <= half; k++) h.push(tap(k)); return h; })() : null;
     for (let i = 0; i < len; i++) {
-        const a = Math.floor(i * ratio), b = Math.min(n, Math.floor((i + 1) * ratio));
-        let s = 0; for (let j = a; j < b; j++) s += all[j];
-        const v = Math.max(-1, Math.min(1, gain * s / Math.max(1, b - a)));
+        const t = i * ratio, c = Math.floor(t);
+        let s = 0, ws = 0;
+        for (let k = c - half + 1, j = 0; k <= c + half; k++, j++) {
+            if (k < 0 || k >= n) continue;
+            const h = fixed ? fixed[j] : tap(k - t);
+            s += all[k] * h; ws += h;
+        }
+        const v = Math.max(-1, Math.min(1, gain * (ws ? s / ws : 0)));
         view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
     }
     return new Uint8Array(view.buffer);
@@ -369,19 +381,19 @@ async function vaSend(key, chunks, rate, softOnly) {
         const body = sealed ? { action: "grade", stream: true, id, qIndex: d0.qIndex, audio } : { task: "voice", stream: true, q: q0.text || "", answer: q0.answer || "", audio };
         res = await vaPost(body, heard => {
             if (VA.key !== key) return;
-            VA.live = heard;
-            const el = document.getElementById("vaLive"); if (el) el.textContent = "«" + heard + "»";
+            /* ما نعرض النص الخام (ممكن ملخبط)، بس إن الصوت وصل وانسمع */
+            const el = document.getElementById("vaLive"); if (el) el.textContent = "سمعتك، يتأكد من الجواب...";
             vaDiag("heard", { heard: heard.slice(0, 60), heardMs: Math.round(performance.now() - t0) });
         }, VA_EXTEND_MS - 800, sealed ? "/answer" : "/ai");
     } catch (e) { res = null; }
     if (VA.key !== key) return;
     vaDiag(res ? "result" : "server-error", res ? { heard: (res.heard || "").slice(0, 60), said: res.said || "", ok: res.ok === true, ms: Math.round(performance.now() - t0), srv: res.t || null } : {});
     /* انرسل من الكاشف الحساس بس و Whisper ما طلّع جواب: نطلّع الكتابة بدل ما نسجّل كلام (ممكن يكون ضجة أو أحد حوله) */
-    if (res && softOnly && !res.said) { vaToType("ما فهمت الجواب، اكتبه بسرعة"); return; }
-    if (!res || (!res.said && !res.heard)) { vaToType(res ? "ما فهمت الجواب، اكتبه بسرعة" : "تعذّر التحقق من صوتك، اكتب جوابك"); return; }
+    /* ما فيه جواب واضح (ملخبط أو ما انسمع): الكتابة تطلع والدور ما يروح. كان النص الخام الملخبط ينحفظ جواب */
+    if (!res || !res.said) { vaToType(!res ? "تعذّر التحقق من صوتك، اكتب جوابك" : (res.unclear ? "ما اتضح كلامك، اكتب جوابك" : "ما فهمت الجواب، اكتبه بسرعة")); return; }
     VA.heard = res.heard || ""; VA.said = res.said || ""; VA.ok = res.ok === true;
     VA.st = "done"; vaRefresh();
-    liveCommitAnswer(id, VA.said || VA.heard, res.ok === true, q0)
+    liveCommitAnswer(id, VA.said, res.ok === true, q0)
         .catch(err => { console.log("voice answer:", err); if (VA.key === key) vaToType("ما انحفظ جوابك، اكتبه"); });
 }
 
@@ -399,10 +411,10 @@ function vaHTML() {
 <div class="va-mic">${ic("mic")}</div>
 <div class="va-t" id="vaT">قل جوابك الحين</div>
 <div class="va-meter"><i id="vaLevel"></i></div>
-<div class="va-live" id="vaLive">${VA.live ? "«" + escapeHTML(VA.live) + "»" : ""}</div>
+<div class="va-live" id="vaLive"></div>
 <div class="va-sub">أول جواب تقوله هو اللي ينحسب</div>
 </div>`;
     }
-    if (VA.st === "think") return `<div class="va-box" id="vaBox"><div class="va-spin"></div><div class="va-t">وصل جوابك، يتحقق...</div><div class="va-live" id="vaLive">${VA.live ? "«" + escapeHTML(VA.live) + "»" : ""}</div></div>`;
-    return `<div class="va-box ${VA.ok ? "ok" : "no"}"><div class="va-res">${ic(VA.ok ? "check-circle" : "x-circle")} ${VA.ok ? "صح" : "غلط"}</div><div class="va-t">«${escapeHTML(VA.said || VA.heard)}»</div></div>`;
+    if (VA.st === "think") return `<div class="va-box" id="vaBox"><div class="va-spin"></div><div class="va-t">وصل جوابك، يتحقق...</div><div class="va-live" id="vaLive"></div></div>`;
+    return `<div class="va-box ${VA.ok ? "ok" : "no"}"><div class="va-res">${ic(VA.ok ? "check-circle" : "x-circle")} ${VA.ok ? "صح" : "غلط"}</div><div class="va-t">«${escapeHTML(VA.said)}»</div></div>`;
 }

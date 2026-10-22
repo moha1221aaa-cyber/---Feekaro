@@ -4,7 +4,11 @@ import { onRequestPost } from "../../functions/ai.js";
 
 const auth = await setupAuth(); fakeCaches();
 const calls = [];
+/* طلب تصحيح الإملاء (cleanArabic): الوهمي يرجّع النص نفسه واضح، إلا لو فيه "ملخبط" */
+const CLEAN = i => i && i.messages && /صحّح إملاءها/.test(i.messages[0].content);
+const cleanReply = i => ({ response: JSON.stringify(/ملخبط|سيدو/.test(i.messages[1].content) ? { text: "", clear: false } : { text: i.messages[1].content, clear: true }) });
 const env = { AI: { run: async (model, input) => {
+    if (CLEAN(input)) return cleanReply(input);
     calls.push(model);
     if (model.includes("whisper")) return { text: "امم خلني أفكر الرياض" };
     return { response: '{"said":"الرياض"}' };
@@ -51,7 +55,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
 }
 {
     /* السرعة والدقة (بعد تجربة محمد 21 أكتوبر): الطريق السريع بدون أي موديل لغة، وغلط السمع ينقبل، وأول جواب ينحسب */
-    const mk = text => { const c = []; return { c, env: { AI: { run: async (m, i) => { c.push(m); if (m.includes("whisper")) return { text }; return { response: '{"said":"جدة","ok":false}' }; } } } }; };
+    const mk = text => { const c = []; return { c, env: { AI: { run: async (m, i) => { if (CLEAN(i)) return cleanReply(i); c.push(m); if (m.includes("whisper")) return { text }; return { response: '{"said":"جدة","ok":false}' }; } } } }; };
     const go = async (text, q, answer) => { const k = mk(text); const r = await (await onRequestPost(ctxFor(await req({ task: "voice", q, answer, audio }), k.env))).json(); return { r, llm: k.c.filter(m => !m.includes("whisper")).length }; };
     let x = await go("امم خلني أفكر، الرياض", "ما عاصمة السعودية؟", "الرياض");
     check("fast path: filler + answer → ok with zero LLM calls", x.r.ok === true && x.llm === 0 && x.r.said === "الرياض" && x.r.t.path === "fast", x);
@@ -64,7 +68,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
 }
 {
     /* تجربة 21 أكتوبر الحقيقية: Whisper طلّع السؤال نفسه والموديل جاوب "206" من عنده وانحسب صح */
-    const mk = (text, said) => { const c = []; return { c, env: { AI: { run: async (m, i) => { c.push({ m, i }); if (m.includes("whisper")) return { text }; return { response: JSON.stringify({ said, ok: true }) }; } } } }; };
+    const mk = (text, said) => { const c = []; return { c, env: { AI: { run: async (m, i) => { if (CLEAN(i)) return cleanReply(i); c.push({ m, i }); if (m.includes("whisper")) return { text }; return { response: JSON.stringify({ said, ok: true }) }; } } } }; };
     let k = mk("مرد عظام جسم الإنسان", "206");
     let r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206", audio }), k.env))).json();
     check("question echo + model self-answer → NOT accepted", r.ok === false && !r.said, r);
@@ -73,7 +77,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     check("extracted word not in speech → rejected", r.ok === false && r.t.path === "extract-rejected", r);
     k = mk("ميتين وست", "206");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206", audio }), k.env))).json();
-    check("number said in words goes to the judge (not blocked)", r.ok === true && r.said === "ميتين وست", r);
+    check("number said in words goes to the judge, and shows as the answer (206)", r.ok === true && r.said === "206" && r.canon, r);
     k = mk("سورة البقرة", "");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة", audio }), k.env))).json();
     check("answer that shares a question word (سورة البقرة) still accepted fast", r.ok === true && r.t.path === "fast", r);
@@ -89,7 +93,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
 }
 {
     /* تجربة 22 أكتوبر: هلوسات Whisper انحسبت جواب وراح الدور */
-    const mk = (stt) => { let llm = 0; return { get llm() { return llm; }, env: { AI: { run: async (m) => { if (m.includes("whisper")) return stt; llm++; return { response: JSON.stringify({ said: "شي", ok: true }) }; } } } }; };
+    const mk = (stt) => { let llm = 0; return { get llm() { return llm; }, env: { AI: { run: async (m, i) => { if (CLEAN(i)) return cleanReply(i); if (m.includes("whisper")) return stt; llm++; return { response: JSON.stringify({ said: "شي", ok: true }) }; } } } }; };
     const go = async (stt, answer) => { const k = mk(stt); const r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أصغر دولة في العالم؟", answer: answer || "الفاتيكان", audio }), k.env))).json(); return { r, llm: k.llm }; };
     for (const t of ["شكرا للمشاهدة.", "اشتركوا في القناة", "لا تنسوا الاشتراك في القناة", "والمتسابق، والمتسابق، والمتسابق، والمتسابق.", "[موسيقى]", "شكراً."]) {
         const x = await go({ text: t });
@@ -119,5 +123,27 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
         ["إيه يو", "Au", true], ["اي يو", "Au", true], ["اتش تو او", "H2O", true], ["يو اس ايه", "USA", true], ["يوم", "Au", false], ["اي جي", "Au", false]];
     const bad = T.filter(([g, a, w]) => voiceMatch(g, a) !== w);
     check("voiceMatch: close mishearings accepted, near-miss wrong answers rejected, spelled Latin letters (26 cases)", !bad.length, bad);
+}
+{
+    /* 22 أكتوبر: الكلام اللي يطلع على الشاشة: الصح بإملائه الصحيح، والغلط مصحح، والملخبط ما ينحسب جواب */
+    const mk = (text, fixed, clear) => ({ AI: { run: async (m, i) => {
+        if (m.includes("whisper")) return { text };
+        if (CLEAN(i)) return { response: JSON.stringify({ text: fixed, clear }) };
+        return { response: '{"said":"' + text + '","ok":false}' };
+    } } });
+    const go = async (text, fixed, clear, answer) => {
+        const res = await onRequestPost(ctxFor(await req({ task: "voice", q: "ما عاصمة تركيا؟", answer: answer || "أنقرة|انقره", audio }), mk(text, fixed, clear)));
+        return res.json();
+    };
+    let r = await go("انقره", "أنقرة", true);
+    check("correct: shows the canonical spelling (أنقرة)", r.ok === true && r.said === "أنقرة" && r.canon, r);
+    r = await go("ألا سمي و سيدو", "", false);
+    check("garbled: unclear, nothing committed (typing box, turn kept)", r.ok === false && r.said === "" && r.unclear === true, r);
+    r = await go("اسطنبل", "إسطنبول", true);
+    check("wrong but clear: shown with corrected spelling (إسطنبول)", r.ok === false && r.said === "إسطنبول" && !r.unclear, r);
+    r = await go("انقرا", "أنقرة", true, "أنقرة");
+    check("cleanup can turn a near-miss into the right answer", r.ok === true && r.said === "أنقرة", r);
+    r = await go("جدة", "أنقرة", true);
+    check("cleanup can't swap the word for another (جدة stays جدة)", r.ok === false && r.said === "جدة", r);
 }
 auth.restore(); done();

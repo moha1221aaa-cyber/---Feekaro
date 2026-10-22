@@ -21,6 +21,8 @@ const CASES = [
     { name: "phone-choppy-raw", wav: "phone_choppy.wav", expect: "voice", raw: true },
     /* تجربة 22 أكتوبر: الجواب ينرسل كامل (الكلمتين)، مو مقطوع بعد أول سكتة */
     { name: "two-words-gap", wav: "speech_gap.wav", expect: "voice", minSec: 2.7, maxMs: 5000 },
+    /* كلام انسمع بس ملخبط (السيرفر رجّع unclear): الكتابة تطلع، وما ينحفظ أي جواب (الدور ما يروح) */
+    { name: "garbled", wav: "speech.wav", expect: "type", maySend: true, garbled: true, typeMs: 12000 },
     { name: "silence", wav: "silence.wav", expect: "type" },
     /* موسيقى عالية بس: الكاشف الحساس ممكن يرسلها، و Whisper ما يسمع فيها كلام، فتطلع الكتابة */
     { name: "music-only", wav: "music_only.wav", expect: "type", maySend: true, empty: true },
@@ -39,6 +41,10 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         reqs.push(r);
         if (b.audio) fs.writeFileSync(`${out}/${c.name}-${b.task}-${reqs.length}.wav`, Buffer.from(b.audio, "base64"));
         if (b.task === "hear") return { heard: "مساء الخير مساء" };
+        if (b.task === "voice" && c.garbled) {
+            const lines = [{ heard: "ألا سمي و سيدو" }, { final: true, heard: "ألا سمي و سيدو", said: "", ok: false, unclear: true }];
+            return b.stream ? { raw: { status: 200, contentType: "application/x-ndjson", body: lines.map(l => JSON.stringify(l)).join("\n") + "\n" } } : lines[1];
+        }
         if (b.task === "voice" && c.empty) {
             const lines = [{ heard: "" }, { final: true, heard: "", said: "", ok: false }];
             return b.stream ? { raw: { status: 200, contentType: "application/x-ndjson", body: lines.map(l => JSON.stringify(l)).join("\n") + "\n" } } : lines[1];
@@ -63,7 +69,8 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
                 if (!window.__lvl) { const t = bcTrack.getMediaStreamTrack(); const was = t.enabled; t.enabled = true; const ctx = new AudioContext(); const an = ctx.createAnalyser(); ctx.createMediaStreamSource(new MediaStream([t.clone()])).connect(an); const buf = new Float32Array(an.fftSize); window.__lvl = () => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length); }; t.enabled = was; }
                 return window.__lvl() > (/rawmic=1/.test(location.search) ? 0.004 : 0.012);
             }), 9000, 20));
-        } else await sleep(500);
+        } else if (c.garbled) await until(() => p1.evaluate(() => window.__lvl ? window.__lvl() > 0.012 : (() => { const t = bcTrack.getMediaStreamTrack(); const ctx = new AudioContext(); const an = ctx.createAnalyser(); ctx.createMediaStreamSource(new MediaStream([t.clone()])).connect(an); const buf = new Float32Array(an.fftSize); window.__lvl = () => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length); }; return false; })()), 9000, 20);
+        else await sleep(500);
         const t0 = Date.now();
         await p1.evaluate(() => document.getElementById("lvBell").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true })));
         await until(() => liveDoc(db).phase === "answer", 5000);
@@ -72,7 +79,9 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         r.quietDuring = await p1.evaluate(() => ({ remote: window.__remoteVol, bed: typeof bedTarget === "function" ? bedTarget() : -1, rec: !!VA.rec }));
         await p1.screenshot({ path: `${out}/${c.name}-1-rec.png` });
         if (c.live) {
+            /* 22 أكتوبر: نص Whisper الخام ما يطلع على الشاشة (كان يطلع ملخبط)، بس "سمعتك" والجواب النهائي */
             r.liveText = await until(() => p1.evaluate(() => { const e = document.getElementById("vaLive"); return e && e.textContent.trim(); }), 6000);
+            r.rawShown = /مساء الخير/.test(await p1.evaluate(() => document.getElementById("liveScreen").innerText));
             await p1.screenshot({ path: `${out}/${c.name}-1b-live.png` });
         }
         if (c.expect === "voice") {
@@ -98,8 +107,8 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         r.reqs = reqs.map(x => x.task + ":" + x.sec + "s");
         r.errors = p1.__logs.filter(l => /PAGEERROR/.test(l));
         r.pass = c.expect === "voice"
-            ? r.sent && r.committed && r.sentAfterMs < (c.maxMs || (c.live ? 4500 : 3500)) && r.wavSec > (c.minSec || 0.9) && r.quietDuring.remote === 0 && r.quietDuring.bed === 0 && r.quietAfter === 100 && r.wavSec <= 8.2 && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || (r.liveText && r.reqs.some(x => /^hear/.test(x)))) && !r.errors.length
-            : r.typeBox && (c.maySend || !r.voiceSent) && r.typeAfterMs < 9000 && !(liveDoc(db).lastAnswer || {}).correct && !r.errors.length;
+            ? r.sent && r.committed && r.sentAfterMs < (c.maxMs || (c.live ? 4500 : 3500)) && r.wavSec > (c.minSec || 0.9) && r.quietDuring.remote === 0 && r.quietDuring.bed === 0 && r.quietAfter === 100 && r.wavSec <= 8.2 && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || r.rawShown === false) && !r.errors.length
+            : r.typeBox && (c.maySend || !r.voiceSent) && r.typeAfterMs < (c.typeMs || 9000) && (!c.garbled || (/اتضح/.test(r.note) && !liveDoc(db).lastAnswer)) && !(liveDoc(db).lastAnswer || {}).correct && !r.errors.length;
     } catch (e) { r.pass = false; r.err = String(e.stack || e); }
     results.push(r);
     console.log((r.pass ? "PASS " : "FAIL ") + c.name + " " + JSON.stringify(r));

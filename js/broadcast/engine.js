@@ -64,6 +64,8 @@ function liveRef(id) { return liveCol().doc(id); }
 function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
 function liveDiagRef(id) { return firebaseDB.collection("room").doc("main").collection("liveDiag").doc(id); }
 function bcId(r) { return "round_" + r; }
+/* نسخة كود البث (نفس CACHE_NAME في sw.js): تنكتب في التشخيص */
+const BC_VER = "v49";
 /* ===== وقت السيرفر: فرق ساعة الجوال عن السيرفر، عشان المؤقتات تكون عادلة للكل ===== */
 let bcClockOffset = 0, bcClockSynced = false;
 try { bcClockOffset = Number(sessionStorage.getItem("bcClockOffset")) || 0; } catch (e) {}
@@ -765,6 +767,7 @@ function bcDiagPush(kind, entry) {
         /* المتسابقين والمنظم بس: المشاهدين ما يظهرون في اللوحة، وكتاباتهم تثقّل الوثيقة على الفاضي */
         if (!(isAdmin || myLiveNum(liveMatchesCache[openLiveId]))) return;
         const k = openLiveId + "|" + kind;
+        entry.v = BC_VER;
         const list = (bcDiagMine[k] || []).filter(x => x && x.at !== entry.at).concat([entry]).slice(-5);
         bcDiagMine[k] = list;
         const all = {};
