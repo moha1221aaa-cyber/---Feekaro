@@ -17,6 +17,7 @@ let currentUserDocData = null;
 
 let predictions = {};
 let playerLinks = {};
+let leagueTrial = null;   /* league/current.trial لو المسابقة التجريبية شغالة */
 
 let predictionListener = null;
 let usersRankingListener = null;
@@ -374,8 +375,10 @@ return { p1:p1Obj, p2:p2Obj, s1:m.s1, s2:m.s2, round:m.round };
 });
 }
 playerLinks = data.playerLinks || {};
+leagueTrial = data.trial || null;
 }
 function renderLeagueAll() {
+renderTrialUI();
 table();
 renderMatches();
 renderPredictions();
@@ -423,6 +426,100 @@ updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 .catch(error => {
 console.log(error);
 });
+}
+
+/* ===== المسابقة التجريبية المؤقتة =====
+   المنظم يكتب أسماء متسابقي التجربة: الدوري الأصلي (المتسابقين والمواجهات والنتائج والروابط) ينحفظ كامل في league/saved،
+   و league/current يصير دوري التجربة (فيه trial). "إنهاء التجربة" يرجّع الأصلي كامل، ويحذف توقعات التجربة.
+   ما تبدأ تجربة ثانية والأصلي محفوظ ولا رجع (عشان نسخة الأصلي ما تنكتب فوقها بأسماء التجربة) */
+function trialRefs() {
+const col = firebaseDB.collection("league");
+return { cur: col.doc("current"), saved: col.doc("saved") };
+}
+function renderTrialUI() {
+const banner = document.getElementById("trialBanner");
+if(banner) {
+banner.innerHTML = leagueTrial ? `<div class="trial-banner"><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg><div><b>مسابقة تجريبية</b><span>هذا جدول التجربة بس، والدوري الأصلي محفوظ ويرجع بعدها</span></div></div>` : "";
+}
+const btn = document.getElementById("trialBtn");
+if(btn) btn.innerHTML = leagueTrial
+? `<svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg> إنهاء التجربة وإرجاع الدوري`
+: `<svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg> مسابقة تجريبية مؤقتة`;
+}
+function toggleTrialLeague() {
+if(!isAdmin || !firebaseReady || !firebaseDB) return;
+if(leagueTrial) return endTrialLeague();
+startTrialLeague();
+}
+function startTrialLeague() {
+let raw = prompt("اكتب أسماء متسابقي التجربة، بين كل اسم واسم فاصلة (،)\nمثال: احمد، مشاري، خلود، ياي، عبدالرحمن، سعود");
+if(!raw) return;
+let names = [];
+raw.split(/[،,\n]+/).map(x => x.trim()).filter(Boolean).forEach(x => { if(!names.includes(x)) names.push(x); });
+if(names.length < 2) return alert("اكتب اسمين على الأقل");
+if(!confirm(`بنبدأ مسابقة تجريبية بـ ${names.length} متسابقين:\n${names.join("، ")}\n\nالدوري الأصلي (${players.length} متسابق ونتايجهم) ينحفظ ويختفي لين تضغط "إنهاء التجربة وإرجاع الدوري". نكمل؟`)) return;
+/* نولّد مواجهات التجربة بدون ما نغيّر الدوري المعروض (لو فشل الحفظ يظل مثل ما هو) */
+const keepPlayers = players, keepMatches = matches;
+players = names.map(name => ({ name:name, w:0, d:0, l:0, gf:0, ga:0, pts:0 }));
+generateMatches();
+const trialMatches = serializeMatches();
+players = keepPlayers; matches = keepMatches;
+const R = trialRefs();
+firebaseDB.runTransaction(async tx => {
+const cur = await tx.get(R.cur);
+const saved = await tx.get(R.saved);
+if(saved.exists && !saved.data().restoredAt) throw new Error("فيه دوري محفوظ ما رجع للحين. اضغط إنهاء التجربة أول.");
+const d = cur.exists ? cur.data() : {};
+if(d.trial) throw new Error("التجربة شغالة من قبل.");
+const links = d.playerLinks || {};
+tx.set(R.saved, {
+playersList: d.playersList || [], matches: d.matches || [], playerLinks: links,
+savedAt: firebase.firestore.FieldValue.serverTimestamp(), restoredAt: null
+});
+const keepLinks = {};
+names.forEach(n => { if(links[n]) keepLinks[n] = links[n]; });
+tx.update(R.cur, {
+playersList: names, matches: trialMatches, playerLinks: keepLinks,
+trial: { startedAt: firebase.firestore.FieldValue.serverTimestamp(), n: names.length },
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+})
+.then(() => alert(`بدأت المسابقة التجريبية بـ ${names.length} متسابقين (${trialMatches.length} مواجهة).\nالدوري الأصلي محفوظ.`))
+.catch(err => alert("ما بدأت التجربة: " + (err && err.code ? authErrAr(err) : err.message)));
+}
+function endTrialLeague() {
+if(!confirm("بنرجّع الدوري الأصلي بمتسابقينه ونتايجه، ونشيل جدول التجربة ونتايجها وتوقعاتها. نكمل؟")) return;
+const R = trialRefs();
+let startedAt = null;
+firebaseDB.runTransaction(async tx => {
+const cur = await tx.get(R.cur);
+const saved = await tx.get(R.saved);
+if(!saved.exists || saved.data().restoredAt) throw new Error("ما لقيت الدوري الأصلي المحفوظ.");
+const s = saved.data(), d = cur.exists ? cur.data() : {};
+startedAt = d.trial && d.trial.startedAt;
+/* ربط الحسابات اللي صار وقت التجربة يبقى لو الاسم موجود في الدوري الأصلي */
+const links = Object.assign({}, s.playerLinks || {});
+const tl = d.playerLinks || {};
+(s.playersList || []).forEach(n => { if(tl[n]) links[n] = tl[n]; });
+tx.update(R.cur, {
+playersList: s.playersList || [], matches: s.matches || [], playerLinks: links,
+trial: firebase.firestore.FieldValue.delete(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+tx.update(R.saved, { restoredAt: firebase.firestore.FieldValue.serverTimestamp() });
+})
+.then(() => removeTrialPredictions(startedAt))
+.then(n => alert("رجع الدوري الأصلي." + (n ? `\nوانحذف ${n} توقع من التجربة.` : "")))
+.catch(err => alert("ما رجع الدوري: " + (err && err.code ? authErrAr(err) : err.message)));
+}
+/* توقعات التجربة (اللي انحفظت بعد بدايتها) تنحذف، عشان ما تنحسب على مواجهات الدوري الأصلي اللي بنفس الأسماء */
+function removeTrialPredictions(startedAt) {
+const t0 = startedAt && startedAt.toMillis ? startedAt.toMillis() : 0;
+if(!t0) return Promise.resolve(0);
+return firebaseDB.collection("predictions").get().then(snap => {
+const old = snap.docs.filter(x => { const u = x.data().updatedAt; return u && u.toMillis && u.toMillis() >= t0; });
+return Promise.all(old.map(x => x.ref.delete().catch(() => null))).then(() => old.length);
+}).catch(() => 0);
 }
 
 function resetLeague() {
