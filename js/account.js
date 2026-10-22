@@ -28,6 +28,7 @@ container.innerHTML = `
 <button onclick="handleLogin()">تسجيل الدخول</button>
 <button onclick="handleRegister()" style="background:#059669;">إنشاء حساب جديد</button>
 </div>
+<button type="button" id="forgotPassBtn" class="forgot-pass-btn" onclick="handleForgotPassword()">نسيت كلمة المرور؟</button>
 </div>
 `;
 return;
@@ -202,6 +203,25 @@ createdAt: firebase.firestore.FieldValue.serverTimestamp()
 })
 .then(() => alert("تم إنشاء الحساب بنجاح!"))
 .catch(err => alert("خطأ في إنشاء الحساب: " + authErrAr(err)));
+}
+
+/* نسيت كلمة المرور: Firebase يرسل إيميل بالعربي فيه رابط (فيه رمز تغيير كلمة المرور)،
+   يفتح صفحة Firebase يكتب فيها كلمة مرور جديدة، وبعدها زر يرجّعه للموقع */
+function handleForgotPassword() {
+let input = document.getElementById("loginEmail");
+let email = (input && input.value.trim()) || "";
+if(!email) email = (prompt("اكتب بريدك الإلكتروني المسجّل في الدوري:") || "").trim();
+if(!email) return;
+if(input) input.value = email;
+firebaseAuth.languageCode = "ar";
+let btn = document.getElementById("forgotPassBtn");
+if(btn) btn.disabled = true;
+/* بعد التغيير يرجع للموقع. لو الدومين مو مسموح في Firebase نرسل بدون رابط الرجوع */
+firebaseAuth.sendPasswordResetEmail(email, { url: location.origin + "/" })
+.catch(err => /continue-uri|unauthorized-domain/.test((err && err.code) || "") ? firebaseAuth.sendPasswordResetEmail(email) : Promise.reject(err))
+.then(() => alert("أرسلنا رابط تغيير كلمة المرور إلى:\n" + email + "\n\nافتح الإيميل واضغط الرابط واكتب كلمة مرور جديدة، وبعدها سجّل دخول فيها.\nلو ما لقيته خلال دقايق شيك على البريد المزعج (Spam)."))
+.catch(err => alert("ما قدرنا نرسل الرابط: " + authErrAr(err)))
+.finally(() => { if(btn) btn.disabled = false; });
 }
 
 function handleLogout() {

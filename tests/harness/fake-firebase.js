@@ -95,7 +95,16 @@
         onAuthStateChanged(cb) { listeners.push(cb); setTimeout(() => cb(user), 0); return () => {}; },
         signOut: () => Promise.resolve(),
         signInWithEmailAndPassword: () => Promise.reject(new Error("test")),
-        createUserWithEmailAndPassword: () => Promise.reject(new Error("test"))
+        createUserWithEmailAndPassword: () => Promise.reject(new Error("test")),
+        /* نسيت كلمة المرور: ما يرسل شي، بس يسجل الطلب (forgot.mjs). "nobody@" ما له حساب، و "nodomain@" الدومين مو مسموح لرابط الرجوع */
+        languageCode: null,
+        sendPasswordResetEmail(email, settings) {
+            (window.__resets = window.__resets || []).push({ email, url: settings && settings.url, lang: auth.languageCode });
+            const err = c => { const e = new Error(c); e.code = c; return Promise.reject(e); };
+            if (/^nobody@/.test(email)) return err("auth/user-not-found");
+            if (/^nodomain@/.test(email) && settings) return err("auth/unauthorized-continue-uri");
+            return Promise.resolve();
+        }
     };
     window.firebase = {
         apps: [],

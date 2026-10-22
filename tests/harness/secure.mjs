@@ -78,7 +78,7 @@ try {
     check("no answer anywhere in the public doc", leaks(d0).length === 0, leaks(d0));
     const sec = await until(() => db.data("liveSecrets/round_2"), 5000);
     const plan = sec ? JSON.parse(sec.plan || "[]") : [];
-    check("host kept answers + plan in liveSecrets (admin-only)", !!sec && plan.length === d0.order.length && plan.every(m => m.qs.length === 5 && m.gold.length === 3 && m.qs.concat(m.gold).every(q => !!sec.answers[q.text] && /^v1\./.test(q.seal))));
+    check("host kept answers + plan in liveSecrets (admin-only)", !!sec && plan.length === d0.order.length && plan.every(m => m.qs.length === 5 && m.gold.length === 0 && m.qs.every(q => !!sec.answers[q.text] && /^v1\./.test(q.seal))));
     await host.goto("http://127.0.0.1:" + PORT + "/index.html?as=host&live=round_2");
     const p1 = await device(browser, db, "p1", { api }), p2 = await device(browser, db, "p2", { api }), fan = await device(browser, db, "fan", { api });
     await until(() => host.$("button.bc-go"), 8000);

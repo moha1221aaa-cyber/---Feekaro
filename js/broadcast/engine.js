@@ -345,12 +345,11 @@ function liveTx(id, fn) {
 }
 
 /* ===== الأجوبة المختومة (functions/answer.js، SECURITY-PLAN الخطوة 1) =====
-   عند بداية البث: لكل مواجهة 5 أسئلة + 3 ذهبية، وأجوبتها تنختم في السيرفر. الوثيقة العامة فيها { text, seal } بس،
+   عند بداية البث: لكل مواجهة 5 أسئلة (بدون ذهبية: التعادل ينتهي تعادل)، وأجوبتها تنختم في السيرفر. الوثيقة العامة فيها { text, seal } بس،
    والأجوبة الأصلية في liveSecrets/<id> (المنظم بس يقراها: للمذيع يجهّز جملة الجواب مسبقاً).
    التصحيح في السيرفر (bcServerGrade). وقت الكشف جهاز المنظم يكتب الجواب في الوثيقة (shown.<مواجهة>_<سؤال>)، فالكل يشوفه.
    السيرفر ما يكشف الجواب لغير المنظم، لأن مراحل البث في الوثيقة المفتوحة ممكن أي أحد يغيّرها (تدقيق 21 أكتوبر).
    لو الختم ما اشتغل: البث يكمل بالطريقة القديمة (الجواب في الوثيقة والتصحيح في الجهاز). */
-const LIVE_GOLD_N = 3;
 const bcSecrets = {};     /* id ← { qs: { text: answer } } (المنظم) */
 const bcRevealed = {};    /* id ← { text: answer } (اللي انكشف) */
 function bcSealed(q) { return !!(q && q.seal && !q.answer); }
@@ -368,7 +367,7 @@ async function bcSealRound(id, order) {
         let used = [];
         const plan = order.map(() => {
             const qs = pickLiveQuestions(used); used = used.concat(qs.map(q => q.text));
-            const gold = pickLiveQuestions(used).slice(0, LIVE_GOLD_N); used = used.concat(gold.map(q => q.text));
+            const gold = [];   /* السؤال الذهبي انشال: التعادل ينتهي تعادل */
             return { qs, gold };
         });
         const items = [].concat(...plan.map(p => p.qs.concat(p.gold)));
@@ -541,20 +540,7 @@ function liveNextStep(d, now) {
         const next = (d.qIndex || 0) + 1;
         const qs = d.questions || [];
         if (next < qs.length) return liveQuestionUpd(next, now);
-        /* تعادل: سؤال ذهبي (لين 3 مرات)، واللي يجاوب صح أول يفوز */
-        if ((d.s1 || 0) === (d.s2 || 0) && (d.golden || 0) < 3) {
-            const gold = d.gold || ((d.order || [])[d.cur] || {}).gold;
-            const extra = Array.isArray(gold) && gold.length ? gold[(d.golden || 0) % gold.length]
-                : pickLiveQuestions((d.usedQ || []).concat(qs.map(q => q.text)))[0];
-            if (extra) {
-                const u = liveQuestionUpd(next, now);
-                u.questions = qs.concat([extra]);
-                u.golden = (d.golden || 0) + 1;
-                u.log = (d.log || []).concat([-1]);
-                return u;
-            }
-        }
-        /* صافرة النهاية: نحفظ نتيجة المواجهة داخل البث وننتقل لمشهد النتيجة */
+        /* صافرة النهاية (والتعادل ينتهي تعادل، الدوري يحسبه نقطة لكل واحد: السؤال الذهبي انشال 22 أكتوبر 2026): نحفظ نتيجة المواجهة داخل البث وننتقل لمشهد النتيجة */
         const order = (d.order || []).map(o => Object.assign({}, o));
         if (order[d.cur]) Object.assign(order[d.cur], { s1: d.s1 || 0, s2: d.s2 || 0, state: "done", applied: false, fb1: d.fb1 || 0, fb2: d.fb2 || 0, bh1: d.bh1 || 0, bh2: d.bh2 || 0 });
         return { scene: "result", phase: "done", order: order, deadline: 0, sceneAt: now };
