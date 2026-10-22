@@ -73,7 +73,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     check("extracted word not in speech → rejected", r.ok === false && r.t.path === "extract-rejected", r);
     k = mk("ميتين وست", "206");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206", audio }), k.env))).json();
-    check("number said in words goes to the judge (not blocked)", r.ok === true && r.said === "ميتين وست", r);
+    check("number said in words goes to the judge, and shows as the answer (206)", r.ok === true && r.said === "206", r);
     k = mk("سورة البقرة", "");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة", audio }), k.env))).json();
     check("answer that shares a question word (سورة البقرة) still accepted fast", r.ok === true && r.t.path === "fast", r);
@@ -119,5 +119,18 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
         ["إيه يو", "Au", true], ["اي يو", "Au", true], ["اتش تو او", "H2O", true], ["يو اس ايه", "USA", true], ["يوم", "Au", false], ["اي جي", "Au", false]];
     const bad = T.filter(([g, a, w]) => voiceMatch(g, a) !== w);
     check("voiceMatch: close mishearings accepted, near-miss wrong answers rejected, spelled Latin letters (26 cases)", !bad.length, bad);
+}
+{
+    /* تجربة 22 أكتوبر: الجواب الصح يطلع بإملائه (الحكم ما يتغير) */
+    const mk = (text, ok) => ({ AI: { run: async (m) => m.includes("whisper") ? { text } : { response: JSON.stringify({ said: text, ok }) } } });
+    const go = async (text, answer, ok) => { const res = await onRequestPost(ctxFor(await req({ task: "voice", q: "سؤال", answer, audio }), mk(text, ok))); return res.json(); };
+    let r = await go("Jónis", "يونس", true);
+    check("correct (via the judge): shows the answer spelling (يونس), verdict unchanged", r.ok === true && r.said === "يونس", r);
+    r = await go("توكيو", "طوكيو|توكيو", true);
+    check("correct (fast path): shows the answer's main spelling (طوكيو)", r.ok === true && r.said === "طوكيو", r);
+    r = await go("انقره", "أنقرة", true);
+    check("correct: canonical spelling أنقرة", r.ok === true && r.said === "أنقرة", r);
+    r = await go("جدة", "الرياض", false);
+    check("wrong: unchanged (shows what was said, still wrong)", r.ok === false && r.said === "جدة", r);
 }
 auth.restore(); done();
