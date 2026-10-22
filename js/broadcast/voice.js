@@ -7,6 +7,20 @@ let bcTrack = null, bcPubPromise = null, bcSelfMuted = false;
 let bcMicFailAt = 0, bcMicErr = "", bcAudioErr = "";
 let bcSyncBusy = false, bcSyncAgain = false;
 let bcMyUid = null;
+/* وقت جوابي بالصوت (VA.rec): أصوات البث كلها عندي تسكت، عشان إلغاء الصدى ما يقطّع كلامي (voice-answer.js).
+   الحالة تنحسب من وجود التسجيل نفسه، و liveTick يعيدها كل 200ms، فما تعلق ساكتة أبد */
+let bcQuiet = false;
+function bcSetLocalQuiet() {
+    const q = typeof VA !== "undefined" && !!VA.rec;
+    if (q === bcQuiet) return;
+    bcQuiet = q;
+    bcApplyRemoteVolume();
+    if (typeof bedApply === "function") bedApply();
+}
+function bcApplyRemoteVolume() {
+    if (!bcClient) return;
+    (bcClient.remoteUsers || []).forEach(u => { try { if (u.audioTrack) u.audioTrack.setVolume(bcQuiet || speakerMuted ? 0 : 100); } catch (e) {} });
+}
 let bcConnState = "", bcNetQ = 0, bcRejoinT = 0, bcRepub = false, bcRejoinN = 0;
 /* نعيد بعد 1.5 ث، وكل مرة تفشل الضعف (لين 30 ث) */
 function bcRejoinLater() {
@@ -32,7 +46,7 @@ async function bcJoin() {
             if (mediaType !== "audio") return;
             try {
                 await bcClient.subscribe(user, "audio");
-                if (user.audioTrack) { user.audioTrack.setVolume(speakerMuted ? 0 : 100); user.audioTrack.play(); }
+                if (user.audioTrack) { user.audioTrack.setVolume(speakerMuted || bcQuiet ? 0 : 100); user.audioTrack.play(); }
                 bcAudioErr = "";
             } catch (e) { console.error("بث: تعذر استقبال الصوت", e); bcAudioErr = "تعذّر استقبال الصوت"; }
             liveLastSig = ""; renderLiveScreen();

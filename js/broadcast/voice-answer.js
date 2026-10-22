@@ -22,7 +22,9 @@ const VA_PAD_MS = 300;           /* نخلي 0.3 ث قبل أول كلمة وب�
 const VA_LOUD = 0.08;            /* صوت أعلى من كذا بدون ما ينكشف كلام: ينرسل للسيرفر احتياط */
 const VA_SOFT_MS = 250;          /* الكاشف الحساس (احتياط): كلام واطي أو مقطّع بهالطول ينرسل للسيرفر بدل الكتابة */
 const VA_SOFT_IGNORE_MS = 500;   /* أول نص ثانية من الضغط: صوت الجرس ودقة الإصبع ما تنحسب للحساس */
-const VA_QUIET_MS = 5000;        /* 5 ث بدون أي كلام من بداية الدور: نطلّع الكتابة بدل ما ننتظر نهاية الوقت */
+const VA_QUIET_MS = 5000;
+const VA_END_SILENCE_MS = 900;   /* سكوت حقيقي (ولا كاشف سمع شي) بعد الكلام = خلص. 0.55 ث كانت تقطع الكلمة من نصها (تجربة 22 أكتوبر) */
+const VA_SEND_MAX_MS = 8000;     /* أطول تسجيل ينرسل (من الضغطة) */        /* 5 ث بدون أي كلام من بداية الدور: نطلّع الكتابة بدل ما ننتظر نهاية الوقت */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
 const VA = { key: "", st: "", msg: "", heard: "", said: "", ok: false, ctx: null, rec: null, arm: null, try: null, live: "" };
@@ -146,6 +148,9 @@ async function vaStart(key) {
     const rec = { key, stop: null, timer: 0 };
     VA.rec = rec;
     if (typeof bedApply === "function") bedApply();
+    /* كل الأصوات عندي تسكت وقت جوابي (أصوات المتسابقين والمنظم والموسيقى والمؤثرات): إلغاء الصدى في الجوال
+       يكتم صوتي لما فيه صوت ثاني يطلع من السماعة، فيوصل كلامي مقطّع لـ Whisper */
+    if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
     let stream = null, own = false, unmuted = false;
     try {
         const t = (typeof bcTrack !== "undefined" && bcTrack && bcTrack.getMediaStreamTrack) ? bcTrack.getMediaStreamTrack() : null;
@@ -175,13 +180,13 @@ async function vaStart(key) {
         const x = liveMatchesCache[openLiveId];
         return (x && x.phase === "answer") ? (x.deadline || 0) - VA_STOP_BEFORE_MS : Infinity;
     };
-    /* الجزء اللي فيه كلام بس (مع هامش)، عشان الملف أصغر و Whisper ما يتخيّل كلام من السكوت */
+    /* التسجيل كامل من لحظة الضغط (آخر 8 ث بالكثير): القص على حدود الكاشف كان يقطع الكلمة لما الكاشف يلقط جزء منها بس
+       (تجربة 22 أكتوبر: Whisper سمع "أمود سن" و "أمقارون" و "يوم"). السكوت ما يضر: Whisper ومرشّح الهلوسة يتعاملون معه */
     const clip = () => {
-        const pad = Math.ceil(VA_PAD_MS / 20);
-        const fi = firstIdx >= 0 ? firstIdx : softFirstIdx, li = lastIdx >= 0 ? lastIdx : softLastIdx;
-        const a = fi >= 0 ? Math.max(0, fi - pad) : 0, b = li >= 0 ? Math.min(frames.length, li + pad + 1) : frames.length;
-        return frames.slice(a, b).map(f => f.pcm);
+        const max = Math.ceil(VA_SEND_MAX_MS / 20);
+        return frames.slice(Math.max(0, frames.length - max)).map(f => f.pcm);
     };
+    let actMs = 0, firstActAt = 0, lastActAt = 0;
 
     let cap = null;
     const finish = (send) => {
@@ -193,16 +198,18 @@ async function vaStart(key) {
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
         if (VA.rec === rec) VA.rec = null;
         if (typeof bedApply === "function") bedApply();
+        if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
         const key = rec.key;
         if (!send || VA.key !== key || key.indexOf("arm|") === 0) return;
-        const info = { frames: frames.length, speechMs: Math.round(speechMs), softMs: Math.round(softMs), eMax: +eMax.toFixed(4), peak: +peak.toFixed(3), noise: +floor.toFixed(4) };
+        const info = { frames: frames.length, speechMs: Math.round(speechMs), softMs: Math.round(softMs), actMs: Math.round(actMs), eMax: +eMax.toFixed(4), peak: +peak.toFixed(3), noise: +floor.toFixed(4) };
         if (!frames.length) { vaDiag("no-audio", info); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
         /* لو الكاشف لقط كلام قصير بس الصوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب.
            وموسيقى أو ضجة بدون أي كلام ما تنرسل (Whisper يتخيّل منها كلام) */
         /* شبكة أمان (تجربة 21 أكتوبر: صوت واضح 0.13 وما انحسب كلام): صوت عالي بدون كلام مكشوف ينرسل كامل،
            والسيرفر يحكم (يرفض أي جواب ما هو من كلام المتسابق) */
         /* وتجربة 21 أكتوبر الثانية: كلام واطي (0.024) ومقطّع من إلغاء الصدى، الأساسي ما سمعه والحساس يسمعه */
-        if (speechMs < VA_MIN_SPEECH_MS && softMs < VA_SOFT_MS && !(peak >= VA_LOUD || (peak >= 0.05 && firstIdx >= 0))) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
+        /* أي صوت واضح فوق الضجة ينرسل (الأولوية إن الجواب ينسمع)، والسيرفر يشيل الهلوسة ويرجّع فاضي لو ما فيه كلام */
+        if (speechMs < VA_MIN_SPEECH_MS && actMs < 150 && !(peak >= Math.max(0.02, floor * 15))) { vaDiag("no-speech", info); vaToType("ما سمعت جواب، اكتبه"); return; }
         /* رد فوري إن الجواب وصل قبل ما يرد السيرفر */
         if (typeof bcTap === "function") bcTap(document.getElementById("vaBox"), "tapped", "tick", 20);
         vaDiag("sent", info);
@@ -217,10 +224,13 @@ async function vaStart(key) {
         speechMs = f.speechMs; peak = f.peak; floor = f.floor; if (f.e > eMax) eMax = f.e;
         if (f.talking) { lastVoiceAt = now; lastIdx = frames.length - 1; if (!firstVoiceAt) { firstVoiceAt = now; firstIdx = frames.length - 1; } }
         /* الحساس ما يحسب نص الثانية الأولى، ولا وقت أي مؤثر صوتي شغّال عندي (الجرس 1 ث، الغلط 1.2 ث) */
-        if (f.soft && now - startedAt > VA_SOFT_IGNORE_MS && now > ((typeof CINE !== "undefined" && CINE.fxUntil) || 0) + 150) {
+        const softOk = f.soft && now - startedAt > VA_SOFT_IGNORE_MS && now > ((typeof CINE !== "undefined" && CINE.fxUntil) || 0) + 150;
+        if (softOk) {
             softMs += f.pcm.length / ctx.sampleRate * 1000; softLastAt = now; softLastIdx = frames.length - 1;
             if (!softFirstAt) { softFirstAt = now; softFirstIdx = frames.length - 1; }
         }
+        /* نشاط = أي كاشف سمع كلام (الأساسي أو الحساس)، والنهاية بسكوت الاثنين */
+        if (f.talking || softOk) { actMs += f.pcm.length / ctx.sampleRate * 1000; lastActAt = now; if (!firstActAt) firstActAt = now; }
         /* نص مباشر: الكلام طويل، نعرض اللي انقال للحين (مرة وحدة، وبس بعد ما يتأكد إني فزت بالجرس) */
         if (!partial && f.talking && speechMs >= VA_PARTIAL_MS && rec.key.indexOf("arm|") !== 0) { partial = true; vaPartial(rec.key, clip(), ctx.sampleRate); }
         /* المتسابق يشوف إن صوته واصل: المؤشر يتحرك والدائرة تكبر والنص يتغير */
@@ -228,11 +238,11 @@ async function vaStart(key) {
         const bar = document.getElementById("vaLevel"); if (bar) bar.style.transform = "scaleX(" + Math.max(0.04, level).toFixed(2) + ")";
         const box = document.getElementById("vaBox");
         if (box) {
-            const on = now - Math.max(lastVoiceAt, softLastAt) < 350;
+            const on = now - lastActAt < 350;
             box.classList.toggle("talking", on);
             box.style.setProperty("--lvl", level.toFixed(2));
             const t = document.getElementById("vaT");
-            const msg = on ? "أسمعك..." : (speechMs >= VA_MIN_SPEECH_MS ? "وصل صوتك" : "قل جوابك الحين");
+            const msg = on ? "أسمعك..." : (actMs >= 150 ? "وصل صوتك" : "قل جوابك الحين");
             if (t && t.textContent !== msg) t.textContent = msg;
         }
     };
@@ -243,6 +253,7 @@ async function vaStart(key) {
         /* لو فتحنا مايكه المكتوم عشان التسجيل، نرجّعه مكتوم (المايك ما يظل مفتوح بسبب خطأ) */
         if (unmuted && typeof bcTrack !== "undefined" && bcTrack && bcSelfMuted) bcTrack.setMuted(true).catch(() => {});
         if (typeof bedApply === "function") bedApply();
+        if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
         vaDiag("capture-error", { err: String((e && (e.name || e.message)) || e).slice(0, 80) });
         if (VA.key === rec.key && !VA.arm) vaToType("ما قدرت أسجّل صوتك، اكتب جوابك");
         return;
@@ -255,17 +266,14 @@ async function vaStart(key) {
             if (now - startedAt > VA_ARM_MS) { VA.arm = null; finish(false); }
             return;
         }
+        /* قاعدة وحدة (تجربة 22 أكتوبر: الأساسي يلقط 180-400ms بس من الكلمة، فكان يوقف من نصها):
+           - ما فيه أي صوت 5 ث ← نوقف (وينرسل لو فيه صوت واضح، وإلا الكتابة)
+           - فيه كلام ← نوقف بعد 0.9 ث سكوت من الكاشفين الاثنين، وبعد 0.7 ث على الأقل من أول الكلام
+           - أطول جواب 6 ث من أول كلام، ونهاية الوقت */
         if (!frames.length && now - startedAt > 1500) finish(true);
-        else if (!firstVoiceAt && !softFirstAt && now - startedAt > VA_QUIET_MS) finish(true);
-        /* الأساسي ما سمع شي بس الحساس سمع كلام واطي أو مقطّع وسكت بعده 0.8 ث: نرسله (السيرفر يحكم) */
-        else if (!firstVoiceAt && softMs >= VA_SOFT_MS + 100 && now - softLastAt > 1200) finish(true);
-        else if (!firstVoiceAt && softFirstAt && now - softFirstAt > VA_MAX_MS) finish(true);
-        else if (!firstVoiceAt && softFirstAt && softMs < VA_SOFT_MS && now - softLastAt > VA_QUIET_MS) finish(true);
-        else if (speechMs >= VA_MIN_SPEECH_MS && lastVoiceAt && now - lastVoiceAt > VA_SILENCE_MS) finish(true);
-        /* كلمة قصيرة قالها مع الجرس: ما ننتظر 5 ث. بس لازم 200ms كلام وآخره بعد 0.6 ث من الضغط،
-           عشان صوت الجرس أو دقة الإصبع ما تنحسب جواب وتقفل التسجيل وهو للحين يفكر */
-        else if (speechMs >= 200 && lastVoiceAt && lastVoiceAt - startedAt > 600 && now - lastVoiceAt > VA_SILENCE_MS * 2) finish(true);
-        else if (firstVoiceAt && now - firstVoiceAt > VA_MAX_MS) finish(true);
+        else if (!firstActAt && now - startedAt > VA_QUIET_MS) finish(true);
+        else if (firstActAt && now - lastActAt > VA_END_SILENCE_MS && now - firstActAt > 700) finish(true);
+        else if (firstActAt && now - firstActAt > VA_MAX_MS) finish(true);
         else if (bcNow() >= stopAt()) finish(true);
     }, 100);
     vaDiag("rec", { via: cap.via + (own ? "+getUserMedia" : "+bcTrack"), armed: key.indexOf("arm|") === 0 });

@@ -19,6 +19,8 @@ const CASES = [
     /* تجربة 21 أكتوبر الثانية: جوال صوته واطي (0.024) والكلام مقطّع من إلغاء الصدى، بدون رفع صوت من المتصفح */
     { name: "phone-soft-raw", wav: "phone_soft.wav", expect: "voice", raw: true },
     { name: "phone-choppy-raw", wav: "phone_choppy.wav", expect: "voice", raw: true },
+    /* تجربة 22 أكتوبر: الجواب ينرسل كامل (الكلمتين)، مو مقطوع بعد أول سكتة */
+    { name: "two-words-gap", wav: "speech_gap.wav", expect: "voice", minSec: 2.7, maxMs: 5000 },
     { name: "silence", wav: "silence.wav", expect: "type" },
     /* موسيقى عالية بس: الكاشف الحساس ممكن يرسلها، و Whisper ما يسمع فيها كلام، فتطلع الكتابة */
     { name: "music-only", wav: "music_only.wav", expect: "type", maySend: true, empty: true },
@@ -66,6 +68,8 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
         await p1.evaluate(() => document.getElementById("lvBell").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true })));
         await until(() => liveDoc(db).phase === "answer", 5000);
         await sleep(400);
+        /* وقت جوابي: صوت الثاني والموسيقى ساكتين عندي */
+        r.quietDuring = await p1.evaluate(() => ({ remote: window.__remoteVol, bed: typeof bedTarget === "function" ? bedTarget() : -1, rec: !!VA.rec }));
         await p1.screenshot({ path: `${out}/${c.name}-1-rec.png` });
         if (c.live) {
             r.liveText = await until(() => p1.evaluate(() => { const e = document.getElementById("vaLive"); return e && e.textContent.trim(); }), 6000);
@@ -87,12 +91,14 @@ for (const c of CASES.filter(x => !only || x.name === only)) {
             r.note = await p1.evaluate(() => { const n = document.querySelector(".va-note"); return n ? n.textContent.trim() : ""; });
             await p1.screenshot({ path: `${out}/${c.name}-2-type.png` });
         }
+        await sleep(500);
+        r.quietAfter = await p1.evaluate(() => window.__remoteVol);   /* ورجع بعد الجواب */
         const diag = ((db.data("room/main/liveDiag/round_2") || {}).vaDiag || {}).u_p1;
         r.diag = Array.isArray(diag) ? diag.map(x => ({ steps: x.steps.join(">"), via: x.via, speechMs: x.speechMs, said: x.said, ok: x.ok })) : diag;
         r.reqs = reqs.map(x => x.task + ":" + x.sec + "s");
         r.errors = p1.__logs.filter(l => /PAGEERROR/.test(l));
         r.pass = c.expect === "voice"
-            ? r.sent && r.committed && r.sentAfterMs < (c.live ? 4500 : 3500) && r.wavSec > 0.9 && r.wavSec < (c.live ? 4.5 : 3.5) && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || (r.liveText && r.reqs.some(x => /^hear/.test(x)))) && !r.errors.length
+            ? r.sent && r.committed && r.sentAfterMs < (c.maxMs || (c.live ? 4500 : 3500)) && r.wavSec > (c.minSec || 0.9) && r.quietDuring.remote === 0 && r.quietDuring.bed === 0 && r.quietAfter === 100 && r.wavSec <= 8.2 && r.diag && /worklet/.test(r.diag[r.diag.length - 1].via || "") && (!c.mute || (r.mutedBefore && r.mutedAfter)) && (!c.live || (r.liveText && r.reqs.some(x => /^hear/.test(x)))) && !r.errors.length
             : r.typeBox && (c.maySend || !r.voiceSent) && r.typeAfterMs < 9000 && !(liveDoc(db).lastAnswer || {}).correct && !r.errors.length;
     } catch (e) { r.pass = false; r.err = String(e.stack || e); }
     results.push(r);

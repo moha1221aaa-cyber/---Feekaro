@@ -39,4 +39,8 @@ wr("phone_soft_music.wav", at_peak(phone(cyc + m * 0.15, 1.0), 0.03) + quiet_noi
 # نفس الجوال بس الكلام مقطّع (إلغاء الصدى في الجوال يكتم المايك 60ms كل 140ms لما فيه صوت ثاني يطلع من السماعة)
 gate = (np.arange(N) % int(0.14 * R) < int(0.08 * R)).astype(np.float32)
 wr("phone_choppy.wav", at_peak(phone(cyc, 1.0) * gate, 0.024) + quiet_noise)
+# جواب فيه سكتة نص ثانية بالنص (كلمتين): التسجيل كان يوقف بعد 0.55 ث ويقطع الكلمة الثانية
+gp = np.zeros(N, np.float32); two_gap = np.concatenate([sp, np.zeros(int(0.5 * R), np.float32), sp])
+for k in range(0, 30, 6): gp[k * R:k * R + len(two_gap)] += two_gap
+wr("speech_gap.wav", gp + noise)
 print("ok")

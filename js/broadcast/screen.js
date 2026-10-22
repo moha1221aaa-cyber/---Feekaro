@@ -106,6 +106,7 @@ function liveTick() {
     bcLowerThird(d);
     tvTick(d);
     showTick(d);
+    if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
     bcPerfTick(d);
     liveAdvanceIfDue();
 }
