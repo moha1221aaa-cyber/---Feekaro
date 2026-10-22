@@ -212,6 +212,7 @@ function bcTicker(d) {
     if (tab.some(r => r.pts > 0)) items.push(`${ic("trophy")} الترتيب: ` + tab.map((r, i) => `${i + 1}. ${escapeHTML(r.name)} <b>${r.pts}</b>`).join(" · "));
     const nx = (d.order || []).find((o, i) => o.state === "pending" && i !== d.cur);
     if (nx) items.push(`${ic("zap")} المواجهة الجاية: ${escapeHTML(nx.p1)} ضد ${escapeHTML(nx.p2)}`);
+    items.unshift(...showStats(d));
     items.push(`دوري بنو مسروح للنخبة · الجولة ${escapeHTML(String(d.round))} · بث مباشر`);
     const sig = items.join("|");
     if (sig === bcTickerSig && el) return;
@@ -219,7 +220,10 @@ function bcTicker(d) {
     if (!el) { el = document.createElement("div"); el.id = "stTicker"; el.className = "st-ticker"; scr.appendChild(el); }
     const row = items.map(x => `<span class="st-tk-it">${x}</span>`).join("");
     const dur = Math.max(18, sig.length * 0.22);
-    el.innerHTML = `<span class="st-tk-tag">${ic("megaphone")} أخبار</span><div class="st-tk-win"><div class="st-tk-in" style="animation-duration:${dur}s">${row}${row}</div></div>`;
+    /* الشريط يكمل من مكانه لما يتحدث (الإحصائيات تتغير مع كل جواب)، ما يرجع من أوله */
+    const old = el.querySelector(".st-tk-in"), oa = old && old.getAnimations ? old.getAnimations()[0] : null;
+    const prog = oa && oa.effect && oa.effect.getComputedTiming ? (oa.effect.getComputedTiming().progress || 0) : 0;
+    el.innerHTML = `<span class="st-tk-tag">${ic("megaphone")} أخبار</span><div class="st-tk-win"><div class="st-tk-in" style="animation-duration:${dur}s;animation-delay:${-(prog * dur).toFixed(2)}s">${row}${row}</div></div>`;
 }
 
 /* ===== الشريط السفلي (Lower third) لاسم المتسابق: لما يضغط الجرس أو يتكلم ===== */
@@ -247,10 +251,11 @@ function bcLowerThird(d) {
     if (!el) { el = document.createElement("div"); el.id = "stL3"; el.className = "st-l3"; scr.appendChild(el); }
     if (BC_L3.key !== want.key) {
         BC_L3.key = want.key;
-        el.classList.remove("on");
         el.innerHTML = `<img src="${safeSrc(want.av)}" alt=""><div class="tx"><b>${escapeHTML(want.name)}</b><span>${escapeHTML(want.sub)}</span></div>`;
         el.classList.toggle("gold", !!want.gold);
-        void el.offsetWidth;
+        const k = want.key;
+        bcRestartAnim(el, "on", () => BC_L3.key === k, true);   /* كان void offsetWidth: ~100ms لحظة الجرس على الجوال الضعيف */
+        return;
     }
     el.classList.add("on");
 }

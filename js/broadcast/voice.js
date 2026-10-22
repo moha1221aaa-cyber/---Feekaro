@@ -247,7 +247,7 @@ function bcTickMics() {
             const prev = parseInt(ls.textContent, 10);
             ls.textContent = t;
             if (n && prev && n !== prev) {
-                ls.classList.remove("bump"); void ls.offsetWidth; ls.classList.add("bump");
+                bcRestartAnim(ls, "bump");
                 const f = document.createElement("span");
                 f.className = "st-delta " + (n > prev ? "up" : "down");
                 f.textContent = (n > prev ? "+" : "") + (n - prev);

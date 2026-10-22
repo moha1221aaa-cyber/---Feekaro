@@ -36,6 +36,30 @@ function bcSetLite(on, why) {
     bcApplyLite();
     try { if (typeof bcDiagPush === "function") bcDiagPush("perf", { at: bcNow(), lite: on, why: String(why || "").slice(0, 40) }); } catch (e) {}
 }
+/* ===== قياس الأداء على الجهاز نفسه (يطلع في لوحة التشخيص، liveDiag → bcDiag.<uid>.perf) =====
+   كل 30 ث وقت البث: أطول رسم للشاشة، والمهام الطويلة (longtask)، وأطول تأخير بين لمسة وأول رسم بعدها (Event Timing)،
+   عشان نعرف بالأرقام وش اللي يثقّل الجوال الحقيقي */
+const BC_PERF = { renderMax: 0, renders: 0, longMs: 0, longN: 0, tapMax: 0, last: 0, obs: false };
+function bcPerfRender(ms) { BC_PERF.renders++; if (ms > BC_PERF.renderMax) BC_PERF.renderMax = ms; }
+function bcPerfStart() {
+    if (BC_PERF.obs || typeof PerformanceObserver === "undefined") return;
+    BC_PERF.obs = true;
+    try { new PerformanceObserver(l => { for (const e of l.getEntries()) { BC_PERF.longMs += e.duration; BC_PERF.longN++; } }).observe({ type: "longtask", buffered: false }); } catch (e) {}
+    try { new PerformanceObserver(l => { for (const e of l.getEntries()) if (e.name === "pointerdown" && e.duration > BC_PERF.tapMax) BC_PERF.tapMax = e.duration; }).observe({ type: "event", durationThreshold: 16 }); } catch (e) {}
+}
+function bcPerfTick(d) {
+    bcPerfStart();
+    const now = bcNow();
+    if (!BC_PERF.last) { BC_PERF.last = now; return; }
+    if (now - BC_PERF.last < 30000 || !d || d.status !== "live") return;
+    const p = BC_PERF;
+    /* المتسابقين والمنظم بس (اللوحة تعرضهم)، وبس لو فيه شي جديد: كل مشاهد يكتب كل 30 ث = كتابات كثير على وثيقة وحدة */
+    const sig = [Math.round(p.renderMax / 10), p.longN, Math.round(p.tapMax / 10), bcLite].join("|");
+    if (!(isAdmin || myLiveNum(d)) || sig === p.sig) { p.renderMax = 0; p.renders = 0; p.longMs = 0; p.longN = 0; p.tapMax = 0; p.last = now; return; }
+    p.sig = sig;
+    try { if (typeof bcDiagPush === "function") bcDiagPush("perf", { at: now, scene: d.scene + (d.phase ? "/" + d.phase : ""), lite: bcLite, renderMax: Math.round(p.renderMax), renders: p.renders, longMs: Math.round(p.longMs), longN: p.longN, tapMax: Math.round(p.tapMax) }); } catch (e) {}
+    p.renderMax = 0; p.renders = 0; p.longMs = 0; p.longN = 0; p.tapMax = 0; p.last = now;
+}
 /* أول 5 ث من البث: لو أكثر من ربع الإطارات تاخذ فوق 50ms، نشغّل الخفيف (وما نرجع، عشان ما يرمش) */
 function bcWatchFrames() {
     if (bcLite || BC_LITE_FORCED || bcWatchFrames.on) return;
@@ -124,6 +148,8 @@ function cineS(id, t, v, o) {
         const G = cineGraph(), c = G.c;
         try { if (c.state === "suspended") c.resume(); } catch (e) {}
         const src = c.createBufferSource(); src.buffer = b;
+        /* متى يخلص آخر مؤثر صوتي (الكاشف الحساس في voice-answer.js ما يحسب صوته كلام) */
+        CINE.fxUntil = Math.max(CINE.fxUntil || 0, performance.now() + (Math.max(0, t - c.currentTime) + b.duration) * 1000);
         const g = c.createGain();
         const vol = (v == null ? 1 : v) * ((CINE_FILES[id] || {}).g || 1);
         g.gain.value = vol;
@@ -360,11 +386,14 @@ function cineMatchIntro(d) {
 }
 
 /* ===== "انطلق!" لحظة بداية الأسئلة ===== */
-function cineGo() {
+function cineGo(at) {
+    const late = at ? bcNow() - at : 0;
+    if (late > 1200) return;   /* "انطلق!" خلصت عند الكل */
     cineReady();
-    const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, 1400);
+    const el = cineOverlay("fxonly", `<div class="cine-go"><span class="cine-gold">انطلق!</span></div>`, Math.max(200, 1400 - Math.max(0, late)));
     if (!el) return;
-    cinePlay("start_q", 0.8) || cinePlay("impact", 0.8);
+    showSync(el, at);
+    if (late < SHOW_SOUND_LATE) cinePlay("start_q", 0.8) || cinePlay("impact", 0.8);
     cineFlash(el, 0.6, 350); cineShake(9);
     setTimeout(() => cpSpark(CP.w / 2, CP.h * 0.45, 90, null, 450), 30);
 }

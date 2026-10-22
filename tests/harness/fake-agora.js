@@ -2,7 +2,9 @@
    والقناة ما تتصل بأي مكان. setMuted مثل أجورا: التتبع يظل موجود بس يطلع سكوت. */
 (function () {
     function micTrack() {
-        return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(stream => {
+        /* ?rawmic=1: بدون معالجة المتصفح (مثل جوال ما يرفع الصوت تلقائياً)، عشان الملف الواطي يوصل واطي */
+        const raw = /[?&]rawmic=1/.test(location.search);
+        return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !raw, noiseSuppression: !raw, autoGainControl: !raw } }).then(stream => {
             const t = stream.getAudioTracks()[0];
             let ctx = null, an = null, buf = null;
             return {

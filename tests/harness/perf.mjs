@@ -28,12 +28,22 @@ for (const mode of ["lite=0", "lite=1", "auto"]) {
             const step = ts => { const dt = ts - last; last = ts; n++; if (dt > 50) slow++; if (ts - t0 < 4000) requestAnimationFrame(step); else done({ frames: n, slowPct: Math.round(slow / n * 100), longMs: Math.round(long), lite: bcLite, cls: document.getElementById("liveScreen").classList.contains("bc-lite"), video: (() => { const v = document.getElementById("stVideo"); return v ? (v.paused ? "paused" : "playing") : "none"; })() }); };
             requestAnimationFrame(step);
         }));
+        await p1.evaluate(() => {
+            window.__rt = []; const o = bcPerfRender; bcPerfRender = ms => { window.__rt.push(Math.round(ms)); o(ms); };
+            /* السبب الجذري (void offsetWidth يرتّب الصفحة كاملة على طول): نعد أي قراءة له بعد الجرس */
+            window.__reflow = 0;
+            const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
+            Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get() { window.__reflow++; return d.get.call(this); } });
+        });
         const bell = await p1.evaluate(() => new Promise(r => {
             const b = document.getElementById("lvBell");
             const ev = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
             b.dispatchEvent(ev);
             requestAnimationFrame(() => r(Math.round(performance.now() - ev.timeStamp)));
         }));
+        await sleep(2500);   /* بعد الجرس: الوثيقة تتغير (answer) والشاشة ترسم من جديد */
+        const pf = await p1.evaluate(() => ({ afterBuzz: window.__rt, reflows: window.__reflow, renderMax: Math.round(BC_PERF.renderMax), renders: BC_PERF.renders, longMs: Math.round(BC_PERF.longMs), tapMax: Math.round(BC_PERF.tapMax) }));
+        Object.assign(m, { perf: pf });
         await p1.screenshot({ path: `${out}/${mode.replace("=", "")}.png` });
         res[mode] = Object.assign(m, { bellMs: bell, errors: p1.__logs.filter(l => /PAGEERROR/.test(l)) });
         console.log(mode, JSON.stringify(res[mode]));
@@ -45,6 +55,10 @@ check("lite mode: video paused, class on", res["lite=1"] && res["lite=1"].cls &&
 check("full mode stays full (?lite=0 wins over auto-detect)", res["lite=0"] && !res["lite=0"].cls && !res["lite=0"].lite);
 check("auto mode: this 4-core box is detected as weak", res.auto && res.auto.lite === true, res.auto && res.auto.lite);
 check("lite is not slower than full on a slow CPU (5% margin)", res["lite=1"] && res["lite=0"] && res["lite=1"].slowPct <= res["lite=0"].slowPct + 5, [res["lite=0"] && res["lite=0"].slowPct, res["lite=1"] && res["lite=1"].slowPct]);
+/* السبب الجذري: ولا قراءة offsetWidth (ترتيب إجباري للصفحة) بعد الجرس. والوقت يختلف حسب الجهاز اللي يشغّل الاختبار
+   (كان 113-176ms قبل الإصلاح، وصار 27-51ms على نفس الجهاز)، فحده هنا شبكة أمان بس */
+check("no forced layout (offsetWidth) after the buzz", Object.values(res).every(r => r.perf && r.perf.reflows === 0), Object.values(res).map(r => r.perf && r.perf.reflows));
+check("render after the buzz < 150ms on a 6x slower CPU", Object.values(res).every(r => r.perf && r.perf.afterBuzz.length && Math.max(...r.perf.afterBuzz) < 150), Object.values(res).map(r => r.perf && r.perf.afterBuzz));
 check("no page errors", Object.values(res).every(r => !r.errors.length));
 fs.writeFileSync(out + "/perf.json", JSON.stringify(res, null, 1));
 srv.close();

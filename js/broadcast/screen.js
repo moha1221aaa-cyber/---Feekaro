@@ -9,6 +9,7 @@ function openLiveScreen(id) {
     }
     openLiveId = id;
     liveLastSig = "";
+    { const b = document.getElementById("liveScreenBody"); if (b) b.__bcR = null; }   /* الرسم الجزئي يبدأ من جديد مع كل فتح */
     livePrevView = null;
     bcPrevKey = null;
     bcLastSpokenKey = "";
@@ -83,7 +84,7 @@ function liveTick() {
         if (el && el.textContent !== String(n)) {
             el.textContent = n;
             cinePlay("heartbeat", 0.9);
-            el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+            if (el.getAnimations) el.getAnimations().forEach(a => { a.cancel(); a.play(); });
         }
     } else if (d.scene === "playing") {
         const total = d.phase === "buzz" ? LIVE_BUZZ_MS : (d.phase === "answer" ? LIVE_ANSWER_MS : LIVE_REVEAL_MS);
@@ -104,6 +105,8 @@ function liveTick() {
     bcTickMics();
     bcLowerThird(d);
     tvTick(d);
+    showTick(d);
+    bcPerfTick(d);
     liveAdvanceIfDue();
 }
 
@@ -130,17 +133,20 @@ function bcTickClock(d) {
 }
 
 /* لقطة انتقالية بين المشاهد (ستينجر) */
-function bcStinger(title, sub) {
+function bcStinger(title, sub, at) {
     const scr = document.getElementById("liveScreen");
     if (!scr) return;
+    const late = at ? bcNow() - at : 0;
+    if (late > 1500) return;
     const old = scr.querySelector(".bc-stinger");
     if (old) old.remove();
     const el = document.createElement("div");
     el.className = "bc-stinger";
     el.innerHTML = `<div class="bc-st-band"></div><div class="bc-st-txt"><div class="t">${escapeHTML(title)}</div>${sub ? `<div class="s">${escapeHTML(sub)}</div>` : ""}</div>`;
     scr.appendChild(el);
-    cinePlay("whoosh", 0.6);
-    setTimeout(() => el.remove(), 1700);
+    showSync(el, at);
+    showSound(at, "whoosh", 0.6);
+    setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));
 }
 
 function bcSceneEffects(d) {
@@ -164,18 +170,19 @@ function bcSceneEffects(d) {
         if (prevScene === "result") tvBumper(d, () => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "intro" && x.cur === d.cur) cineMatchIntro(x); });
         else cineMatchIntro(d);
     } else if (d.scene === "talk") {
-        bcTransition("talk");
+        bcTransition("talk", Number(d.sceneAt) || 0);
     } else if (d.scene === "countdown") {
-        bcTransition("count");
+        bcTransition("count", (Number(d.deadline) || 0) - LIVE_COUNT_MS);
     } else if (d.scene === "playing" && prevScene === "countdown") {
-        cineGo();
+        cineGo(Number(d.qAt) || 0);
     } else if (d.scene === "result") {
         tvWarm();
-        setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : ""), 900);
+        const sAt = (Number(d.sceneAt) || bcNow()) + 900;
+        setTimeout(() => bcStinger("نهاية المواجهة", o ? `${o.p1} ${d.s1 || 0} - ${d.s2 || 0} ${o.p2}` : "", sAt), Math.max(0, sAt - bcNow()));
         cineResult(d);
     } else if (d.scene === "closing") {
         cineCloseAll();
-        bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج");
+        bcStinger(`ختام الجولة ${d.round}`, "ملخص النتائج", Number(d.sceneAt) || 0);
         cineClosing();
     }
 }
@@ -203,28 +210,36 @@ function bcEntrance(body, d) {
 }
 
 /* ===== لقطات انتقال بين المشاهد ===== */
-function bcTransition(kind) {
+function bcTransition(kind, at) {
     const scr = document.getElementById("liveScreen");
     if (!scr) return;
+    const late = at ? bcNow() - at : 0;
+    if (late > 1500) return;   /* خلص عند الكل */
     scr.querySelectorAll(".st-trans").forEach(e => e.remove());
     const el = document.createElement("div");
     el.className = "st-trans " + kind;
     if (kind === "talk") {
         el.innerHTML = `<i class="bloom"></i><i class="ring"></i><i class="ring two"></i><div class="lbl">${ic("mic")}<b>الترحيب بالمتسابقين</b><span>المايكات مفتوحة</span></div>`;
-        cinePlay("whoosh", 0.35);
-        setTimeout(() => cinePlay("impact", 0.25), 350);
+        showSound(at, "whoosh", 0.35);
+        if (late < 350) setTimeout(() => cinePlay("impact", 0.25), 350 - Math.max(0, late));
     } else if (kind === "count") {
         el.innerHTML = `<i class="iris"></i><div class="lbl"><b>المواجهة تبدأ</b></div>`;
-        cinePlay("riser", 0.45, { tail: 1.1 });
+        showSound(at, "riser", 0.45, { tail: 1.1 });
     } else {
         el.innerHTML = `<i class="sweep"></i>`;
-        cinePlay("whoosh", 0.3);
+        showSound(at, "whoosh", 0.3);
     }
     scr.appendChild(el);
-    setTimeout(() => el.remove(), 1700);
+    showSync(el, at);
+    setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));
 }
 
+/* القياس (bcPerf في cinema.js): كم ياخذ رسم الشاشة كل مرة */
 function renderLiveScreen() {
+    const t0 = performance.now();
+    if (renderLiveScreenNow()) bcPerfRender(performance.now() - t0);
+}
+function renderLiveScreenNow() {
     const body = document.getElementById("liveScreenBody");
     if (!body || !openLiveId) return;
     const d = liveMatchesCache[openLiveId];
@@ -238,10 +253,11 @@ function renderLiveScreen() {
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
         bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, cineBgOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
-    if (sig === liveLastSig) return;
+    if (sig === liveLastSig) return false;
     liveLastSig = sig;
 
     if (!d) {
+        body.__bcR = null;
         body.innerHTML = `
 <div class="lv-top"><button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button></div>
 <div class="lv-stage"><div class="lv-muted">جاري تحميل البث...</div></div>`;
@@ -268,8 +284,9 @@ function renderLiveScreen() {
     const sched = d.status === "scheduled";
     const o = bcCur(d);
     const total = (d.order || []).length;
-    let html = sched ? `<div class="bc-wavebg"><svg class="w1" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 0 300 120 450 60 S750 0 900 60 1050 120 1200 60 V120 H0Z"/></svg><svg class="w2" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 120 300 0 450 60 S750 120 900 60 1050 0 1200 60 V120 H0Z"/></svg><svg class="w3" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70 C200 20 400 110 600 60 S1000 20 1200 70 V120 H0Z"/></svg></div>` : "";
-    html += `
+    const R = {};
+    R.wave = sched ? `<div class="bc-wavebg"><svg class="w1" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 0 300 120 450 60 S750 0 900 60 1050 120 1200 60 V120 H0Z"/></svg><svg class="w2" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 C150 120 300 0 450 60 S750 120 900 60 1050 0 1200 60 V120 H0Z"/></svg><svg class="w3" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70 C200 20 400 110 600 60 S1000 20 1200 70 V120 H0Z"/></svg></div>` : "";
+    R.top = `
 <div class="lv-top">
 <button class="rs-back" onclick="closeLiveScreen()">${ic("chevron-right")} خروج</button>
 <span class="lv-badge ${live ? "" : (sched ? "soon" : "off")}"><span class="dot"></span>${live ? `على الهواء <b id="bcAirClock" class="st-air">00:00</b>` : (sched ? "قريباً" : "انتهى البث")}</span>
@@ -277,7 +294,8 @@ function renderLiveScreen() {
 ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic("power")} ${sched ? "إلغاء" : "إنهاء البث"}</button>` : ""}
 </div>`;
 
-    if (live) html += `<div class="st-hostrow">${bcHostHTML(d)}${bcSideCtlHTML()}</div>`;
+    R.host = live ? `<div class="st-hostrow">${bcHostHTML(d)}${bcSideCtlHTML()}</div>` : "";
+    R.pods = "";
     if (live && o && (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing" || d.scene === "result")) {
         /* منصات المتسابقين: تنور منصة اللي ضغط الجرس */
         const lit = (d.scene === "playing" && d.phase === "answer") ? d.answerer : 0;
@@ -287,11 +305,11 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
 <i class="st-cone"></i>
 <img src="${safeSrc(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
-<div class="st-desk"><b>${n === 1 ? (d.s1 || 0) : (d.s2 || 0)}</b><i>نقاط</i></div>
+<div class="st-desk">${showScoreHTML(d, n)}<i>نقاط</i></div>
 </div>`;
         const mid = d.scene === "talk" ? `الترحيب<small>قبل البداية</small>` : d.scene === "playing" ? (d.qIndex >= LIVE_Q_COUNT ? `ذهبي<small>سؤال الحسم</small>` : `السؤال ${d.qIndex + 1}<small>من ${LIVE_Q_COUNT}</small>`) : (d.scene === "result" ? "النتيجة" : "استعدوا");
         const mc = (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
-        html += `
+        R.pods = `
 ${mc ? `<div class="st-microw">${mc}</div>` : ""}
 <div class="st-pods">
 ${pod(1)}
@@ -300,16 +318,41 @@ ${pod(2)}
 </div>`;
     }
 
-    html += `<div class="lv-stage bc-scene" data-scene="${escapeHTML(d.scene || "")}">` + bcStageHTML(d, me) + `</div>`;
+    R.stage = `<div class="lv-stage bc-scene" data-scene="${escapeHTML(d.scene || "")}">` + bcStageHTML(d, me) + `</div>`;
 
-    body.innerHTML = html;
+    bcPatchRegions(body, R);
+    showAfterRender(body, d);
     bcEntrance(body, d);
 
     const qc = body.querySelector(".st-qcard");
-    if (qc) { if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
+    /* still بس للوحة جديدة لنفس السؤال (انعاد بناء المشهد)، مو للوحة نفسها اللي للحين تتحرك (الرسم الجزئي ما يعيد بناءها) */
+    if (qc && !qc.dataset.seen) { qc.dataset.seen = "1"; if (qc.dataset.q === bcLastQAnim) qc.classList.add("still"); bcLastQAnim = qc.dataset.q; }
     const inp = document.getElementById("lvAnswerInput");
     if (inp) setTimeout(() => inp.focus(), 60);
     liveTick();
+    return true;
+}
+
+/* الشاشة 5 أجزاء ثابتة (display:contents فالشكل ما يتغير)، وكل جزء ينعاد رسمه بس لو تغيّر.
+   كان كل تحديث يعيد بناء الشاشة كاملة: 200ms على معالج أبطأ 6 مرات، ولحظة الجرس على كل الجوالات */
+const BC_REGIONS = ["wave", "top", "host", "pods", "stage"];
+/* إعادة بناء كاملة: بعد تعديل مباشر في الصفحة (الجرس "ضغطت!"، مربع التسجيل) أو فتح الشاشة من جديد */
+function bcRedrawAll() {
+    const body = document.getElementById("liveScreenBody");
+    if (body) body.__bcR = null;
+    liveLastSig = "";
+    setTimeout(renderLiveScreen, 0);
+}
+function bcPatchRegions(body, R) {
+    if (!body.__bcR || !body.__bcR.stage || !body.__bcR.stage.isConnected) {
+        body.innerHTML = BC_REGIONS.map(k => `<div class="bc-r" data-r="${k}"></div>`).join("");
+        body.__bcR = {}; body.__bcHtml = {};
+        [...body.children].forEach(el => { body.__bcR[el.dataset.r] = el; });
+    }
+    for (const k of BC_REGIONS) {
+        const h = R[k] || "";
+        if (body.__bcHtml[k] !== h) { body.__bcR[k].innerHTML = h; body.__bcHtml[k] = h; }
+    }
 }
 
 function liveSoundsOnChange(d) {
@@ -550,7 +593,7 @@ function bcQuizHTML(d, me) {
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-<div class="lv-qtext">${escapeHTML(q.text)}</div>
+<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>
 </div>`;
 
     const last = d.lastAnswer;
@@ -630,7 +673,12 @@ function bcDiagPanel(d) {
         const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
         const vd = (dd.vaDiag || {})[uid];
         const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}${v.ms ? ` · الحكم بعد ${v.ms}ms` : ""}${v.srv ? ` (Whisper ${+v.srv.stt || 0} · ${escapeHTML(String(v.srv.path || ""))})` : ""}</li>`).join("");
-        return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>
+        /* أداء جواله وانقطاع النت (آخر قياس) */
+        const pf = (x.perf || []).filter(q => q && q.renders != null).slice(-1)[0];
+        const nt = (x.net || []).slice(-3).map(q => escapeHTML(String(q.ev || ""))).join("، ");
+        const perf = pf ? `<div class="bd-e">جواله: رسم أقصى ${+pf.renderMax || 0}ms · مهام طويلة ${+pf.longMs || 0}ms · لمسة ${+pf.tapMax || 0}ms${pf.lite ? " · خفيف" : ""}</div>` : "";
+        const net = nt ? `<div class="bd-e">النت: ${nt}</div>` : "";
+        return `<div class="bd-p"><div class="bd-n">${escapeHTML(name || "")}</div>${perf}${net}
 ${bz ? `<table><tr><th>السؤال</th><th>محلي</th><th>السيرفر</th><th>وصل</th><th></th></tr>${bz}</table>` : `<div class="bd-e">ما ضغط الجرس للحين</div>`}
 ${va ? `<ul>${va}</ul>` : ""}</div>`;
     }).join("");

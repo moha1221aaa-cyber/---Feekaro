@@ -19,8 +19,9 @@ function vaVadCreate(rate) {
        كل الكلام انلقط بدون ولا دورة ناقصة، والسكوت صفر، والموسيقى الكاملة بعد رفع الصوت مقطع واحد في 22 ث */
     const ah = Math.exp(-2 * Math.PI * 300 / rate), al = 1 - Math.exp(-2 * Math.PI * 3500 / rate);
     const K = 4, MIN = 0.008, REL = 0.2, PD = 0.995, ON = 6;
-    let ri = 0, px = 0, py = 0, ly = 0, floor = 0.01, pk = 0, on = 0, off = 0, talking = false;
-    const st = { N, speechMs: 0, peak: 0, frames: 0, floor: floor, talking: false, e: 0 };
+    let ri = 0, px = 0, py = 0, ly = 0, floor = 0.01, pk = 0, on = 0, off = 0, gap = 0, talking = false;
+    let son = 0, soff = 0, sgap = 0, soft = false;
+    const st = { N, speechMs: 0, softMs: 0, peak: 0, frames: 0, floor: floor, talking: false, soft: false, e: 0 };
     st.frame = function (x) {
         let s = 0, s2 = 0, z = 0;
         for (let i = 0; i < x.length; i++) {
@@ -38,12 +39,23 @@ function vaVadCreate(rate) {
         pk = Math.max(e, pk * PD);
         const hi = Math.max(MIN, floor * K, pk * REL), lo = hi * 0.66;
         const voiced = e > hi && zcr < 0.4;
-        if (voiced) { on++; off = 0; } else if (e < lo || zcr >= 0.4) { off++; on = 0; }
+        /* فجوة قصيرة (لين 80ms) داخل الكلام ما تصفّر العداد: إلغاء الصدى في الجوال يقطّع الكلام لما فيه صوت ثاني
+           (تجربة 21 أكتوبر الثانية: أندرويد 10، 3 محاولات كلها no-speech وأعلى صوت 0.024) */
+        if (voiced) { on++; gap = 0; off = 0; }
+        else { if (++gap > 4) on = 0; if (e < lo || zcr >= 0.4) off++; }
         if (!talking && on >= ON) talking = true;
         if (talking && off >= 15) talking = false;
         if (talking && e > lo) st.speechMs += n / rate * 1000;
+        /* كاشف حساس احتياط (soft): عتبة أوطى (0.004) ويسمح بفجوات لين 200ms. يلقط كلام واطي ومقطّع،
+           بس ممكن يلقط موسيقى بعد رفع الصوت، فما يُستخدم لنهاية الكلام إلا لو الكاشف الأساسي ما سمع شي (voice-answer.js) */
+        const shi = Math.max(0.004, floor * K, pk * REL), slo = shi * 0.66;
+        if (e > shi && zcr < 0.4) { son++; sgap = 0; soff = 0; }
+        else { if (++sgap > 10) son = 0; if (e < slo || zcr >= 0.4) soff++; }
+        if (!soft && son >= ON) soft = true;
+        if (soft && soff >= 15) soft = false;
+        if (soft && e > slo) st.softMs += n / rate * 1000;
         if (rms > st.peak) st.peak = rms;
-        st.frames++; st.floor = floor; st.talking = talking; st.e = e; st.rms = rms;
+        st.frames++; st.floor = floor; st.talking = talking; st.soft = soft || talking; st.e = e; st.rms = rms;
         return talking;
     };
     return st;
@@ -69,7 +81,7 @@ if (typeof registerProcessor === "function" && typeof AudioWorkletProcessor === 
                     if (this.n === this.buf.length) {
                         const f = this.buf;
                         const v = this.vad, talking = v.frame(f);
-                        this.port.postMessage({ pcm: f, talking, rms: v.rms, e: v.e, floor: v.floor, speechMs: v.speechMs, peak: v.peak }, [f.buffer]);
+                        this.port.postMessage({ pcm: f, talking, soft: v.soft, softMs: v.softMs, rms: v.rms, e: v.e, floor: v.floor, speechMs: v.speechMs, peak: v.peak }, [f.buffer]);
                         this.buf = new Float32Array(this.vad.N); this.n = 0;
                     }
                 }

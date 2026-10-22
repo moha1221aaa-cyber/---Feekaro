@@ -27,7 +27,11 @@ function tvBuzzMoment(d) {
     el.innerHTML = `<i class="tv-bz-band"></i><i class="tv-bz-shine"></i>
 <div class="tv-bz-in"><img src="${safeSrc(bcAv(o, n))}" alt=""><div><b>${escapeHTML(n === 1 ? o.p1 : o.p2)}</b><span>${d.passed ? "انتقل له السؤال" : "ضغط الجرس!"}</span></div></div>`;
     scr.appendChild(el);
-    setTimeout(() => el.remove(), 1700);
+    /* لحظة الجرس = بداية وقت الإجابة (deadline - LIVE_ANSWER_MS)، فالشريط بنفس الإطار على كل الجوالات */
+    const at = (Number(d.deadline) || 0) - LIVE_ANSWER_MS, late = at > 0 ? bcNow() - at : 0;
+    if (late > 1500) { el.remove(); return; }
+    showSync(el, at > 0 ? at : 0);
+    setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));
 }
 
 /* ===== العداد الأخير + لوحة النتيجة (تنادى من liveTick كل 200ms) ===== */
@@ -47,7 +51,7 @@ function tvTick(d) {
         TV.sec = sec;
         if (sec > 0) {
             const num = document.getElementById("lvTimerNum");
-            if (num) { num.classList.remove("beat"); void num.offsetWidth; num.classList.add("beat"); }
+            bcRestartAnim(num, "beat");
             if (d.phase === "buzz") cinePlay("tick", sec <= 3 ? 0.45 : 0.3);
         }
     }
@@ -77,7 +81,8 @@ function tvBoard(d) {
 <div class="tv-bd-p r ${d.outcome === 2 ? "up" : ""}">${num(p2, s2)}<span class="nm">${escapeHTML(o.p2)}</span><img src="${safeSrc(bcAv(o, 2))}" alt=""></div>
 </div>
 <div class="tv-bd-lead">${escapeHTML(lead)}</div>`;
-        b.classList.remove("on"); void b.offsetWidth;
+        bcRestartAnim(b, "on", () => TV.boardKey === key, true);
+        return;
     }
     b.classList.add("on");
 }
