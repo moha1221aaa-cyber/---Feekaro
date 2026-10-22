@@ -78,7 +78,7 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة", audio }), k.env))).json();
     check("answer that shares a question word (سورة البقرة) still accepted fast", r.ok === true && r.t.path === "fast", r);
     const w = k.c.find(x => x.m.includes("whisper"));
-    check("whisper prompt no longer contains the question", w && w.i.initial_prompt.indexOf("عظام") === -1, w && w.i.initial_prompt);
+    check("whisper gets no initial_prompt (it leaked into the output)", w && w.i.initial_prompt === undefined, w && w.i.initial_prompt);
     /* مراجعة الكود: جواب صح فيه كلمة من السؤال ما ينرفض */
     k = mk("سبعة أيام", "سبعة");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "كم عدد أيام الأسبوع؟", answer: "7", audio }), k.env))).json();
@@ -86,5 +86,22 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     k = mk("انا متأكد مية بالمية انها سورة البقرة", "سورة البقرة");
     r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما هي أطول سورة في القرآن الكريم؟", answer: "البقرة", audio }), k.env))).json();
     check("extracted answer with a question word (سورة البقرة) accepted", r.ok === true && r.t.path !== "extract-rejected", r);
+}
+{
+    /* تجربة 22 أكتوبر: هلوسات Whisper انحسبت جواب وراح الدور */
+    const mk = (stt) => { let llm = 0; return { get llm() { return llm; }, env: { AI: { run: async (m) => { if (m.includes("whisper")) return stt; llm++; return { response: JSON.stringify({ said: "شي", ok: true }) }; } } } }; };
+    const go = async (stt, answer) => { const k = mk(stt); const r = await (await onRequestPost(ctxFor(await req({ task: "voice", q: "ما أصغر دولة في العالم؟", answer: answer || "الفاتيكان", audio }), k.env))).json(); return { r, llm: k.llm }; };
+    for (const t of ["شكرا للمشاهدة.", "اشتركوا في القناة", "لا تنسوا الاشتراك في القناة", "والمتسابق، والمتسابق، والمتسابق، والمتسابق.", "[موسيقى]", "شكراً."]) {
+        const x = await go({ text: t });
+        check("hallucination dropped: " + t, x.r.ok === false && !x.r.heard && !x.r.said && x.llm === 0, x);
+    }
+    let x = await go({ text: "شكرا للمشاهدة الفاتيكان", segments: [{ text: "شكرا للمشاهدة", no_speech_prob: 0.92, avg_logprob: -0.4 }, { text: "الفاتيكان", no_speech_prob: 0.05, avg_logprob: -0.3 }] });
+    check("segment with high no_speech_prob dropped, the real answer kept", x.r.ok === true && x.r.heard === "الفاتيكان", x);
+    x = await go({ text: "الفاتيكار", segments: [{ text: "الفاتيكار", no_speech_prob: 0.1, avg_logprob: -1.6 }] });
+    check("low-confidence segment dropped", x.r.ok === false && !x.r.heard, x);
+    x = await go({ text: "الفاتيكار" });
+    check("real answer still accepted (no segments field)", x.r.ok === true && x.llm === 0, x);
+    x = await go({ text: "المترجم", segments: [{ text: "المترجم", no_speech_prob: 0.1, avg_logprob: -0.2 }] }, "المترجم");
+    check("a real answer that looks like a credit word is kept", x.r.ok === true, x);
 }
 auth.restore(); done();
