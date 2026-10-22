@@ -607,3 +607,11 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, .tab:focus
   .section.active, .modal-overlay.active .modal-content{ animation: none !important; }
   ::view-transition-old(root), ::view-transition-new(root){ animation: none; }
 }
+
+/* نسيت كلمة المرور: رابط نصي تحت أزرار الدخول */
+.account-box .forgot-pass-btn{
+  display: block; margin: 12px auto 0; padding: 6px 10px;
+  background: none !important; box-shadow: none !important; border: 0;
+  color: var(--brand); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;
+}
+.account-box .forgot-pass-btn:disabled{ opacity: .5; }

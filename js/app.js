@@ -179,7 +179,7 @@ function authErrAr(err) {
     const c = (err && err.code) || "";
     const m = {
         "auth/invalid-email": "البريد الإلكتروني مكتوب غلط.",
-        "auth/user-not-found": "ما فيه حساب بهذا البريد.",
+        "auth/user-not-found": "ما فيه حساب بهذا البريد. لو حسابك من قبل، الحسابات القديمة انحذفت: أنشئ حساب جديد.",
         "auth/wrong-password": "كلمة المرور غلط.",
         "auth/invalid-credential": "البريد أو كلمة المرور غلط.",
         "auth/invalid-login-credentials": "البريد أو كلمة المرور غلط.",
@@ -191,6 +191,7 @@ function authErrAr(err) {
         "auth/unauthorized-domain": "هذا الرابط مو مسموح له بتسجيل الدخول. كلّم المنظم.",
         "auth/operation-not-allowed": "طريقة تسجيل الدخول هذي مقفلة. كلّم المنظم.",
         "auth/missing-password": "اكتب كلمة المرور.",
+        "auth/missing-email": "اكتب بريدك الإلكتروني.",
         "permission-denied": "ما عندك صلاحية لهذي العملية."
     };
     return m[c] || ("صار خطأ غير متوقع، جرّب مرة ثانية." + (c ? " (" + c + ")" : ""));
