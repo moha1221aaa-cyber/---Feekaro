@@ -615,3 +615,13 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, .tab:focus
   color: var(--brand); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;
 }
 .account-box .forgot-pass-btn:disabled{ opacity: .5; }
+
+/* المسابقة التجريبية: شريط فوق الرئيسية وقت التجربة */
+.trial-banner{
+  display: flex; align-items: center; gap: 12px; max-width: 520px; margin: 10px auto; padding: 12px 14px;
+  border-radius: var(--r-lg); border: 1px solid rgba(250,204,21,.45);
+  background: linear-gradient(180deg, rgba(250,204,21,.14), rgba(250,204,21,.05)); color: var(--text, #fff);
+}
+.trial-banner .ic{ width: 26px; height: 26px; color: var(--gold); flex: none; }
+.trial-banner b{ display: block; color: var(--gold); font-size: 15px; }
+.trial-banner span{ display: block; font-size: 13px; color: var(--text-2); }

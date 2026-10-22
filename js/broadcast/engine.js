@@ -63,7 +63,8 @@ function liveRef(id) { return liveCol().doc(id); }
    liveBoxes/<id> صناديق أسئلة المواجهات (السيرفر بس يقراها)، liveDiag/<id> التشخيص (المنظم يقراها لما يفتح اللوحة) */
 function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
 function liveDiagRef(id) { return firebaseDB.collection("room").doc("main").collection("liveDiag").doc(id); }
-function bcId(r) { return "round_" + r; }
+/* وقت المسابقة التجريبية (leagueTrial في app.js) البث له معرّف لحاله (round_trial<رقم>)، عشان ما ينكتب فوق بث الجولة الحقيقية */
+function bcId(r) { return "round_" + (leagueTrial ? "trial" : "") + r; }
 /* ===== وقت السيرفر: فرق ساعة الجوال عن السيرفر، عشان المؤقتات تكون عادلة للكل ===== */
 let bcClockOffset = 0, bcClockSynced = false;
 try { bcClockOffset = Number(sessionStorage.getItem("bcClockOffset")) || 0; } catch (e) {}
@@ -304,7 +305,7 @@ async function bcStartRound(r) {
     const secret = await bcSealRound(id, order);
     const data = Object.assign(bcQuizReset(), {
         aiLines: aiLines || null,
-        type: "round", round: r, status: choice.at ? "scheduled" : "live", scene: choice.at ? "waiting" : "opening", cur: -1, order: order,
+        type: "round", trial: leagueTrial ? 1 : 0, round: r, status: choice.at ? "scheduled" : "live", scene: choice.at ? "waiting" : "opening", cur: -1, order: order,
         startAt: choice.at || bcNow(),
         hostUid: currentUser.uid, hostName: myName, hostAv: myAv,
         questions: [], usedQ: [], sceneAt: bcNow(), hostSeen: bcNow(), v: 1,
@@ -917,6 +918,8 @@ function liveCommitAnswer(id, text, aiOk, q0) {
 function bcApplyResults(id) {
     const d = liveMatchesCache[id];
     if (!d || !firebaseDB || !currentUser) return;
+    /* نتيجة بث التجربة ما تنكتب إلا في جدول التجربة، ونتيجة البث الحقيقي ما تنكتب في جدول التجربة */
+    if (!!d.trial !== !!leagueTrial) return;
     (d.order || []).forEach((o, i) => {
         if (o.state !== "done" || o.applied) return;
         if (!isAdmin && o.uid1 !== currentUser.uid && o.uid2 !== currentUser.uid) return;
