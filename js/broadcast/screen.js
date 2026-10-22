@@ -36,6 +36,7 @@ function openLiveScreen(id) {
         scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
     }
     scr.classList.add("open");
+    screenAwake("live", true);
     try { const v = document.getElementById("stVideo"); if (v && v.paused && !bcLite) v.play().catch(() => {}); } catch (e) {}
     bcApplyLite();
     bcWatchFrames();
@@ -59,6 +60,7 @@ function closeLiveScreen(fromPop) {
         return;
     }
     openLiveId = null;
+    screenAwake("live", false);
     const scr = document.getElementById("liveScreen");
     if (scr) scr.classList.remove("open");
     document.body.classList.remove("live-open");

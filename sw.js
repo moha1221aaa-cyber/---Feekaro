@@ -4,7 +4,7 @@
    - رقم الإصدار CACHE_NAME: لازم يتغيّر مع كل تحديث كبير للموقع حتى يحمّل الأجهزة النسخة الجديدة. */
 const CACHE_NAME = "masro7-shell-v48";
 /* ملفات الموقع الأساسية (الشكل في css/ والكود في js/) */
-const SHELL_FILES = ["/", "/index.html", "/logo.png", "/icon-192.png", "/manifest.json", "/css/main.css", "/css/room.css", "/css/design.css", "/css/broadcast.css", "/js/core.js", "/js/pwa.js", "/js/config.js", "/js/voice.js", "/js/app.js", "/js/notifications.js", "/js/predictions.js", "/js/league.js", "/js/account.js", "/js/videos.js", "/js/room.js", "/js/room-tools.js", "/js/room-screen.js", "/js/broadcast/engine.js", "/js/broadcast/presenter.js", "/js/broadcast/studio.js", "/js/broadcast/cinema.js", "/js/broadcast/tv.js", "/js/broadcast/show.js", "/js/broadcast/voice.js", "/js/broadcast/va-worklet.js", "/js/broadcast/voice-answer.js", "/js/broadcast/screen.js", "/js/ai.js", "/js/menu.js"];
+const SHELL_FILES = ["/", "/index.html", "/logo.png", "/icon-192.png", "/manifest.json", "/css/main.css", "/css/room.css", "/css/design.css", "/css/broadcast.css", "/js/core.js", "/js/pwa.js", "/js/wake.js", "/js/config.js", "/js/voice.js", "/js/app.js", "/js/notifications.js", "/js/predictions.js", "/js/league.js", "/js/account.js", "/js/videos.js", "/js/room.js", "/js/room-tools.js", "/js/room-screen.js", "/js/broadcast/engine.js", "/js/broadcast/presenter.js", "/js/broadcast/studio.js", "/js/broadcast/cinema.js", "/js/broadcast/tv.js", "/js/broadcast/show.js", "/js/broadcast/voice.js", "/js/broadcast/va-worklet.js", "/js/broadcast/voice-answer.js", "/js/broadcast/screen.js", "/js/ai.js", "/js/menu.js"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

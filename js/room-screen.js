@@ -179,6 +179,7 @@ function openRoomScreen(skipPush) {
     }
     roomScreenOpen = true;
     scr.classList.add("open");
+    screenAwake("room", true);
     document.body.classList.add("room-open");
     joinRoomPresence();
     if (roomState.isLive && !agoraJoined) ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
@@ -201,6 +202,7 @@ function closeRoomScreen(fromPop) {
         return;
     }
     roomScreenOpen = false;
+    screenAwake("room", false);
     const scr = document.getElementById("roomScreen");
     if (scr) scr.classList.remove("open");
     document.body.classList.remove("room-open");

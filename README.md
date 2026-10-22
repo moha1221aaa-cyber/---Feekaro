@@ -16,6 +16,7 @@ css/
 js/
   core.js               أيقونات SVG، وتحميل مكتبة أجورا وقت الحاجة
   pwa.js                تثبيت الموقع كتطبيق + Service Worker
+  wake.js               الشاشة ما تطفي وقت البث وفي الغرفة (Screen Wake Lock، ويرجع يطلبه لما الموقع يرجع للواجهة، وفيديو صامت صغير media/awake.* للمتصفح اللي ما يدعمه)
   config.js             إعدادات Cloudinary و Firebase و أجورا
   voice.js              صوت الغرفة (أجورا)
   app.js                حالة التطبيق، النوافذ، المتسابقين، توليد المواجهات، التحميل والحفظ
@@ -101,5 +102,6 @@ node tests/harness/perf.mjs /tmp/out                  # جوال ضعيف (مع�
 node tests/harness/show.mjs /tmp/out                  # الإخراج: نفس الإطار على جهاز متأخر، الأشرطة، الإضاءة، النقاط
 node tests/harness/secure.mjs /tmp/out                # الأجوبة المختومة (functions/answer.js الحقيقي)
 node tests/harness/nomusic.mjs                        # البث بدون موسيقى: ولا ملف موسيقى ينطلب ولا صوت متكرر، والمؤثرات القصيرة باقية
+node tests/harness/wakelock.mjs                       # الشاشة ما تطفي: القفل ينطلب مع البث والغرفة، وينفك بعدهم، ويرجع بعد الخلفية، والفيديو البديل
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال
 ```
