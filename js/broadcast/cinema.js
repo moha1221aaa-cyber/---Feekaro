@@ -144,6 +144,8 @@ function cineLoadSamples(ids) {
 function cineS(id, t, v, o) {
     const b = CINE_BUF[id];
     if (!b) return false;
+    /* وقت جوابي بالصوت ما يطلع أي مؤثر عندي (إلا صوت جرسي لحظة الضغط، قبل ما يبدأ التسجيل) */
+    if (typeof VA !== "undefined" && VA.rec && id !== "buzz") return false;
     try {
         const G = cineGraph(), c = G.c;
         try { if (c.state === "suspended") c.resume(); } catch (e) {}
@@ -452,7 +454,7 @@ function bedTarget() {
     let v = 0.8;
     if (bcTrack && !bcSelfMuted) v *= 0.5;   /* مايكك مفتوح: نخفضها عشان ما تدخل المايك */
     if (BED.duck) v *= 0.3;                   /* المذيع يتكلم */
-    if (typeof VA !== "undefined" && VA.rec) v *= 0.1;   /* أنا أجاوب بصوتي: الموسيقى شبه ساكتة عشان ما تدخل التسجيل */
+    if (typeof VA !== "undefined" && VA.rec) v = 0;   /* أنا أجاوب بصوتي: الموسيقى تسكت (كانت 10% وإلغاء الصدى يقطّع كلامي) */
     if (typeof bcRemoteTalk !== "undefined" && bcRemoteTalk) v *= 0.35;   /* متسابق أو المنظم يتكلم: صوته أوضح من الموسيقى */
     if (bcNow() < (BED.holdUntil || 0)) v *= 0.15;   /* موسيقى مشهد خاصة شغالة */
     return v;

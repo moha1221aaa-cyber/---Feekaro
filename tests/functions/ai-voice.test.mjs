@@ -97,11 +97,27 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     }
     let x = await go({ text: "شكرا للمشاهدة الفاتيكان", segments: [{ text: "شكرا للمشاهدة", no_speech_prob: 0.92, avg_logprob: -0.4 }, { text: "الفاتيكان", no_speech_prob: 0.05, avg_logprob: -0.3 }] });
     check("segment with high no_speech_prob dropped, the real answer kept", x.r.ok === true && x.r.heard === "الفاتيكان", x);
+    /* قاعدة Whisper نفسه: السكوت = no_speech عالي والثقة واطية مع بعض (تجربة 22 أكتوبر الثانية: انشال "الأرجنتين") */
     x = await go({ text: "الفاتيكار", segments: [{ text: "الفاتيكار", no_speech_prob: 0.1, avg_logprob: -1.6 }] });
-    check("low-confidence segment dropped", x.r.ok === false && !x.r.heard, x);
+    check("low confidence alone is kept (real answers on a bad mic)", x.r.ok === true, x);
+    x = await go({ text: "الفاتيكان", segments: [{ text: "الفاتيكان", no_speech_prob: 0.7, avg_logprob: -0.4 }] });
+    check("no_speech 0.7 with good confidence is kept", x.r.ok === true, x);
+    x = await go({ text: "شي", segments: [{ text: "شي", no_speech_prob: 0.7, avg_logprob: -1.3 }] });
+    check("no_speech high + low confidence dropped", x.r.ok === false && !x.r.heard, x);
     x = await go({ text: "الفاتيكار" });
     check("real answer still accepted (no segments field)", x.r.ok === true && x.llm === 0, x);
     x = await go({ text: "المترجم", segments: [{ text: "المترجم", no_speech_prob: 0.1, avg_logprob: -0.2 }] }, "المترجم");
     check("a real answer that looks like a credit word is kept", x.r.ok === true, x);
+}
+{
+    /* هيكل الحروف (تجربة 22 أكتوبر الثانية: "أمقارون" والجواب "أنقرة") بدون ما يقبل أجوبة غلط قريبة */
+    const { voiceMatch } = await import("../../lib/grading.js");
+    const T = [["أمقارون", "أنقرة", true], ["انقره", "أنقرة", true], ["الارجنتين", "الأرجنتين", true], ["ارجنتين", "الأرجنتين", true], ["الفاتيكار", "الفاتيكان", true],
+        ["القاهره", "القاهرة", true], ["الفاتحه", "الفاتحة", true], ["الرياض", "أنقرة", false], ["جدة", "جيزان", false], ["البرازيل", "الأرجنتين", false],
+        ["نيجيريا", "النيجر", false], ["اليمن", "عمان", false], ["مصر", "مسقط", false], ["سوريا", "السودان", false], ["تونس", "تركيا", false],
+        ["الهند", "هولندا", false], ["ايران", "العراق", false], ["كندا", "كينيا", false], ["امريكا", "المكسيك", false], ["الكويت", "القاهرة", false],
+        ["إيه يو", "Au", true], ["اي يو", "Au", true], ["اتش تو او", "H2O", true], ["يو اس ايه", "USA", true], ["يوم", "Au", false], ["اي جي", "Au", false]];
+    const bad = T.filter(([g, a, w]) => voiceMatch(g, a) !== w);
+    check("voiceMatch: close mishearings accepted, near-miss wrong answers rejected, spelled Latin letters (26 cases)", !bad.length, bad);
 }
 auth.restore(); done();

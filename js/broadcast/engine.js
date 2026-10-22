@@ -841,7 +841,7 @@ function liveBuzz(ev) {
         if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
         return u;
     });
-    cinePlay("buzz", 0.7);
+    cinePlay("buzz", 0.35);   /* عندي أوطى (الاهتزاز والجرس المضغوط يكفون)، عشان ما يغطي أول كلمة من جوابي */
     try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
     requestAnimationFrame(() => { bz.local = Math.round(performance.now() - t0); });
     setTimeout(() => bcBuzzDone(bz), 6000);   /* لو ما وصل شي، نسجّل اللي عندنا */

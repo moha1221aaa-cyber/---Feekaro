@@ -27,8 +27,10 @@
             const h = {};
             /* window.__agora: عدد الدخول والنشر، و emit يطلق حدث (مثلاً انقطاع النت) للاختبار */
             const st = window.__agora = { joins: 0, publishes: 0, published: [], emit: (e, ...a) => h[e] && h[e](...a) };
+            /* متسابق ثاني/المنظم: نتابع مستوى صوته عندي (لازم يسكت وقت جوابي) */
+            window.__remoteVol = 100;
             return {
-                remoteUsers: [],
+                remoteUsers: [{ uid: 99, audioTrack: { setVolume: v => { window.__remoteVol = v; }, play() {}, stop() {} } }],
                 on: (e, f) => { h[e] = f; },
                 join: (app, ch, tok, uid) => { st.joins++; return Promise.resolve(uid || Math.floor(Math.random() * 1e6)); },
                 publish: tr => { st.publishes++; if (st.failPublish > 0) { st.failPublish--; return Promise.reject(new Error("CAN_NOT_PUBLISH_MULTIPLE_TRACKS")); } st.published = tr; return Promise.resolve(); }, unpublish: () => Promise.resolve(),
