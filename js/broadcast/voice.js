@@ -131,10 +131,13 @@ async function bcLeave() {
     bcMyUid = null;
 }
 
+/* شارة البداية شغالة (أول CINE_IDENT_MS من فقرة الترحيب): المايكات تنتظرها عشان صوتها ما يتداخل مع الشارة (طلب محمد 23 أكتوبر 2026) */
+function bcIdentOn(d) { return !!d && d.scene === "talk" && bcNow() < (Number(d.sceneAt) || 0) + CINE_IDENT_MS + 300; }
 /* هل لازم مايكي يكون مفتوح الحين؟ المنظم دايماً، وللمتسابقين أول ما تبدأ مواجهتهم */
 function bcShouldPublish(d) {
     /* المايك يفتح بس وقت اللعب: من بداية المواجهة (العد التنازلي والأسئلة)، ويتقفل أول ما تنتهي */
     if (!currentUser || !d || d.status !== "live" || !(d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") || !bcCur(d)) return false;
+    if (bcIdentOn(d)) return false;
     if (amBcHost(d)) return true;
     return !!myLiveNum(d);
 }

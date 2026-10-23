@@ -49,14 +49,14 @@ async function doSeal(env, b, user) {
   if (!ID_RE.test(String(b.id || ""))) return json(400, { error: "bad id" });
   if (Array.isArray(b.boxes)) {
     const boxes = [];
-    for (let i = 0; i < Math.min(b.boxes.length, 40); i++) {
+    for (let i = 0; i < Math.min(b.boxes.length, 60); i++) {
       const t = String(b.boxes[i] || "");
       if (!t || t.length > 20000) return json(400, { error: "bad box" });
       boxes.push(await seal(key, b.id, "\u0001box" + i, t));
     }
     return json(200, { boxes });
   }
-  const items = Array.isArray(b.items) ? b.items.slice(0, 160) : [];
+  const items = Array.isArray(b.items) ? b.items.slice(0, 300) : [];
   const out = [];
   for (const it of items) {
     const text = clip(it && it.text, 200), answer = clip(it && it.answer, 160);

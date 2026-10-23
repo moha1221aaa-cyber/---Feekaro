@@ -27,7 +27,8 @@ try {
     check("original league saved in full", saved && JSON.stringify(saved.playersList) === JSON.stringify(original.playersList) && JSON.stringify(saved.matches) === JSON.stringify(original.matches) && JSON.stringify(saved.playerLinks) === JSON.stringify(original.playerLinks) && saved.restoredAt === null);
     check("banner + button switch on", await until(() => host.evaluate(() => /مسابقة تجريبية/.test(document.getElementById("trialBanner").innerText) && /إنهاء التجربة/.test(document.getElementById("trialBtn").textContent)), 5000));
     check("table shows trial names", await until(() => host.evaluate(() => players.length === 6 && players.some(p => p.name === "ياي")), 5000));
-    check("trial broadcast id is separate (round_trial1)", await host.evaluate(() => bcId(1) === "round_trial1"));
+    check("trial broadcast id is separate (one broadcast for all rounds)", await host.evaluate(() => bcId(1) === "round_trialall" && bcId(3) === "round_trialall"));
+    check("one start button only (first round), for all rounds", await until(() => host.evaluate(() => { const b = [...document.querySelectorAll(".live-start-btn")]; return b.length >= 1 && b.every(x => /كل الجولات/.test(x.textContent)); }), 5000), await host.evaluate(() => [...document.querySelectorAll(".live-start-btn")].map(x => x.textContent)));
     /* توقع وقت التجربة + ربط حساب لاسم موجود في الأصلي */
     db.write({ op: "set", path: "predictions/u_p2_r1_احمد_مشاري", data: { userId: "u_p2", matchId: "r1_احمد_مشاري", s1: 1, s2: 0, updatedAt: { __fv: "ts" } } });
     db.write({ op: "update", path: "league/current", data: { "playerLinks": { "سعود": "u_new" } } });
