@@ -11,13 +11,24 @@ const CINE_REDUCED = (() => { try { return matchMedia("(prefers-reduced-motion: 
    فيديو الاستوديو المتكرر + لقطات بحركة كاميرا وفلاتر + زجاج (backdrop-filter) + جزيئات: على جوال ضعيف تاخذ المعالج كله،
    فالجرس يتأخر (قسنا 300ms على أندرويد 10) والصوت يتقطع. الوضع الخفيف يوقف الفيديو على صورة ثابتة ويشيل الحركة والزجاج،
    وشكل البث نفسه (الألوان والمنصات والنص) ما يتغير. يشتغل لحاله: جهاز ضعيف (4 أنوية أو أقل، أو ذاكرة 2GB أو أقل)
-   أو لو الإطارات تتأخر أول ما يفتح البث. ?lite=1 أو ?lite=0 للتجربة */
+   أو لو الإطارات تتأخر أول ما يفتح البث. ?lite=1 أو ?lite=0 للتجربة.
+   وضع التبريد (23 أكتوبر 2026، "الجوالات تسخن وخصوصاً الآيفون"): أي جوال أو تابلت (آيفون وأندرويد وآيباد) يشتغل عليه الخفيف دايماً.
+   فيديو الاستوديو بفلتر وحركة الخلفية والزجاج كانت ترسم كل إطار طول البث (ساعة وأكثر)، فالمعالج والشاشة شغالين على الآخر.
+   الكمبيوتر يظل بالشكل الكامل */
+function bcIsPhone() {
+    try {
+        const ua = navigator.userAgent || "";
+        if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+        /* الآيباد يقول إنه ماك: نعرفه من اللمس */
+        return navigator.maxTouchPoints > 1 && matchMedia("(pointer: coarse)").matches;
+    } catch (e) { return false; }
+}
 let bcLite = (() => {
     try {
         const q = new URLSearchParams(location.search).get("lite");
         if (q === "1") return true;
         if (q === "0") return false;
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent || "")) return false;   /* سفاري ما يعطي عدد الأنوية الحقيقي، والآيفون يكشفه فحص الإطارات */
+        if (bcIsPhone()) return true;
         return (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2;
     } catch (e) { return false; }
 })();
@@ -96,7 +107,9 @@ const CINE_FILES = {
     heartbeat: { g: 1 }, fireworks: { g: 0.7 },
     buzz: { g: 1.3 }, correct: { g: 1 }, wrong: { g: 0.78 }, tick: { g: 1.4 }, timeout: { g: 0.85 },
     /* طابع برامج المسابقات (مؤثرات قصيرة). الموسيقى (lobby، show_intro، interlude، decider، think2، outro، big_win) انشالت */
-    reveal: { g: 0.83 }, match_end: { g: 0.81 }, applause: { g: 1 }, start_q: { g: 0.87 }
+    reveal: { g: 0.83 }, match_end: { g: 0.81 }, applause: { g: 1 }, start_q: { g: 0.87 },
+    /* نغمة شارة البداية (5.8 ث، مقطوعة من show_intro بتلاشي): طلب محمد 23 أكتوبر 2026، قبل الترحيب بالمتسابقين */
+    ident: { g: 0.55 }
 };
 const CINE_BUF = {};
 const CINE_LOADING = {};
@@ -106,6 +119,7 @@ function cineNeedFor(d) {
     if (!d || d.status !== "live") return [];
     const left = (d.order || []).filter((o, i) => o.state === "pending" && i !== d.cur).length;
     if (d.scene === "closing" || (d.scene === "result" && !left)) return ["fireworks"];
+    if (d.scene === "intro") return ["ident"];
     return [];
 }
 function cineLoadSamples(ids) {
@@ -367,6 +381,31 @@ function cineMatchIntro(d) {
     });
     cineAt(el, 4.4, () => cineOn(el, ".cine-of"));
     cineAt(el, 6.4, () => { cinePlay("whoosh", 0.6); cineFlash(el, 1, 650); });
+}
+
+/* ===== شارة البداية: أول ما يضغطون الاثنين "جاهز"، قبل الترحيب (مثل دخول البرنامج في التلفزيون) =====
+   شعار الدوري واسمه (مرسوم، بدون فيديو عشان ما يتغطى النص)، ونغمة البداية، وبعدها أسماء المواجهة. at: لحظة المشهد بساعة السيرفر،
+   فالجوال المتأخر يدخل من نفس المكان، ولو فاتت الشارة كلها ما تطلع. يرجّع مدتها المتبقية بالـ ms */
+const CINE_IDENT_MS = 5600;
+function cineIdent(d, at) {
+    const o = bcCur(d);
+    const late = Math.max(0, at ? bcNow() - at : 0);
+    if (!o || late > CINE_IDENT_MS - 1500) return 0;
+    cineReady();
+    const el = cineOverlay("ident", `
+<div class="cine-bar t"></div><div class="cine-bar b"></div>
+<img src="logo.png" class="cine-logo" alt="">
+<div class="cine-idname"><span class="cine-gold">دوري بنو مسروح للنخبة</span><small>MASRO7 LEAGUE</small></div>
+<div class="cine-idmatch">المواجهة ${escapeHTML(BC_AR_NUM_F[d.cur] || String(d.cur + 1))}<b>${escapeHTML(o.p1)} <i>ضد</i> ${escapeHTML(o.p2)}</b></div>
+<div class="cine-skip">اضغط للتخطي</div>`, CINE_IDENT_MS - late);
+    if (!el) return 0;
+    const at0 = s => Math.max(0, s - late / 1000);
+    if (late < SHOW_SOUND_LATE) cinePlay("ident", 0.9) || cinePlay("braam", 0.8);
+    cineAt(el, at0(0.25), () => { cineOn(el, ".cine-logo"); cineFlash(el, 0.7, 500); });
+    cineAt(el, at0(1.1), () => cineOn(el, ".cine-idname"));
+    cineAt(el, at0(2.6), () => { cineOn(el, ".cine-idmatch"); cinePlay("whoosh", 0.4); });
+    cineAt(el, at0(5.0), () => cineFlash(el, 1, 550));
+    return CINE_IDENT_MS - late;
 }
 
 /* ===== "انطلق!" لحظة بداية الأسئلة ===== */
