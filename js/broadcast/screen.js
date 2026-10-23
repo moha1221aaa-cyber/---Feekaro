@@ -396,11 +396,12 @@ function liveSoundsOnChange(d) {
 /* المنظم فوق (صورته واسمه)، والمتسابقين تحته في المشهد نفسه */
 function bcHostHTML(d) {
     const av = cdnThumb(d.hostAv || getPlayerAvatar(d.hostName || "م").url);
+    /* وقت المايكات: الاسم بس (لون الحلقة يبيّن المايك مفتوح أو مقفل). نص "المايك مفتوح" كان يوسّع البطاقة فتركب على الأزرار */
     const micOn = d.scene === "talk" || d.scene === "countdown" || d.scene === "playing";
     return `
 <div class="st-host" ${d.hostUid ? `data-bcuid="${escapeHTML(d.hostUid)}"` : ""}>
 <div class="ring"><img src="${safeSrc(av)}" alt=""><span class="mi">${ic("mic")}</span></div>
-<div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b><span>${micOn ? `<i class="bc-st">المايك مقفل</i>` : "مقدم البرنامج"}</span></div>
+<div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b>${micOn ? "" : `<span>مقدم البرنامج</span>`}</div>
 </div>`;
 }
 /* أزرار صغيرة فوق يسار: الرابط، صوت المذيع، التشخيص (أزرار التفاعل بالإيموجي انشالت 23 أكتوبر 2026، طلب محمد) */

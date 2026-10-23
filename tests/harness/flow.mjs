@@ -76,6 +76,12 @@ try {
         await until(() => p1.$(".st-qcard .tv-w"), 15000); await sleep(1500);
         const card = p => p.evaluate(() => { const q = document.querySelector(".st-qcard"); return q ? Math.round(q.getBoundingClientRect().height) >= q.scrollHeight - 1 : false; });
         check("short screen: question card not squeezed (buzz)", await card(p1) && await card(host));
+        check("host card in the middle, never over the buttons (long name)", await host.evaluate(() => {
+            const x = liveMatchesCache[openLiveId]; const b = document.querySelector(".st-host .tx b"); if (b) b.textContent = "عبدالرحمن بن محمد الغامدي";
+            const h = document.querySelector(".st-host").getBoundingClientRect(), sd = document.querySelector(".st-side").getBoundingClientRect();
+            const mid = (h.left + h.right) / 2;
+            return sd.right <= h.left && Math.abs(mid - innerWidth / 2) < 30 && !document.querySelector(".st-side [aria-label='تفاعل']");
+        }));
         check("no zoom inside the broadcast (touch-action pan-y)", await p1.evaluate(() => getComputedStyle(document.getElementById("liveScreen")).touchAction === "pan-y"));
         upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
         await until(() => p1.$(".va-box"), 5000); await sleep(1200);
