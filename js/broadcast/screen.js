@@ -608,8 +608,9 @@ function bcQuizHTML(d, me) {
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-${d.phase === "answer" || bcArmedHere(d, me)
-    /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات */
+${(d.phase === "answer" && !d.passed) || bcArmedHere(d, me)
+    /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات.
+       ولما ينتقل السؤال للمتسابق الثاني يرجع يطلع كامل (طلب محمد نفس اليوم) */
     ? `<div class="lv-qtext lv-qhidden">${ic("lock")} السؤال انخفى، جاوب من اللي سمعته</div>`
     : `<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>`}
 </div>`;

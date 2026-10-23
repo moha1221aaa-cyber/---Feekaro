@@ -57,6 +57,9 @@ try {
         check("question hidden instantly on the presser's phone", await p1.evaluate(() => window.__hid === true));
         check("question hidden for viewers once the buzz lands", await until(() => fan.evaluate(() => !!document.querySelector(".lv-qtext.lv-qhidden") && !document.querySelector(".lv-qtext .tv-w")), 4000));
         await fan.screenshot({ path: out + "/2-hidden-after-buzz.png" });
+        /* غلط وانتقل السؤال للثاني: يرجع كامل */
+        upd(db, { phase: "answer", answerer: 2, passed: true, tried2: true, lastAnswer: { by: 1, text: "جدة", correct: false }, deadline: Date.now() + 15000 });
+        check("question shown in full again when it passes to the other player", await until(async () => !(await fan.$(".lv-qtext.lv-qhidden")) && (await words(fan)) === total && (await words(p1)) === total, 4000));
         const errs = [fan, p1].flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
         check("no page errors (words/buzz)", !errs.length, errs.slice(0, 3));
         await fan.context().close(); await p1.context().close();
