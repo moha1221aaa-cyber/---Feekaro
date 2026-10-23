@@ -61,6 +61,26 @@ try {
         check("no page errors (words/buzz)", !errs.length, errs.slice(0, 3));
         await fan.context().close(); await p1.context().close();
     }
+    /* ===== 1ب) الترتيب على شاشة قصيرة (صور محمد 23 أكتوبر: لوحة السؤال انضغطت، شريط الاسم غطى مربع الجواب، الصفحة كبرت) ===== */
+    {
+        const db = new FakeDB(40);
+        const now = Date.now();
+        seed(db, "playing", { phase: "buzz", qIndex: 0, qAt: now - 20000, deadline: now + 60000, ready1: true, ready2: true });
+        liveDoc(db).questions[0] = { text: "ما اسم أطول نهر في قارة أفريقيا ويمر في عدة دول عربية منها مصر والسودان؟", answer: "النيل" };
+        const vp = { width: 412, height: 640 };
+        const p1 = await device(browser, db, "p1", { api, viewport: vp });
+        const host = await device(browser, db, "host", { api, viewport: vp });
+        await until(() => p1.$(".st-qcard .tv-w"), 15000); await sleep(1500);
+        const card = p => p.evaluate(() => { const q = document.querySelector(".st-qcard"); return q ? Math.round(q.getBoundingClientRect().height) >= q.scrollHeight - 1 : false; });
+        check("short screen: question card not squeezed (buzz)", await card(p1) && await card(host));
+        check("no zoom inside the broadcast (touch-action pan-y)", await p1.evaluate(() => getComputedStyle(document.getElementById("liveScreen")).touchAction === "pan-y"));
+        upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
+        await until(() => p1.$(".va-box"), 5000); await sleep(1200);
+        check("short screen: question card not squeezed (answer)", await card(p1) && await card(host));
+        check("no name strip over the answer box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
+        await p1.screenshot({ path: out + "/1b-short-answer.png" });
+        await p1.context().close(); await host.context().close();
+    }
     /* ===== 2) شارة البداية ===== */
     {
         const db = new FakeDB(40);

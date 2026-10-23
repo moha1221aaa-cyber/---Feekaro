@@ -774,3 +774,42 @@
 @keyframes tvFadeIO{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
 /* الصفحة اللي ورا شاشة البث أو الغرفة ما تنشاف، فحركاتها (حلقة الشعار ترسم كل إطار) توقف لين ترجع (23 أكتوبر 2026، سخونة الجوالات) */
 body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeader *,body.room-open .section *{animation-play-state:paused !important;}
+
+/* ===== ترتيب شاشة البث على الجوال (23 أكتوبر 2026، صور محمد: لوحة السؤال تنضغط وينقص نصها، شريط الاسم يغطي الأزرار وخانة الكتابة،
+   الصفحة تكبر وتزيح لما ينضغط الجرس بسرعة، وأزرار المنظم تتداخل) ===== */
+/* بدون تكبير بالنقرتين أو بالأصابع داخل البث (كان يكبّر الصفحة ويزيحها لما يضغطون الجرس بسرعة) */
+#liveScreen{touch-action:pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+#liveScreen .lv-bell{touch-action:none;}
+/* عناصر المشهد ما تنضغط أبد: لو المكان ما كفى المشهد ينزل بالتمرير، بدل ما تنقص لوحة السؤال لـ 45px */
+#liveScreen .lv-stage>*{flex-shrink:0;max-width:100%;box-sizing:border-box;}
+#liveScreen .lv-stage{overscroll-behavior:contain;}
+#liveScreen .lv-qtext{overflow-wrap:anywhere;}
+/* صف المنظم: النص سطر واحد، ولو ما كفى العرض الأزرار تنزل تحت بدل ما تركب على الاسم */
+.st-hostrow{flex-wrap:wrap;row-gap:6px;}
+.st-host .tx span,.st-host .tx .bc-st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* شريط اسم المتكلم وقت الترحيب: المشهد يترك له مكان تحت */
+#liveScreen[data-scene="talk"] .lv-stage{padding-bottom:64px;}
+/* الشاشات القصيرة (شريط المتصفح، أو الخط الكبير في إعدادات الجوال): الرأس يصغر عشان السؤال والجرس ياخذون مكانهم */
+@media (max-height: 780px){
+  .st-pod img{width:42px;height:42px;border-width:2px;}
+  .st-pod .nm{font-size:12px;}
+  .st-desk{padding:3px 0 5px;}
+  .st-desk b{font-size:22px;}
+  .st-pods{margin:6px 0 4px;}
+  .st-host .ring img{width:38px;height:38px;}
+  .st-host{padding:3px 10px 3px 6px;}
+  .st-microw{margin-top:4px;}
+  .st-microw .bc-mybtn{padding:4px 6px;}
+  #liveScreen .lv-stage{gap:8px;}
+  #liveScreen .lv-bell{width:122px;height:122px;}
+  #liveScreen .lv-bell .ic{width:48px;height:48px;}
+  #liveScreen .va-box{padding:10px;gap:6px;}
+  #liveScreen .va-mic{width:50px;height:50px;}
+  #liveScreen .st-qcard{padding:10px 12px 12px;}
+  #liveScreen .lv-qtext{font-size:19px;}
+}
+@media (max-height: 640px){
+  .st-pod img,.st-pod .st-cone{display:none;}
+  /* وقت الأسئلة شريط الأخبار ياخذ مكان مربع الجواب، فيختفي */
+  #liveScreen[data-scene="playing"] .st-ticker{display:none;}
+}

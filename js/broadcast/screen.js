@@ -48,7 +48,21 @@ function openLiveScreen(id) {
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
+    bcFitViewport();
 }
+
+/* الكيبورد (23 أكتوبر 2026، صور محمد): بعد ما ينقفل، سامسونج يخلي الصفحة مرفوعة فينقص فوق ويطلع فراغ تحت.
+   الشاشة تاخذ مقاس الجزء الظاهر فعلاً (visualViewport) ومكانه، ولما يرجع المقاس كامل ترجع الصفحة لفوق */
+function bcFitViewport() {
+    const scr = document.getElementById("liveScreen"), vv = window.visualViewport;
+    if (!scr || !vv) return;
+    if (!openLiveId) { scr.style.top = scr.style.height = scr.style.bottom = ""; return; }
+    scr.style.top = Math.round(vv.offsetTop) + "px";
+    scr.style.height = Math.round(vv.height) + "px";
+    scr.style.bottom = "auto";
+    if (vv.height >= window.innerHeight - 2 && (window.scrollY || vv.offsetTop)) window.scrollTo(0, 0);
+}
+if (window.visualViewport) { visualViewport.addEventListener("resize", bcFitViewport); visualViewport.addEventListener("scroll", bcFitViewport); }
 
 function closeLiveScreen(fromPop) {
     if (!openLiveId) return;
@@ -72,6 +86,7 @@ function closeLiveScreen(fromPop) {
     if (scr) { delete scr.dataset.scene; delete scr.dataset.shot; }
     bcSyncAudio();
     if (typeof screenAwake === "function") screenAwake("live", false);
+    bcFitViewport();
 }
 
 function liveTick() {
