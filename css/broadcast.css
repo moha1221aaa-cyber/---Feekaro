@@ -827,3 +827,13 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
 .st-card{width:100%;max-width:100%;}
 .st-card div{flex:1 1 0;min-width:0;padding:3px 2px;}
 .st-card small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+/* مشهد دخول المتسابقين (cineMatchIntro): الاسم الطويل كان يوسّع جهة المتسابق ويركب على VS */
+.cine-p{min-width:0;}
+.cine-vs{flex-shrink:0;}
+/* المقدم: الاسم تحت الصورة (طلب محمد 23 أكتوبر)، والبطاقة أضيق فما تقرب من الأزرار */
+.st-hostrow .st-host{flex-direction:column;gap:2px;padding:5px 12px 6px;border-radius:18px;text-align:center;}
+.st-hostrow .st-host .tx{align-items:center;max-width:100%;}
+.st-hostrow .st-host .tx b{font-size:14px;line-height:1.2;max-width:100%;}
+.st-hostrow .st-host .tx span{font-size:10px;}
+.st-hostrow .st-host .ring img{width:40px;height:40px;}
+.cine-p b{white-space:normal;text-align:center;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
