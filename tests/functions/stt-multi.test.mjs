@@ -12,7 +12,7 @@ const J = o => new Response(JSON.stringify(o), { headers: { "Content-Type": "app
 const az = (...texts) => () => J({ RecognitionStatus: "Success", DisplayText: texts[0], NBest: texts.map(t => ({ Confidence: 0.8, Lexical: t, ITN: t, MaskedITN: t, Display: t })) });
 const mkEnv = (whisper, extra) => {
     const llm = [];
-    return { llm, env: Object.assign({ AZURE_TTS_KEY: "k", AZURE_TTS_REGION: "uaenorth", ELEVEN_KEY: "e", AI: { run: async (m, i) => {
+    return { llm, env: Object.assign({ STT_NOVA: "1", AZURE_TTS_KEY: "k", AZURE_TTS_REGION: "uaenorth", ELEVEN_KEY: "e", AI: { run: async (m, i) => {
         if (m.includes("nova")) { if (nova instanceof Error) throw nova; return { results: { channels: [{ alternatives: nova ? [{ transcript: nova }] : [] }] } }; }
         if (m.includes("whisper")) { if (whisper instanceof Error) throw whisper; return { text: whisper }; }
         llm.push(m); return { response: '{"ok":false,"said":""}' };
@@ -85,6 +85,15 @@ const go = (env, q, answer) => taskVoice(env, { q, answer, audio });
     const e = await go(mkEnv("الأرجنتين").env, "من فاز بكأس العالم 2022؟", "الأرجنتين|الارجنتين");
     check("Nova-3 error is skipped quietly", e.ok === true && e.t.errs && e.t.errs.nova, e);
     nova = "";
+}
+{
+    /* محرك بطيء ما يأخّر الحكم: بعد Whisper الباقين لهم 1.5 ث بس */
+    azure = () => new Promise(r => setTimeout(() => r(J({ RecognitionStatus: "Success", NBest: [{ Display: "جدة" }] })), 4000));
+    eleven = () => new Response("x", { status: 401 });
+    const t0 = Date.now();
+    const r = await go(mkEnv("جدة", { STT_NOVA: "0" }).env, "ما عاصمة السعودية؟", "الرياض");
+    const ms = Date.now() - t0;
+    check("slow engine does not hold the verdict (< 2.5 s)", ms < 2500 && r.ok === false && r.t.errs && /azure/.test(r.t.errs.late || ""), { ms, r });
 }
 auth.restore();
 done();

@@ -130,6 +130,25 @@ try {
         check("sent audio is a real clip (not empty)", sent[0] > 4000, sent);
         const steps = await p1.evaluate(() => VA.try && VA.try.steps);
         check("no 'no-audio' when the recorder works", steps && !steps.includes("no-audio") && steps.includes("sent"), steps);
+        await p1.context().close();
+        /* أندرويد: مسار البث يرسل أصفار بالضبط (peak 0) ← مايك مستقل للجواب ويوصل الصوت */
+        const db3 = new FakeDB(40);
+        seed(db3, "playing", { phase: "buzz", qIndex: 0, qAt: Date.now() - 20000, deadline: Date.now() + 60000, ready1: true, ready2: true });
+        sent.length = 0;
+        const p3 = await device(b2, db3, "p1", { api: api2 });
+        await until(() => p3.$("#lvBell"), 15000); await sleep(1500);
+        await p3.evaluate(() => {
+            const real = window.vaCapture; let first = true;
+            window.vaCapture = async (ctx, src, onFrame) => {
+                if (!first) return real(ctx, src, onFrame);
+                first = false;
+                const t = setInterval(() => onFrame({ pcm: new Float32Array(320), talking: false, soft: false, softMs: 0, rms: 0, e: 0, floor: 0, speechMs: 0, peak: 0 }), 20);
+                return { via: "zeros", stop() { clearInterval(t); } };
+            };
+            liveBuzz();
+        });
+        check("all-zero mic → own mic for the answer", await until(() => p3.evaluate(() => VA.try && VA.try.steps.includes("own-mic")), 5000), await p3.evaluate(() => VA.try && VA.try.steps));
+        check("own-mic answer reaches the server", await until(() => sent.length > 0, 12000), sent);
         await b2.close();
     }
     /* ===== 2) شارة البداية ===== */
