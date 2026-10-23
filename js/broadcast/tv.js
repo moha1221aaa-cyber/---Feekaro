@@ -27,8 +27,8 @@ function tvBuzzMoment(d) {
     el.innerHTML = `<i class="tv-bz-band"></i><i class="tv-bz-shine"></i>
 <div class="tv-bz-in"><img src="${safeSrc(bcAv(o, n))}" alt=""><div><b>${escapeHTML(n === 1 ? o.p1 : o.p2)}</b><span>${d.passed ? "انتقل له السؤال" : "ضغط الجرس!"}</span></div></div>`;
     scr.appendChild(el);
-    /* لحظة الجرس = بداية وقت الإجابة (deadline - LIVE_ANSWER_MS)، فالشريط بنفس الإطار على كل الجوالات */
-    const at = (Number(d.deadline) || 0) - LIVE_ANSWER_MS, late = at > 0 ? bcNow() - at : 0;
+    /* لحظة الجرس (ansAt، والوثائق القديمة deadline - LIVE_ANSWER_MS)، فالشريط بنفس الإطار على كل الجوالات */
+    const at = Number(d.ansAt) || ((Number(d.deadline) || 0) - LIVE_ANSWER_MS), late = at > 0 ? bcNow() - at : 0;
     if (late > 1500) { el.remove(); return; }
     showSync(el, at > 0 ? at : 0);
     setTimeout(() => el.remove(), Math.max(0, 1700 - Math.max(0, late)));

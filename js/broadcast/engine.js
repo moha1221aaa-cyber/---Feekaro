@@ -9,7 +9,7 @@
 const LIVE_Q_COUNT = 5;
 const LIVE_COUNT_MS = 3500;   /* العد التنازلي قبل البداية */
 const LIVE_BUZZ_MS = 15000;   /* وقت ضغط الجرس */
-const LIVE_ANSWER_MS = 15000; /* وقت الإجابة (بالصوت، أو كتابة لو الصوت ما اشتغل) */
+const LIVE_ANSWER_MS = 15000; /* كان وقت الإجابة. من 23 أكتوبر 2026 المقدم يحكم بدون وقت، ويستخدم بس للوثائق القديمة (لحظة الجرس) */
 const LIVE_REVEAL_MS = 6500;  /* عرض الإجابة قبل السؤال التالي */
 const BC_CHANNEL = "masro7_live_round"; /* قناة صوت البث (منفصلة عن الغرفة الصوتية) */
 const BC_MATCH_SCENES = ["intro", "talk", "countdown", "playing", "result"];
@@ -564,34 +564,6 @@ function bcRevealFetch(id) {
     }
     return bcRevealBusy[k];
 }
-/* تصحيح الكتابة في السيرفر (السؤال المختوم): يرجّع true/false بس لو السيرفر حكم فعلاً */
-function bcServerGrade(id, qIndex, given) {
-    return answerPost({ action: "grade", id, qIndex, given }, 6000).then(r => r.ok === true);
-}
-/* السيرفر ما رد (نت، 5xx، 429): الجواب ينكتب في الوثيقة (pend) وجهاز المنظم يصححه من الأجوبة اللي عنده.
-   ما نحسبه غلط لأن الخطأ مو من المتسابق. ولو المنظم غايب، يخلص الوقت عادي */
-function bcAskHost(id, d0, text) {
-    const n = myLiveNum(d0);
-    return liveRef(id).update({ pend: { by: n, cur: d0.cur, q: d0.qIndex, text: String(text).slice(0, 80), at: bcNow() } });
-}
-const bcJudged = {};
-function bcHostJudge(d) {
-    const p = d && d.pend;
-    if (!p || !isAdmin || d.phase !== "answer" || p.by !== d.answerer || p.cur !== d.cur || p.q !== d.qIndex) return;
-    const q = (d.questions || [])[d.qIndex];
-    const ans = q && (bcSecrets[openLiveId] || {})[q.text];
-    const k = openLiveId + "|" + p.cur + "|" + p.q + "|" + p.by + "|" + p.at;
-    if (!ans || bcJudged[k]) return;
-    bcJudged[k] = 1;
-    const ok = liveAnswerMatches(p.text, ans);
-    liveTx(openLiveId, (x, now) => {
-        const pp = x.pend;
-        if (!pp || x.status !== "live" || x.scene !== "playing" || x.phase !== "answer" || pp.by !== x.answerer || pp.cur !== x.cur || pp.q !== x.qIndex || pp.at !== p.at) return null;
-        const last = { by: pp.by, text: pp.text, correct: ok };
-        return Object.assign(ok ? liveRevealUpd(x, pp.by, now, last) : livePassUpd(x, pp.by, now, last), { pend: null });
-    }).catch(() => { delete bcJudged[k]; });
-}
-
 function liveQuestionUpd(i, now) {
     return { scene: "playing", qIndex: i, phase: "buzz", buzzer: 0, answerer: 0, tried1: false, tried2: false, passed: false, lastAnswer: null, outcome: 0, qAt: now, deadline: now + LIVE_BUZZ_MS };
 }
@@ -612,7 +584,7 @@ function liveRevealUpd(d, winner, now, last) {
 function livePassUpd(d, n, now, last) {
     const o = n === 1 ? 2 : 1;
     if (!d["tried" + o]) {
-        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS, pend: null };
+        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: 0, ansAt: now, pend: null };
         u["tried" + o] = true;
         return u;
     }
@@ -623,17 +595,20 @@ function liveNextStep(d, now) {
     if (d.scene === "countdown" && now >= d.deadline) return liveQuestionUpd(0, now);
     if (d.scene !== "playing" || now < d.deadline) return null;
     if (d.phase === "buzz") return liveRevealUpd(d, 0, now, null);
-    if (d.phase === "answer") return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
-    if (d.phase === "reveal") {
-        const next = (d.qIndex || 0) + 1;
-        const qs = d.questions || [];
-        if (next < qs.length) return liveQuestionUpd(next, now);
-        /* صافرة النهاية (والتعادل ينتهي تعادل، الدوري يحسبه نقطة لكل واحد: السؤال الذهبي انشال 22 أكتوبر 2026): نحفظ نتيجة المواجهة داخل البث وننتقل لمشهد النتيجة */
-        const order = (d.order || []).map(o => Object.assign({}, o));
-        if (order[d.cur]) Object.assign(order[d.cur], { s1: d.s1 || 0, s2: d.s2 || 0, state: "done", applied: false, fb1: d.fb1 || 0, fb2: d.fb2 || 0, bh1: d.bh1 || 0, bh2: d.bh2 || 0 });
-        return { scene: "result", phase: "done", order: order, deadline: 0, sceneAt: now };
-    }
+    /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict)، فما فيه وقت للجواب،
+       والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ). الانتقال الوحيد بالوقت: محد ضغط الجرس خلال 15 ث ← الكشف */
     return null;
+}
+/* بعد الكشف: السؤال الجاي، أو نهاية المواجهة بعد آخر سؤال (بضغطة المقدم) */
+function liveRevealNext(d, now) {
+    if (d.status !== "live" || d.scene !== "playing" || d.phase !== "reveal") return null;
+    const next = (d.qIndex || 0) + 1;
+    const qs = d.questions || [];
+    if (next < qs.length) return liveQuestionUpd(next, now);
+    /* صافرة النهاية (والتعادل ينتهي تعادل، الدوري يحسبه نقطة لكل واحد: السؤال الذهبي انشال 22 أكتوبر 2026): نحفظ نتيجة المواجهة داخل البث وننتقل لمشهد النتيجة */
+    const order = (d.order || []).map(o => Object.assign({}, o));
+    if (order[d.cur]) Object.assign(order[d.cur], { s1: d.s1 || 0, s2: d.s2 || 0, state: "done", applied: false, fb1: d.fb1 || 0, fb2: d.fb2 || 0, bh1: d.bh1 || 0, bh2: d.bh2 || 0 });
+    return { scene: "result", phase: "done", order: order, deadline: 0, sceneAt: now };
 }
 
 /* سائق واحد للانتقالات بالوقت: كانت كل الجوالات تسوي transaction على نفس الوثيقة بنفس اللحظة،
@@ -648,7 +623,8 @@ function bcAdvanceLag(d) {
 function liveAdvanceIfDue() {
     const d = liveMatchesCache[openLiveId];
     if (!d || liveAdvanceBusy || d.status !== "live") return;
-    if (!(d.scene === "countdown" || d.scene === "playing")) return;
+    /* بالوقت بس: العد التنازلي، ووقت الجرس (الجواب والسؤال الجاي بيد المقدم) */
+    if (!(d.scene === "countdown" || (d.scene === "playing" && d.phase === "buzz")) || !d.deadline) return;
     if (bcNow() < (d.deadline || 0) + bcAdvanceLag(d)) return;
     if (bcNow() - liveLastAdvanceTry < 900) return;
     liveLastAdvanceTry = bcNow();
@@ -747,6 +723,28 @@ function bcHostHeartbeat(d) {
     if (!firebaseDB || !d || d.status !== "live" || !amBcHost(d) || bcNow() - bcLastBeat < 10000) return;
     bcLastBeat = bcNow();
     liveRef(openLiveId).update({ hostSeen: bcNow() }).catch(() => {});
+}
+
+/* ===== المقدم يحكم ويبدأ الأسئلة (23 أكتوبر 2026، قرار محمد: بدون جواب صوتي آلي ولا كتابة) =====
+   المتسابق يضغط الجرس ويقول جوابه بالمايك، والمقدم يشوف الجواب الصحيح عنده ويضغط صح أو غلط.
+   صح ← الكشف ونقطة له. غلط ← السؤال ينتقل للثاني (ولو جرّبه الاثنين ← الكشف). وبعد الكشف المقدم يبدأ السؤال الجاي */
+function bcHostVerdict(ok) {
+    const id = openLiveId, d0 = liveMatchesCache[id];
+    if (!id || !d0 || !isAdmin || d0.phase !== "answer") return;
+    document.querySelectorAll(".bc-verdict button").forEach(b => { b.disabled = true; });
+    bcTap(document.querySelector(".bc-verdict"), "tapped", "", 25);
+    liveTx(id, (x, now) => {
+        if (x.status !== "live" || x.scene !== "playing" || x.phase !== "answer" || x.qIndex !== d0.qIndex || x.answerer !== d0.answerer) return null;
+        const last = { by: x.answerer, text: "", correct: !!ok, judged: 1 };
+        return ok ? liveRevealUpd(x, x.answerer, now, last) : livePassUpd(x, x.answerer, now, last);
+    }).then(u => { if (!u) bcRedrawAll(); }).catch(err => { roomToast("تعذّر: " + err.message, "alert"); bcRedrawAll(); });
+}
+function bcHostNextQ() {
+    const id = openLiveId, d0 = liveMatchesCache[id];
+    if (!id || !d0 || !isAdmin || d0.phase !== "reveal") return;
+    document.querySelectorAll(".bc-nextq").forEach(b => { b.disabled = true; });
+    liveTx(id, (x, now) => (x.qIndex === d0.qIndex && x.cur === d0.cur) ? liveRevealNext(x, now) : null)
+        .then(u => { if (!u) bcRedrawAll(); }).catch(err => { roomToast("تعذّر: " + err.message, "alert"); bcRedrawAll(); });
 }
 
 /* من صفحة المتسابقين ← فقرة الترحيب */
@@ -863,110 +861,43 @@ function liveBuzz(ev) {
     if (!d || d.scene !== "playing" || d.phase !== "buzz" || !myLiveNum(d)) return;
     const bell = document.getElementById("lvBell");
     if (bell && bell.classList.contains("rung")) return;   /* ضغطة وحدة تكفي */
-    /* استجابة فورية قبل ما يرد السيرفر: صوت الجرس، اهتزاز، والجرس يتغير، ويبدأ التسجيل على طول عشان أول كلمة ما تضيع.
-       الحكم مين ضغط أول يظل في الـ transaction تحت، ولو غيري سبقني يتلغى التسجيل */
+    /* استجابة فورية قبل ما يرد السيرفر: صوت الجرس، اهتزاز، والجرس يتغير. الحكم مين ضغط أول يظل في الـ transaction تحت.
+       بعدها المتسابق يقول جوابه بالمايك والمقدم يحكم (bcHostVerdict) */
     if (bell) { bell.classList.add("rung"); const sp = bell.querySelector("span"); if (sp) sp.textContent = "ضغطت!"; }
     /* السؤال يختفي عندي على طول (وعند الكل أول ما يوصل الجرس للسيرفر) */
     { const qt = document.querySelector("#liveScreenBody .lv-qtext.tv-words"); if (qt) qt.style.visibility = "hidden"; }
     bcLocalBuzzQ = id + "|" + d.cur + "|" + d.qIndex;
     const bz = BC_BUZZ.cur = { id, q: d.cur + "_" + d.qIndex, t0, at: bcNow(), local: 0, tx: 0, seen: 0, won: null, sent: false };
-    /* طلب الجرس يطلع للسيرفر أول شي (مين أسرع يتحدد هناك)، وبعده الصوت والاهتزاز وتجهيز التسجيل */
+    /* طلب الجرس يطلع للسيرفر أول شي (مين أسرع يتحدد هناك)، وبعده الصوت والاهتزاز */
     const txP = liveTx(id, (x, now) => {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
         if (!n) return null;
-        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: now + LIVE_ANSWER_MS };
+        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: 0, ansAt: now };
         u["tried" + n] = true;
         /* سرعة ضغطة الجرس (لإحصائيات المواجهة وأفضل لحظة في الجولة) */
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
         if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
         return u;
     });
-    cinePlay("buzz", 0.35);   /* عندي أوطى (الاهتزاز والجرس المضغوط يكفون)، عشان ما يغطي أول كلمة من جوابي */
+    cinePlay("buzz", 0.6);
     try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
     requestAnimationFrame(() => { bz.local = Math.round(performance.now() - t0); });
     setTimeout(() => bcBuzzDone(bz), 6000);   /* لو ما وصل شي، نسجّل اللي عندنا */
     if (typeof bcStopSpeech === "function") bcStopSpeech();
-    /* الضغطة نفسها تفتح صوت المتصفح (AudioContext) عشان التسجيل يشتغل على الجوال */
-    if (typeof vaPrime === "function") vaPrime();
-    /* تجهيز التسجيل (ربط المايك بالمعالج ومربع التسجيل) بعد أول رسم للجرس المضغوط: كان قبله ويأخّر الرد
-       (تجربة 22 أكتوبر: 319-344ms على أندرويد 10، والقياس هنا: الرسم بعد 100-141ms والمعالجة نفسها 23-44ms).
-       التسجيل يتأخر إطار وحد بس، وأول نص ثانية ما ينحسب للكاشف الحساس أصلاً */
-    const q = d.qIndex;
-    requestAnimationFrame(() => setTimeout(() => { if (typeof vaArm === "function" && BC_BUZZ.cur === bz && bz.won !== false) vaArm(id, q); }, 0));
     txP.then(u => {
         bz.tx = Math.round(performance.now() - t0);
         if (!u) {
             bz.won = false; bcBuzzDone(bz);
-            if (typeof vaDisarm === "function") vaDisarm();
             bcRedrawAll();   /* الجرس "ضغطت!" يرجع (الرسم الجزئي ما يلمس الجزء اللي انعدّل مباشرة) */
         } else if (bz.seen) bcBuzzDone(bz);
     }).catch(err => {
         console.log("buzz:", err);
         bz.tx = -1; bz.won = false; bcBuzzDone(bz);
-        if (typeof vaDisarm === "function") vaDisarm();
         bcRedrawAll();
     });
 }
 
-async function liveSubmitAnswer() {
-    const id = openLiveId;
-    const inp = document.getElementById("lvAnswerInput");
-    if (!id || !inp) return;
-    const text = inp.value.trim();
-    if (!text) { inp.focus(); return; }
-    if (inp.disabled) return;
-    inp.disabled = true;
-    /* رد فوري: الخانة تتقفل وتطلع حركة وصوت قبل التصحيح */
-    const row = inp.closest(".lv-ans-row");
-    const sendBtn = row && row.querySelector("button");
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "أرسلت"; }
-    bcTap(row, "tapped", "tick", 20);
-    /* التصحيح الذكي (js/ai.js): لو المطابقة العادية رفضت، نسأل الذكاء الاصطناعي قبل ما ينتهي الوقت */
-    const d0 = liveMatchesCache[id] || {};
-    const q0 = (d0.questions || [])[d0.qIndex] || {};
-    let aiOk = false;
-    if (bcSealed(q0)) {
-        /* الجواب مختوم: التصحيح كله في السيرفر */
-        inp.value = "يتحقق من إجابتك...";
-        let err = null;
-        aiOk = await bcServerGrade(id, d0.qIndex, text).catch(e => { err = e; return false; });
-        inp.value = text;
-        if (err) {
-            if (err.status === 403 || err.status === 409) {   /* السيرفر رفض (مو دورك، خلص الوقت، أو جوابك قيد التصحيح): ما نسجّل شي */
-                roomToast(err.message || "ما انحسب الجواب", "alert");
-                return;
-            }
-            bcAskHost(id, d0, text).then(() => roomToast("السيرفر ما رد، المنظم يصحح جوابك", "hourglass"))
-                .catch(() => { inp.disabled = false; if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "إرسال"; } });
-            return;
-        }
-    } else if (q0.text && !liveAnswerMatches(text, q0.answer || "") && typeof aiGrade === "function") {
-        const left = (d0.deadline || 0) - bcNow();
-        if (left > 1500) {
-            inp.value = "يتحقق من إجابتك...";
-            aiOk = await aiGrade(q0.text, q0.answer || "", text, Math.min(4000, left - 800));
-            inp.value = text;
-        }
-    }
-    liveCommitAnswer(id, text, aiOk, q0).catch(err => {
-        console.log("answer:", err);
-        inp.disabled = false;
-        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "إرسال"; }
-    });
-}
-
-/* تسجيل الإجابة (كتابة أو صوت js/broadcast/voice-answer.js): صح ← كشف الإجابة، غلط ← السؤال ينتقل للثاني */
-function liveCommitAnswer(id, text, aiOk, q0) {
-    return liveTx(id, (d, now) => {
-        const n = myLiveNum(d);
-        if (d.status !== "live" || d.scene !== "playing" || d.phase !== "answer" || d.answerer !== n || now > d.deadline + 2000) return null;
-        const q = (d.questions || [])[d.qIndex] || {};
-        const ok = (!!text && liveAnswerMatches(text, q.answer || "")) || (aiOk && q.text === q0.text);
-        const last = { by: n, text: (text || "ما انسمع جواب").slice(0, 80), correct: ok };
-        return ok ? liveRevealUpd(d, n, now, last) : livePassUpd(d, n, now, last);
-    });
-}
 
 /* تسجيل نتائج مواجهات البث في جدول الدوري تلقائياً */
 function bcApplyResults(id) {
