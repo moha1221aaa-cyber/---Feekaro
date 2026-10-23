@@ -235,10 +235,9 @@ function bcLowerThird(d) {
     let want = null;
     if (d && d.status === "live") {
         const o = bcCur(d);
-        if (o && d.scene === "playing" && d.phase === "answer" && d.answerer) {
-            const n = d.answerer;
-            want = { key: "a" + d.cur + n + d.qIndex, name: n === 1 ? o.p1 : o.p2, sub: d.passed ? "انتقل له السؤال · يجاوب الحين" : "ضغط الجرس أول · يجاوب الحين", av: bcAv(o, n), gold: true };
-        } else {
+        /* 23 أكتوبر 2026: الشريط كان ثابت تحت فوق المشهد، فيغطي مربع الجواب وخانة الكتابة وأزرار المنظم.
+           الحين يطلع وقت الترحيب بس (المشهد يترك له مكان)، ووقت الأسئلة "فلان ضغط الجرس أول" مكتوبة في المشهد نفسه */
+        if (d.scene === "talk") {
             /* أعلى صوت يتكلم الحين (مع مهلة عشان ما يرمش) */
             let best = null;
             bcSpeakers(d).forEach(sp => { const m = bcMicLevel(sp.uid); if (m.on && m.lvl > 0.06 && (!best || m.lvl > best.lvl)) best = Object.assign({ lvl: m.lvl }, sp); });
