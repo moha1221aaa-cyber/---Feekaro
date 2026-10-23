@@ -76,6 +76,13 @@ try {
         await until(() => p1.$(".st-qcard .tv-w"), 15000); await sleep(1500);
         const card = p => p.evaluate(() => { const q = document.querySelector(".st-qcard"); return q ? Math.round(q.getBoundingClientRect().height) >= q.scrollHeight - 1 : false; });
         check("short screen: question card not squeezed (buzz)", await card(p1) && await card(host));
+        check("host card in the middle, name under the picture, never over the buttons (long name)", await host.evaluate(() => {
+            const x = liveMatchesCache[openLiveId]; const b = document.querySelector(".st-host .tx b"); if (b) b.textContent = "عبدالرحمن بن محمد الغامدي";
+            const h = document.querySelector(".st-host").getBoundingClientRect(), sd = document.querySelector(".st-side").getBoundingClientRect();
+            const mid = (h.left + h.right) / 2;
+            const im = document.querySelector(".st-host img").getBoundingClientRect(), nb = document.querySelector(".st-host .tx b").getBoundingClientRect();
+            return sd.right <= h.left && Math.abs(mid - innerWidth / 2) < 30 && !document.querySelector(".st-side [aria-label='تفاعل']") && nb.top >= im.bottom - 2;
+        }));
         check("no zoom inside the broadcast (touch-action pan-y)", await p1.evaluate(() => getComputedStyle(document.getElementById("liveScreen")).touchAction === "pan-y"));
         upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
         await until(() => p1.$(".va-box"), 5000); await sleep(1200);
@@ -83,6 +90,16 @@ try {
         check("no name strip over the answer box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
         await p1.screenshot({ path: out + "/1b-short-answer.png" });
         await p1.context().close(); await host.context().close();
+    }
+    /* ===== 1ب2) صفحة "جاهز" بأسماء طويلة على جوال صغير: ولا شي يطلع برا الشاشة ===== */
+    {
+        const db = new FakeDB(40);
+        seed(db, "intro", { sceneAt: Date.now() - 60000 });
+        const d0 = liveDoc(db); d0.order[0].p1 = "عبدالرحمن بن محمد الغامدي"; d0.order[0].p2 = "محمد بن عبدالله القحطاني";
+        const p1 = await device(browser, db, "p1", { api, viewport: { width: 360, height: 640 } });
+        await until(() => p1.$(".bc-vs"), 15000); await sleep(1500);
+        check("ready page: long names stay on screen (360px)", await p1.evaluate(() => [...document.querySelectorAll(".bc-vs *")].every(e => { const r = e.getBoundingClientRect(); return !r.width || (r.left >= -1 && r.right <= innerWidth + 1); })));
+        await p1.context().close();
     }
     /* ===== 1ج) الآيفون: معالج الصوت ما يوصله ولا إطار (frames 0) ← MediaRecorder من نفس المايك ويوصل للسيرفر ===== */
     {
