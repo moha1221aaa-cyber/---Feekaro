@@ -814,7 +814,9 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
   #liveScreen .lv-qtext{font-size:19px;}
 }
 @media (max-height: 640px){
-  .st-pod img,.st-pod .st-cone{display:none;}
+  /* الصور ما تختفي (محمد حسبها انغطت تحت زر المايك)، بس تصغر */
+  .st-pod img{width:34px;height:34px;}
+  .st-pods{margin:4px 0 2px;}
   /* وقت الأسئلة شريط الأخبار ياخذ مكان مربع الجواب، فيختفي */
   #liveScreen[data-scene="playing"] .st-ticker{display:none;}
 }
@@ -837,3 +839,13 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
 .st-hostrow .st-host .tx span{font-size:10px;}
 .st-hostrow .st-host .ring img{width:40px;height:40px;}
 .cine-p b{white-space:normal;text-align:center;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+
+/* أزرار المقدم في عمودين (المنظم 3 أزرار، الباقين 2) عشان جنبه يضيق واسمه ياخذ مكانه (صورة محمد: "فيك...") */
+.st-hostrow .st-side{display:grid;grid-template-columns:repeat(2,30px);gap:4px;justify-content:end;}
+.st-hostrow .st-side button{width:30px;height:30px;}
+.st-hostrow .st-side button .ic{width:15px;height:15px;}
+.st-hostrow .st-host .tx b{font-size:13px;}
+/* السطر الأول: على الجوال الضيق المنظم عنده زر إنهاء البث، فاسم الجولة يختفي بدل ما يركب عليه */
+@media (max-width: 400px){ .lv-top:has(.bc-endbtn) .lv-round{display:none;} }
+.lv-top .lv-round{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.st-qn small{margin-top:2px;}

@@ -312,8 +312,8 @@ function renderLiveScreenNow() {
 ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic("power")} ${sched ? "إلغاء" : "إنهاء البث"}</button>` : ""}
 </div>`;
 
-    /* مكان الأزرار على قد عددها (المنظم 3 والباقين 2)، عشان اسم المقدم ياخذ أكبر مكان بالنص */
-    R.host = live ? `<div class="st-hostrow" style="--sidew:${isAdmin ? 112 : 76}px">${bcHostHTML(d)}${bcSideCtlHTML()}</div>` : "";
+    /* مكان الأزرار ضيق (عمودين)، عشان اسم المقدم ياخذ أكبر مكان بالنص */
+    R.host = live ? `<div class="st-hostrow" style="--sidew:68px">${bcHostHTML(d)}${bcSideCtlHTML()}</div>` : "";
     R.pods = "";
     if (live && o && (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing" || d.scene === "result")) {
         /* منصات المتسابقين: تنور منصة اللي ضغط الجرس */
