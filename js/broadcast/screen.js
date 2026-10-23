@@ -323,7 +323,7 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
 <i class="st-cone"></i>
 <img src="${safeSrc(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
-<div class="st-desk">${showScoreHTML(d, n)}<i>نقاط</i></div>
+<div class="st-desk">${showScoreHTML(d, n)}<i>أجوبة</i></div>
 </div>`;
         const mid = d.scene === "talk" ? `الترحيب<small>قبل البداية</small>` : d.scene === "playing" ? (d.qIndex >= LIVE_Q_COUNT ? `ذهبي<small>سؤال الحسم</small>` : `السؤال ${d.qIndex + 1}<small>من ${LIVE_Q_COUNT}</small>`) : (d.scene === "result" ? "النتيجة" : "استعدوا");
         const mc = (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
