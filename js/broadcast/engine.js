@@ -580,25 +580,13 @@ function bcNext(skip) {
     bcOpenNext(id, skip).then(() => liveTx(id, (x, now) => bcNextUpd(x, now, skip))).catch(err => alert("تعذّر: " + err.message));
 }
 
-/* البث المجدول: يبدأ الافتتاح (المنظم يضغط "ابدأ الحين" أو لحاله أول ما يخلص العداد) */
-let bcGoLiveTry = 0;
-function bcGoLive(manual) {
+/* البث المجدول: يبدأ الافتتاح بضغطة المنظم بس (قبل الموعد أو بعده). العداد للعرض، وما يبدأ البث لحاله */
+function bcGoLive() {
     const d = liveMatchesCache[openLiveId];
-    if (!d || d.status !== "scheduled") return;
-    if (manual) {
-        if (!isAdmin || !confirm("تبدأ البث الحين قبل الموعد؟")) return;
-        liveTx(openLiveId, (x, now) => x.status === "scheduled" ? { status: "live", scene: "opening", sceneAt: now, startedAt: now, hostUid: currentUser.uid, hostName: (currentUserDocData && currentUserDocData.name) || x.hostName } : null)
-            .catch(err => roomToast("تعذّر بدء البث: " + err.message, "alert"));
-        return;
-    }
-    bcGoLiveId(openLiveId);
-}
-/* يبدأ البث المجدول لحاله (يبقى المنظم الأصلي هو المنظم) */
-function bcGoLiveId(id) {
-    if (bcNow() - bcGoLiveTry < 6000) return;
-    bcGoLiveTry = bcNow();
-    liveTx(id, (x, now) => (x.status === "scheduled" && now >= (Number(x.startAt) || 0)) ? { status: "live", scene: "opening", sceneAt: now, startedAt: now } : null)
-        .catch(() => {});
+    if (!d || d.status !== "scheduled" || !isAdmin) return;
+    if (bcNow() < (Number(d.startAt) || 0) && !confirm("تبدأ البث الحين قبل الموعد؟")) return;
+    liveTx(openLiveId, (x, now) => x.status === "scheduled" ? { status: "live", scene: "opening", sceneAt: now, startedAt: now, hostUid: currentUser.uid, hostName: (currentUserDocData && currentUserDocData.name) || x.hostName } : null)
+        .catch(err => roomToast("تعذّر بدء البث: " + err.message, "alert"));
 }
 
 /* نافذة اختيار وقت البث: الحين أو موعد محدد */
@@ -661,41 +649,18 @@ function bcNextUpd(x, now, skip) {
     });
 }
 
-/* ===== لو المنظم غايب: البث يكمّل لحاله =====
-   جهاز المنظم يكتب "أنا موجود" كل 10 ثواني. ولو ما كتب لـ 25 ثانية، أي جهاز فاتح البث يكمّل:
-   الافتتاح 20 ث ← أول مواجهة، صفحة المتسابقين 60 ث ← تبدأ المواجهة، النتيجة 20 ث ← المواجهة الجاية، الختام 90 ث ← إنهاء البث */
+/* ===== حضور المنظم =====
+   جهاز المنظم يكتب "أنا موجود" كل 10 ثواني (hostSeen). يستخدمه الانتقال بالوقت داخل السؤال (bcAdvanceLag) ومزامنة المذيع.
+   الطيار الآلي انشال (23 أكتوبر 2026، طلب محمد): ولا مشهد ينتقل لحاله (الافتتاح، صفحة المتسابقين، الترحيب، النتيجة، الختام)،
+   ولا البث المجدول يبدأ لحاله لما يخلص العداد. كل انتقال بين الصفحات بضغطة من المنظم بس */
 const BC_HOST_GONE_MS = 25000;
-const BC_AUTO_WAIT = { opening: 20000, intro: 60000, talk: 30000, result: 20000, closing: 90000 };
-let bcLastBeat = 0, bcAutoTry = 0;
+let bcLastBeat = 0;
 function bcHostGone(d) { return !d.hostSeen || bcNow() - Number(d.hostSeen) > BC_HOST_GONE_MS; }
 function bcHostHeartbeat(d) {
     if (!firebaseDB || !d || d.status !== "live" || !amBcHost(d) || bcNow() - bcLastBeat < 10000) return;
     bcLastBeat = bcNow();
     liveRef(openLiveId).update({ hostSeen: bcNow() }).catch(() => {});
 }
-function bcAutoPilot(d) {
-    if (!firebaseDB || !d || d.status !== "live" || !currentUser || !bcHostGone(d)) return;
-    const wait = BC_AUTO_WAIT[d.scene];
-    if (!wait || bcNow() - (Number(d.sceneAt) || 0) < wait || bcNow() - bcAutoTry < 4000) return;
-    bcAutoTry = bcNow();
-    const id = openLiveId, scene = d.scene, v = d.v;
-    (scene === "opening" || scene === "result" ? bcOpenNext(id, false) : Promise.resolve()).then(() => liveTx(id, (x, now) => {
-        if (x.status !== "live" || x.scene !== scene || x.v !== v || !bcHostGone(x)) return null;
-        if (scene === "intro") return { scene: "talk", sceneAt: now, auto: true };
-        if (scene === "talk") return { scene: "countdown", deadline: now + LIVE_COUNT_MS, auto: true };
-        if (scene === "closing") return { status: "ended", phase: "done", endedAt: now, endReason: "auto" };
-        return bcNextUpd(x, now, false);
-    })).catch(() => {});
-}
-
-/* البث المجدول: أي جهاز فاتح الموقع يبدأه أول ما يجي الموعد (مو لازم المنظم) */
-setInterval(() => {
-    if (!firebaseDB || !currentUser) return;
-    Object.keys(liveMatchesCache).forEach(id => {
-        const x = liveMatchesCache[id];
-        if (x && x.status === "scheduled" && !bcIsStale(x) && bcNow() >= (Number(x.startAt) || 0)) bcGoLiveId(id);
-    });
-}, 3000);
 
 /* من صفحة المتسابقين ← فقرة الترحيب */
 function bcToTalk() {
@@ -814,6 +779,8 @@ function liveBuzz(ev) {
     /* استجابة فورية قبل ما يرد السيرفر: صوت الجرس، اهتزاز، والجرس يتغير، ويبدأ التسجيل على طول عشان أول كلمة ما تضيع.
        الحكم مين ضغط أول يظل في الـ transaction تحت، ولو غيري سبقني يتلغى التسجيل */
     if (bell) { bell.classList.add("rung"); const sp = bell.querySelector("span"); if (sp) sp.textContent = "ضغطت!"; }
+    /* السؤال يختفي عندي على طول (وعند الكل أول ما يوصل الجرس للسيرفر) */
+    { const qt = document.querySelector("#liveScreenBody .lv-qtext.tv-words"); if (qt) qt.style.visibility = "hidden"; }
     bcLocalBuzzQ = id + "|" + d.cur + "|" + d.qIndex;
     const bz = BC_BUZZ.cur = { id, q: d.cur + "_" + d.qIndex, t0, at: bcNow(), local: 0, tx: 0, seen: 0, won: null, sent: false };
     /* طلب الجرس يطلع للسيرفر أول شي (مين أسرع يتحدد هناك)، وبعده الصوت والاهتزاز وتجهيز التسجيل */

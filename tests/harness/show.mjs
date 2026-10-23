@@ -1,5 +1,6 @@
 /* طبقة الإخراج الثانية (js/broadcast/show.js): جهازين، واحد التحديثات توصله متأخرة 0.9 ث
-   - السؤال كلمة كلمة: نفس عدد الكلمات ظاهر على الجهازين بنفس اللحظة
+   - السؤال كلمة كلمة بسرعة كلام المذيع (مو كامل بثانية): نفس عدد الكلمات ظاهر على الجهازين بنفس اللحظة
+   - أول ما أحد يضغط الجرس السؤال يختفي، ويرجع كامل وقت الكشف
    - شريط الموقف (سلسلة) وقت الكشف بنفس الإطار على الجهازين (الفرق أقل من 150ms)
    - شريط السؤال الذهبي، والإضاءة (توتر وقت الجواب، احتفال بعد الجواب الصح)، والنقاط تتدحرج، وإحصائيات الشريط
    - جهاز متأخر أكثر من 1.5 ث ما يطلع له شريط خلص وقته
@@ -37,23 +38,26 @@ for (const mode of ["full", "reduced"]) {
         const q1 = Date.now() + 100;
         upd(db, { phase: "buzz", qIndex: 1, qAt: q1, deadline: q1 + 15000, outcome: 0, lastAnswer: null });
         await until(() => late.evaluate(() => liveMatchesCache[openLiveId].qIndex === 1), 4000);
-        await sleep(Math.max(0, q1 + 900 - Date.now()));
-        const [wa, wb] = await Promise.all([words(fan), words(late)]);
         const total = await fan.evaluate(() => document.querySelectorAll(".lv-qtext .tv-w").length);
         if (mode === "full") {
-            check("question words appear progressively (not all at once)", wa > 0 && wa < total, { wa, total });
+            await sleep(Math.max(0, q1 + 1300 - Date.now()));
+            check("no words before the presenter reaches the question text", (await words(fan)) === 0);
+            await sleep(Math.max(0, q1 + 3200 - Date.now()));
+            const [wa, wb] = await Promise.all([words(fan), words(late)]);
+            check("question words appear at speaking pace (part of it after 3.2 s)", wa > 0 && wa < total * 0.6, { wa, total });
             check("late device shows the same words at the same moment (±1)", Math.abs(wa - wb) <= 1, { fan: wa, late: wb });
             await fan.screenshot({ path: dir + "/1-question-words.png" });
         }
-        await sleep(1500);
-        check("all words visible after the reveal-in", (await words(fan)) === total && (await words(late)) === total);
-        /* 2) الجرس: إضاءة توتر */
+        check("all words visible once the presenter finishes", await until(async () => (await words(fan)) === total && (await words(late)) === total, 9000));
+        /* 2) الجرس: إضاءة توتر، والسؤال يختفي */
         upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
         check("light: tense while answering", await until(() => fan.evaluate(() => document.getElementById("tvLight").dataset.mood === "tense"), 3000));
+        check("question hidden after the buzzer", await until(() => fan.evaluate(() => !document.querySelector(".lv-qtext .tv-w") && !!document.querySelector(".lv-qtext.lv-qhidden")), 3000));
         /* 3) الكشف: سعد جاوب صح للمرة الثالثة (سلسلة) */
         const r = Date.now() + 100;
         upd(db, { phase: "reveal", outcome: 1, s1: 3, s2: 0, log: [1, 1, 1, -1, -1], qIndex: 2, deadline: r + 6500, lastAnswer: { by: 1, text: "طوكيو", correct: true } });
         check("streak band on time", await until(() => fan.$(".tv-band.situ.streak"), 5000));
+        check("question shown complete again at the reveal", await until(async () => (await fan.evaluate(() => document.querySelectorAll(".lv-qtext .tv-w").length)) > 0 && (await words(fan)) === (await fan.evaluate(() => document.querySelectorAll(".lv-qtext .tv-w").length)), 3000));
         check("streak band on the late device too", await until(() => late.$(".tv-band.situ.streak"), 3000));
         const [ba, bb] = await Promise.all([bandPos(fan), bandPos(late)]);
         if (mode === "full") check("band in the same frame on both (< 150ms apart)", ba != null && bb != null && Math.abs(ba - bb) < 150, { fan: ba, late: bb });

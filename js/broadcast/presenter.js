@@ -74,10 +74,13 @@ function bcSpeak(text, at, joinedLate) {
             src.onended = () => { if (bcSpeechSrc === src) { bcSpeechSrc = null; setTimeout(() => playAt(i + 1), 250); } };
             const late = i === 0 && at ? (bcNow() - at) / 1000 : 0;
             if (joinedLate && late > buf.duration + 1) return playAt(i + 1);   /* فتح البث متأخر والجملة خلصت عند الكل */
-            if (late < -0.02) src.start(c.currentTime - late);
-            else if (late > 0.15 && late <= BC_SPEAK_SEEK_MAX && late < buf.duration - 0.4) src.start(0, late);
+            /* zero: لحظة أول الملف بساعة السيرفر (كلمات السؤال على الشاشة تمشي معها، show.js) */
+            let zero = bcNow();
+            if (late < -0.02) { src.start(c.currentTime - late); zero = at; }
+            else if (late > 0.15 && late <= BC_SPEAK_SEEK_MAX && late < buf.duration - 0.4) { src.start(0, late); zero = at; }
             else src.start();
             bcSpeechSrc = src;
+            if (typeof showSpeechAt === "function") showSpeechAt(list[i], zero, buf.duration);
         });
     };
     playAt(0);

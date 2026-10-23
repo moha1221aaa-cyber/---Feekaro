@@ -443,6 +443,16 @@
 .cine-skip{position:absolute;bottom:3%;left:0;right:0;text-align:center;z-index:7;color:rgba(255,255,255,.45);font-size:11px;opacity:0;animation:cineUp .5s 1s ease both;}
 .cine-logo{position:absolute;left:50%;top:30%;width:clamp(96px,30vw,140px);margin-left:calc(clamp(96px,30vw,140px) / -2);z-index:5;opacity:0;border-radius:22%;filter:drop-shadow(0 0 30px rgba(59,130,246,.75));}
 .cine-logo.on{animation:cineLogo 1.2s cubic-bezier(.2,.9,.3,1.2) both;}
+/* شارة البداية (cineIdent): الشعار ثم اسم الدوري ثم المواجهة */
+.cine.ident .cine-logo{top:24%;}
+.cine-idname,.cine-idmatch{position:absolute;left:0;right:0;z-index:5;text-align:center;opacity:0;transform:translate3d(0,14px,0);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1);}
+.cine-idname{top:calc(24% + clamp(110px,34vw,156px));}
+.cine-idname span{display:block;font-size:clamp(24px,7.4vw,40px);font-weight:900;}
+.cine-idname small{display:block;margin-top:6px;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:5px;}
+.cine-idmatch{bottom:17%;color:#fde68a;font-size:13px;font-weight:700;letter-spacing:1px;}
+.cine-idmatch b{display:block;margin-top:6px;color:#fff;font-size:clamp(18px,5.4vw,26px);font-weight:900;letter-spacing:0;}
+.cine-idmatch i{font-style:normal;color:#facc15;margin:0 6px;}
+.cine-idname.on,.cine-idmatch.on{opacity:1;transform:none;}
 @keyframes cineLogo{0%{opacity:0;transform:scale(.2) rotate(-25deg);filter:brightness(4) drop-shadow(0 0 30px #fff)}60%{opacity:1;filter:brightness(1.6) drop-shadow(0 0 40px rgba(250,204,21,.9))}100%{opacity:1;transform:none;filter:drop-shadow(0 0 30px rgba(250,204,21,.7))}}
 .cine-onair{position:absolute;top:68%;left:0;right:0;text-align:center;z-index:5;opacity:0;}
 .cine-onair.on{animation:cineUp .5s ease both;}
@@ -702,14 +712,24 @@
 /* الخفيف: الحركات اللي ترسم كل إطار (لمعة النص، تدرّج الانتظار، نبض الظلال) تتوقف، والباقي transform و opacity */
 #liveScreen.bc-lite .bc-title,#liveScreen.bc-lite .cine-gold,#liveScreen.bc-lite.live-screen[data-scene="waiting"],
 #liveScreen.bc-lite .st-talk .ic-wrap,#liveScreen.bc-lite .va-mic,#liveScreen.bc-lite .bc-onair-tag{animation:none;}
-#liveScreen.bc-lite.live-screen::before{animation-duration:56s;}
+/* وضع التبريد للجوالات (23 أكتوبر 2026): ولا حركة تدور طول البث. الغبار والأشعة والموجات ونبض الظلال (box-shadow يرسم كل إطار) توقف،
+   والحركات القصيرة (دخول العناصر، الكلمات، الأشرطة) باقية لأنها تخلص بثواني */
+#liveScreen.bc-lite.live-screen::before{animation:none;will-change:auto;}
+#liveScreen.bc-lite.live-screen::after{animation:none !important;}
+#liveScreen.bc-lite .bc-wavebg svg,#liveScreen.bc-lite .bc-wavebg::before,#liveScreen.bc-lite .bc-wait-logo,
+#liveScreen.bc-lite .bc-clock>span,#liveScreen.bc-lite .bc-clock b.sec,
+#liveScreen.bc-lite .cine-p .av,#liveScreen.bc-lite .cine-p .av img,#liveScreen.bc-lite .tv-vig,
+#liveScreen.bc-lite .st-decider,#liveScreen.bc-lite .st-wait span,#liveScreen.bc-lite .lv-badge .dot,
+#liveScreen.bc-lite .cine-onair span::before,#liveScreen.bc-lite .bc-unlock{animation:none !important;}
+#liveScreen.bc-lite .cine-beam{display:none;}
 
 /* ===== طبقة الإخراج الثانية (js/broadcast/show.js): كلها transform و opacity ===== */
-/* السؤال كلمة كلمة: --q0 بداية السؤال بالنسبة للحين (سالب = الجوال متأخر فيكمل من نفس الكلمة) */
+/* السؤال كلمة كلمة مع صوت المذيع: --wd وقت كل كلمة بالنسبة للحين (show.js showApplyWords، سالب = طلعت) */
 .lv-qtext.tv-words{animation:none !important;}
-.lv-qtext .tv-w{display:inline-block;animation:tvWordIn .42s var(--tv-out) both;animation-delay:calc(var(--q0,0ms) + var(--w) * 75ms);}
+#liveScreen .lv-qtext.lv-qhidden{display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;color:#94a3b8;min-height:3.2em;}
+#liveScreen .lv-qtext.lv-qhidden svg{width:18px;height:18px;flex-shrink:0;}
+.lv-qtext .tv-w{display:inline-block;animation:tvWordIn .42s var(--tv-out) both;animation-delay:var(--wd,0ms);}
 @keyframes tvWordIn{from{opacity:0;transform:translateY(.45em) scale(.96)}to{opacity:1;transform:none}}
-.st-qcard.still .lv-qtext .tv-w{animation:none;}
 
 /* شريط عريض: السؤال الذهبي، سؤال الحسم، والموقف (سلسلة، تعادل، رجوع، صدارة) */
 .tv-band{position:absolute;left:0;right:0;top:40%;height:96px;margin-top:-48px;z-index:1000004;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
@@ -752,3 +772,5 @@
   .st-desk .tv-roll span{animation:none;transform:translateY(-100%);}
 }
 @keyframes tvFadeIO{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+/* الصفحة اللي ورا شاشة البث أو الغرفة ما تنشاف، فحركاتها (حلقة الشعار ترسم كل إطار) توقف لين ترجع (23 أكتوبر 2026، سخونة الجوالات) */
+body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeader *,body.room-open .section *{animation-play-state:paused !important;}

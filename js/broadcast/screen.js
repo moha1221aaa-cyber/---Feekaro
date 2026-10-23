@@ -102,7 +102,6 @@ function liveTick() {
     }
     bcAirClock(d);
     bcHostHeartbeat(d);
-    bcAutoPilot(d);
     bcTickMics();
     bcLowerThird(d);
     tvTick(d);
@@ -128,10 +127,9 @@ function bcTickClock(d) {
         if (sec === 0) {
             el.innerHTML = `<div class="now">الحين!</div>`;
             const lb = document.getElementById("bcWaitNote");
-            if (lb) lb.textContent = "جاري بدء البث...";
+            if (lb) lb.textContent = isAdmin ? "الموعد جا، اضغط \"ابدأ البث الحين\"" : "الموعد جا، بانتظار المنظم يبدأ البث";
         }
     }
-    if (left <= 0 && currentUser) bcGoLive(false);
 }
 
 /* لقطة انتقالية بين المشاهد (ستينجر) */
@@ -172,7 +170,11 @@ function bcSceneEffects(d) {
         if (prevScene === "result") tvBumper(d, () => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "intro" && x.cur === d.cur) cineMatchIntro(x); });
         else cineMatchIntro(d);
     } else if (d.scene === "talk") {
-        bcTransition("talk", Number(d.sceneAt) || 0);
+        /* شارة البداية أول (لما يضغطون الاثنين جاهز)، وبعدها لقطة الترحيب */
+        const at = Number(d.sceneAt) || bcNow();
+        const left = prevScene === "intro" ? cineIdent(d, at) : 0;
+        if (!left) bcTransition("talk", at);
+        else setTimeout(() => { const x = liveMatchesCache[openLiveId]; if (x && x.scene === "talk" && x.cur === d.cur) bcTransition("talk", at + CINE_IDENT_MS); }, left);
     } else if (d.scene === "countdown") {
         bcTransition("count", (Number(d.deadline) || 0) - LIVE_COUNT_MS);
     } else if (d.scene === "playing" && prevScene === "countdown") {
@@ -437,11 +439,11 @@ function bcStageHTML(d, me) {
 <div class="bc-wait-t">يبدأ البث بعد</div>
 <div class="bc-clock" id="bcClock"></div>
 <div class="bc-wait-at">${ic("hourglass")} الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))}</div>
-<div class="lv-muted" id="bcWaitNote">البث يبدأ لحاله أول ما يخلص العداد</div>
+<div class="lv-muted" id="bcWaitNote">البث يبدأ لما المنظم يبدأه</div>
 <button class="bc-ghost" onclick="bcShare()">${ic("share")} أرسل رابط البث في الواتساب</button>
 </div>
 <div class="bc-fixtures">${bcFixturesHTML(d, false)}</div>
-${isAdmin ? `<div class="bc-admin"><button class="bc-go" onclick="bcGoLive(true)">${ic("zap")} ابدأ البث الحين</button></div>` : ""}`;
+${isAdmin ? `<div class="bc-admin"><button class="bc-go" onclick="bcGoLive()">${ic("zap")} ابدأ البث الحين</button></div>` : ""}`;
     }
 
     if (d.status !== "live") {
@@ -593,7 +595,10 @@ function bcQuizHTML(d, me) {
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>
+${d.phase === "answer" || bcArmedHere(d, me)
+    /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات */
+    ? `<div class="lv-qtext lv-qhidden">${ic("lock")} السؤال انخفى، جاوب من اللي سمعته</div>`
+    : `<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>`}
 </div>`;
 
     const last = d.lastAnswer;
@@ -604,7 +609,7 @@ ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGol
     if (d.phase === "buzz") {
         const canBuzz = !!me;
         /* ضغطت الجرس وننتظر السيرفر: الجرس يظل مضغوط والتسجيل ظاهر لو انعاد الرسم */
-        if (canBuzz && typeof VA !== "undefined" && VA.arm && VA.arm.id === openLiveId && VA.arm.qIndex === d.qIndex) {
+        if (canBuzz && bcArmedHere(d, me)) {
             return html + `<button class="lv-bell rung" id="lvBell" disabled>${ic("bell")}<span>ضغطت!</span></button>` + vaHTML();
         }
         html += `
@@ -643,6 +648,8 @@ ${okLast}
     }
     return html;
 }
+/* ضغطت الجرس من هالجهاز والسيرفر للحين ما رد */
+function bcArmedHere(d, me) { return !!me && d.phase === "buzz" && typeof VA !== "undefined" && !!VA.arm && VA.arm.id === openLiveId && VA.arm.qIndex === d.qIndex; }
 /* وقت كشف الإجابة: بعد 1.6 ثانية من بداية لحظة الكشف */
 function bcRevealAt(d) { return (d.deadline || 0) - LIVE_REVEAL_MS + 1600; }
 
@@ -672,7 +679,7 @@ function bcDiagPanel(d) {
         const x = diag[uid] || {};
         const bz = (x.buzz || []).slice().reverse().map(b => `<tr><td>${ql(b.q)}</td><td>${ms(b.local)}</td><td>${ms(b.tx)}</td><td>${ms(b.seen)}</td><td>${b.won ? "فاز" : "سُبق"}</td></tr>`).join("");
         const vd = (dd.vaDiag || {})[uid];
-        const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}${v.ms ? ` · الحكم بعد ${v.ms}ms` : ""}${v.srv ? ` (Whisper ${+v.srv.stt || 0} · ${escapeHTML(String(v.srv.path || ""))})` : ""}</li>`).join("");
+        const va = (Array.isArray(vd) ? vd : []).slice().reverse().map(v => `<li><b>${ql(v.q)}</b> ${escapeHTML((v.steps || []).join(" ← "))}${v.said ? " · «" + escapeHTML(String(v.said)) + "»" : ""}${v.ok != null ? (v.ok ? " ✓" : " ✗") : ""}${v.speechMs != null ? ` · كلام ${v.speechMs}ms` : ""}${v.via ? " · " + escapeHTML(String(v.via)) : ""}${v.ms ? ` · الحكم بعد ${v.ms}ms` : ""}${v.srv ? ` (السمع ${+v.srv.stt || 0}ms${v.srv.by ? " من " + escapeHTML(String(v.srv.by)) : ""} · ${escapeHTML(String(v.srv.path || ""))})` : ""}</li>`).join("");
         /* أداء جواله وانقطاع النت (آخر قياس) */
         const pf = (x.perf || []).filter(q => q && q.renders != null).slice(-1)[0];
         const nt = (x.net || []).slice(-3).map(q => escapeHTML(String(q.ev || ""))).join("، ");

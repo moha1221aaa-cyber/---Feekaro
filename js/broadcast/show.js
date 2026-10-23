@@ -1,7 +1,7 @@
 /* طبقة الإخراج الثانية (21 أكتوبر 2026، بعد "انقله نقلة نوعية"): كل شي هنا transform و opacity بس، وله بديل في prefers-reduced-motion
    1) التزامن: كل انتقال أو شريط يبدأ بوقت اللحظة في الوثيقة (بساعة السيرفر)، والجوال اللي وصله التحديث متأخر
       يقفز لنفس الإطار اللي عند الباقين (showSync). لو فات وقته كامل ما يطلع أبد، والصوت ما يطلع لو متأخر أكثر من 0.35 ث
-   2) السؤال يطلع كلمة كلمة من لحظة بدايته (qAt)، والجوال المتأخر يشوف نفس الكلمات اللي عند الباقين
+   2) السؤال يطلع كلمة كلمة مع صوت المذيع (بساعة السيرفر)، والجوال المتأخر يشوف نفس الكلمات اللي عند الباقين
    3) شريط الموقف وقت الكشف: سلسلة، تعادل، رجوع، صدارة جديدة (نفس bcSituKind حق المذيع)
    4) شريط السؤال الذهبي وسؤال الحسم
    5) إضاءة الاستوديو حسب اللحظة: هدوء، توتر (آخر 5 ثواني والجواب)، احتفال (جواب صح والنتيجة)
@@ -25,14 +25,52 @@ function showWordsHTML(text) {
     const ws = String(text || "").split(/\s+/).filter(Boolean);
     return ws.map((w, i) => `<span class="tv-w" style="--w:${i}">${escapeHTML(w)}</span>`).join(" ");
 }
-/* بعد الرسم: بداية الكلمات = بداية السؤال (+0.5 ث فتحة اللوحة)، والمتأخر يبدأ من نص الجملة */
+/* السؤال يطلع مع صوت المذيع (23 أكتوبر 2026، كان يطلع كامل بثانية): كل كلمة لها وقتها بساعة السيرفر.
+   أول شي تقدير (المذيع يبدأ بعد qAt بـ 150ms، والمقدمة "السؤال الأول." قبل نص السؤال، وكل حرف ~75ms)،
+   وأول ما يبدأ صوت المذيع فعلاً على هالجهاز (showSpeechAt من bcSpeak) نعرف بدايته ومدته، فتتوزع الكلمات على صوته بالضبط.
+   الكلمة اللي طلعت ما ترجع تختفي، وأي رسم جديد للوحة ياخذ نفس الأوقات (فاللي فات يطلع على طول) */
+const SHOW_MS_PER_CHAR = 75;
+SHOW.qt = {};   /* مفتاح السؤال ← { t: [وقت كل كلمة], src: "est" أو "voice" } */
+function showQKey(d) { return openLiveId + ":" + d.cur + "_" + d.qIndex; }
+/* وقت كل كلمة: البداية + نسبة مكان الكلمة (بالحروف) من مدة نص السؤال */
+function showWordTimes(q, start, span) {
+    const ws = String(q || "").split(/\s+/).filter(Boolean), len = ws.join(" ").length || 1, t = [];
+    let pos = 0;
+    ws.forEach(w => { t.push(Math.round(start + span * (pos / len))); pos += w.length + 1; });
+    return t;
+}
+function showEstimate(d) {
+    const q = ((d.questions || [])[d.qIndex] || {}).text || "";
+    const spoken = typeof bcQText === "function" ? bcQText(d, d.qIndex) : q;
+    const pre = Math.max(0, spoken.lastIndexOf(q));
+    const at = (Number(d.qAt) || bcNow()) + (bcIsDecider(d) ? 600 : 150) + 300;
+    return showWordTimes(q, at + pre * SHOW_MS_PER_CHAR, q.length * SHOW_MS_PER_CHAR);
+}
+/* المذيع بدأ جملة على هالجهاز: zero بداية الصوت بساعة السيرفر، dur مدته بالثواني */
+function showSpeechAt(text, zero, dur) {
+    const d = liveMatchesCache[openLiveId];
+    if (!d || d.scene !== "playing" || d.phase !== "buzz") return;
+    const q = ((d.questions || [])[d.qIndex] || {}).text || "";
+    const pos = q ? String(text || "").lastIndexOf(q) : -1;
+    if (pos < 0 || !(dur > 0.5)) return;
+    /* سكوت قصير في أول وآخر ملف الصوت */
+    const len = text.length, use = Math.max(0.3, dur - 0.35) * 1000;
+    const fresh = showWordTimes(q, zero + 120 + use * (pos / len), use * (q.length / len));
+    const k = showQKey(d), old = SHOW.qt[k], now = bcNow();
+    /* اللي طلع يظل طالع */
+    SHOW.qt[k] = { src: "voice", t: fresh.map((x, i) => old && old.t[i] <= now ? old.t[i] : Math.max(x, now)) };
+    showApplyWords(document.querySelector("#liveScreenBody .lv-qtext.tv-words"), d);
+}
+function showApplyWords(qt, d) {
+    if (!qt || !d) return;
+    const k = showQKey(d);
+    if (!SHOW.qt[k]) SHOW.qt[k] = { src: "est", t: showEstimate(d) };
+    const t = SHOW.qt[k].t, now = bcNow(), all = d.phase !== "buzz";
+    qt.querySelectorAll(".tv-w").forEach((w, i) => w.style.setProperty("--wd", (all ? -10000 : (t[i] != null ? t[i] - now : 0)) + "ms"));
+}
 function showAfterRender(body, d) {
     const qt = body.querySelector(".lv-qtext.tv-words");
-    if (qt && !qt.dataset.synced) {
-        qt.dataset.synced = "1";
-        const at = (Number(d.qAt) || 0) + 500;
-        qt.style.setProperty("--q0", (at ? at - bcNow() : 0) + "ms");
-    }
+    if (qt && !qt.dataset.synced) { qt.dataset.synced = "1"; showApplyWords(qt, d); }
 }
 
 /* ===== 3 + 4 + 5) تنادى من liveTick كل 200ms ===== */
