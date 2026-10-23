@@ -100,6 +100,15 @@ try {
         check("short screen: question card not squeezed (answer)", await card(p1) && await card(host));
         check("no name strip over the answer box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
         await p1.screenshot({ path: out + "/1b-short-answer.png" });
+        /* الكيبورد: المتصفح يمرّر شاشة البث نفسها لما تنفتح الخانة، وبعد ما ينقفل لازم ترجع (كانت تظل مرفوعة ومعلقة) */
+        const pre = await p1.evaluate(() => {
+            const scr = document.getElementById("liveScreen"), i = document.createElement("input");
+            document.getElementById("liveScreenBody").appendChild(i); i.focus();
+            const pad = document.createElement("div"); pad.id = "padT"; pad.style.cssText = "height:2000px;flex-shrink:0"; scr.appendChild(pad);
+            scr.scrollTop = 300; const v = scr.scrollTop; i.blur(); i.remove(); return v;
+        });
+        await sleep(1000);
+        check("after the keyboard closes the screen goes back down (not stuck up)", pre > 0 && (await p1.evaluate(() => { const v = document.getElementById("liveScreen").scrollTop; document.getElementById("padT").remove(); return v; })) === 0, pre);
         await p1.context().close(); await host.context().close();
     }
     /* ===== 1ب2) صفحة "جاهز" بأسماء طويلة على جوال صغير: ولا شي يطلع برا الشاشة ===== */

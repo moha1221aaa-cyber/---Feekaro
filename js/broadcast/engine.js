@@ -40,7 +40,46 @@ const LIVE_FALLBACK_QUESTIONS = [
     { text: "كم عدد كواكب المجموعة الشمسية؟", answer: "8|ثمانية|ثمان" },
     { text: "ما أصغر دولة في العالم مساحة؟", answer: "الفاتيكان" },
     { text: "من فاز بكأس العالم لكرة القدم 2022؟", answer: "الأرجنتين|الارجنتين" },
-    { text: "في أي عام أُعلن توحيد المملكة العربية السعودية ميلادياً؟", answer: "1932" }
+    { text: "في أي عام أُعلن توحيد المملكة العربية السعودية ميلادياً؟", answer: "1932" },
+    /* 23 أكتوبر 2026: احتياط أكبر (لو توليد الأسئلة فشل)، معلومات ثابتة بدون خلاف */
+    { text: "ما عاصمة مصر؟", answer: "القاهرة|القاهره" },
+    { text: "ما عاصمة فرنسا؟", answer: "باريس" },
+    { text: "ما عاصمة إيطاليا؟", answer: "روما" },
+    { text: "ما عاصمة ألمانيا؟", answer: "برلين" },
+    { text: "ما عاصمة إسبانيا؟", answer: "مدريد" },
+    { text: "ما عاصمة الإمارات العربية المتحدة؟", answer: "أبوظبي|ابوظبي|أبو ظبي|ابو ظبي" },
+    { text: "ما عاصمة المغرب؟", answer: "الرباط" },
+    { text: "ما عاصمة روسيا؟", answer: "موسكو" },
+    { text: "ما عاصمة الصين؟", answer: "بكين" },
+    { text: "ما عاصمة اليمن؟", answer: "صنعاء" },
+    { text: "ما عاصمة العراق؟", answer: "بغداد" },
+    { text: "ما عاصمة الأردن؟", answer: "عمّان|عمان" },
+    { text: "ما عاصمة سلطنة عمان؟", answer: "مسقط" },
+    { text: "ما عاصمة قطر؟", answer: "الدوحة|الدوحه" },
+    { text: "ما عاصمة البحرين؟", answer: "المنامة|المنامه" },
+    { text: "كم عدد أيام الأسبوع؟", answer: "7|سبعة|سبع" },
+    { text: "كم عدد أشهر السنة؟", answer: "12|اثنا عشر|اثني عشر|اثنعش" },
+    { text: "ما الكوكب الأقرب إلى الشمس؟", answer: "عطارد" },
+    { text: "ما الكوكب الملقب بالكوكب الأحمر؟", answer: "المريخ" },
+    { text: "ما أكبر قارة في العالم مساحة؟", answer: "آسيا|اسيا" },
+    { text: "كم عدد ألوان قوس قزح؟", answer: "7|سبعة|سبع" },
+    { text: "ما اللغة الرسمية في البرازيل؟", answer: "البرتغالية|البرتغالي|البرتغاليه" },
+    { text: "كم عدد لاعبي فريق كرة السلة داخل الملعب؟", answer: "5|خمسة|خمس" },
+    { text: "في أي مدينة يقع المسجد النبوي؟", answer: "المدينة المنورة|المدينة|المدينه" },
+    { text: "كم عدد الصلوات المفروضة في اليوم والليلة؟", answer: "5|خمس|خمسة" },
+    { text: "من النبي الذي رفع قواعد الكعبة مع ابنه إسماعيل؟", answer: "إبراهيم|ابراهيم" },
+    { text: "ما الحيوان الملقب بسفينة الصحراء؟", answer: "الجمل|الإبل|الابل|البعير" },
+    { text: "ما أكبر حيوان على وجه الأرض؟", answer: "الحوت الأزرق|الحوت الازرق" },
+    { text: "كم عدد أرجل العنكبوت؟", answer: "8|ثمانية|ثمان|ثماني" },
+    { text: "ما المعدن الوحيد السائل في درجة حرارة الغرفة؟", answer: "الزئبق" },
+    { text: "ما الغاز الذي يحتاجه الإنسان للتنفس؟", answer: "الأكسجين|الاكسجين" },
+    { text: "كم دقيقة في الساعة؟", answer: "60|ستين|ستون" },
+    { text: "في أي قارة تقع مصر؟", answer: "أفريقيا|افريقيا|إفريقيا" },
+    { text: "ما أكبر صحراء حارة في العالم؟", answer: "الصحراء الكبرى|الكبرى" },
+    { text: "من أول إنسان مشى على سطح القمر؟", answer: "نيل آرمسترونغ|آرمسترونغ|ارمسترونغ|نيل ارمسترونج|ارمسترونج" },
+    { text: "كم عدد أضلاع المثلث؟", answer: "3|ثلاثة|ثلاث" },
+    { text: "ما العضو الذي يضخ الدم في جسم الإنسان؟", answer: "القلب" },
+    { text: "في أي سنة هجرية كانت غزوة بدر الكبرى؟", answer: "2|الثانية|الثانيه|السنة الثانية" }
 ];
 
 let liveMatchesCache = {};   /* بثوث الجولات فقط (type: "round") */
@@ -253,19 +292,59 @@ function buildMatchLiveRow(m) {
     return row;
 }
 
+/* ===== أسئلة جديدة لكل بث (23 أكتوبر 2026، "الأسئلة صارت معروفة وتتكرر") =====
+   بنك الأسئلة كان فاضي، فكل بث ياخذ من نفس الأسئلة الاحتياطية، والتكرار ممنوع داخل البث الواحد بس.
+   الحين: (1) سجل دائم لكل سؤال انسأل (liveDiag/_qhistory، آخر 800)، وما ينعاد سؤال فيه إلا لو خلصت كل الأسئلة.
+   (2) أول ما يبدأ المنظم بث جولة، الذكاء الاصطناعي يولّد أسئلة جديدة على قد المواجهات (تصنيفات مختلفة، ومدقق ثاني يراجعها)
+   وتنحط قبل البنك والاحتياطي. لو تأخر أو فشل، البث يكمّل من البنك والاحتياطي (اللي ما انسأل أول، وبعدها الأقدم) */
+const BC_QHIST_MAX = 800;
+let bcFreshPool = [], bcQHist = [];
+function bcQHistRef() { return liveDiagRef("_qhistory"); }
+function bcQKey(t) { return liveNormalize(String(t || "")).replace(/\s+/g, ""); }
+async function bcLoadQHistory() {
+    try { const s = await bcQHistRef().get(); bcQHist = s.exists && Array.isArray(s.data().texts) ? s.data().texts : []; } catch (e) {}
+    return bcQHist;
+}
+function bcSaveQHistory(texts) {
+    const seen = new Set(), all = bcQHist.concat(texts).reverse().filter(t => { const k = bcQKey(t); if (!k || seen.has(k)) return false; seen.add(k); return true; }).reverse();
+    bcQHist = all.slice(-BC_QHIST_MAX);
+    if (firebaseDB) bcQHistRef().set({ texts: bcQHist, at: bcNow() }).catch(() => {});
+}
+/* يطلب أسئلة جديدة من أكثر من تصنيف بنفس اللحظة (حد السيرفر 4 بالدقيقة، فـ 3 طلبات بالكثير) */
+async function bcFreshQuestions(need) {
+    if (typeof aiCall !== "function" || need <= 0) return [];
+    const cats = ["ثقافة عامة", "جغرافيا", "تاريخ", "علوم", "دين", "رياضة"].map(c => [Math.random(), c]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    const calls = Math.min(3, Math.max(1, Math.ceil(need / 7)));
+    const avoid = bcQHist.slice(-60);
+    const res = await Promise.allSettled(cats.slice(0, calls).map(category => aiCall("questions", { category, count: 10, avoid }, 70000)));
+    const seen = new Set(bcQHist.map(bcQKey)), seenA = new Set(), out = [];
+    res.forEach(r => (r.status === "fulfilled" && r.value && r.value.questions || []).forEach(q => {
+        const k = bcQKey(q && q.text), a = bcQKey(String((q && q.answer) || "").split("|")[0]);
+        if (!k || !q.answer || seen.has(k) || seenA.has(a)) return;
+        seen.add(k); seenA.add(a); out.push({ text: String(q.text), answer: String(q.answer) });
+    }));
+    return out.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+}
 function pickLiveQuestions(exclude) {
-    const ex = new Set(exclude || []);
+    const ex = new Set((exclude || []).map(bcQKey));
+    const hist = new Map(bcQHist.map((t, i) => [bcQKey(t), i]));
     const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
     const bank = (roomState.qbank || []).filter(q => q && q.text && q.answer);
-    let picked = shuffle(bank.filter(q => !ex.has(String(q.text)))).slice(0, LIVE_Q_COUNT);
-    const fill = pool => {
+    let picked = [];
+    const fill = (pool, order) => {
         if (picked.length >= LIVE_Q_COUNT) return;
-        const used = new Set(picked.map(q => String(q.text)));
-        picked = picked.concat(shuffle(pool.filter(q => !used.has(String(q.text)))).slice(0, LIVE_Q_COUNT - picked.length));
+        const used = new Set(picked.map(q => bcQKey(q.text)));
+        const ok = pool.filter(q => !used.has(bcQKey(q.text)) && !ex.has(bcQKey(q.text)));
+        picked = picked.concat((order ? order(ok) : shuffle(ok)).slice(0, LIVE_Q_COUNT - picked.length));
     };
-    fill(LIVE_FALLBACK_QUESTIONS.filter(q => !ex.has(q.text)));
-    fill(bank);                     /* لو خلصت الأسئلة الجديدة نعيد من البنك */
-    fill(LIVE_FALLBACK_QUESTIONS);
+    const fresh = q => !hist.has(bcQKey(q.text));
+    fill(bcFreshPool.filter(fresh));                                     /* جديدة من الذكاء الاصطناعي */
+    fill(bank.filter(fresh));                                            /* البنك: اللي ما انسأل */
+    fill(LIVE_FALLBACK_QUESTIONS.filter(fresh));                         /* الاحتياطي: اللي ما انسأل */
+    /* خلصت الأسئلة اللي ما انسألت: الأقدم في السجل أول */
+    const oldest = arr => arr.slice().sort((a, b) => (hist.get(bcQKey(a.text)) || 0) - (hist.get(bcQKey(b.text)) || 0));
+    fill(bank.concat(LIVE_FALLBACK_QUESTIONS), oldest);
+    if (picked.length < LIVE_Q_COUNT) { ex.clear(); fill(bank.concat(LIVE_FALLBACK_QUESTIONS), oldest); }
     return picked.map(q => ({ text: String(q.text), answer: String(q.answer) }));
 }
 
@@ -299,8 +378,15 @@ async function bcStartRound(r) {
         av1: getPlayerAvatar(m.p1.name).url, av2: getPlayerAvatar(m.p2.name).url,
         s1: 0, s2: 0, state: "pending", applied: false
     }));
-    /* جمل جديدة للمقدم في هذي الجولة (js/ai.js)، ولو تأخرت أو فشلت يرجع للجمل الثابتة */
-    const aiLines = typeof aiHostLines === "function" ? await aiHostLines(r, order) : null;
+    /* جمل جديدة للمقدم في هذي الجولة (js/ai.js)، ولو تأخرت أو فشلت يرجع للجمل الثابتة.
+       وبنفس اللحظة: سجل الأسئلة اللي انسألت، وأسئلة جديدة من الذكاء الاصطناعي على قد المواجهات */
+    roomToast("جاري تجهيز أسئلة جديدة للجولة (دقيقة تقريباً)...", "hourglass");
+    await bcLoadQHistory();
+    const [aiLines, fresh] = await Promise.all([
+        typeof aiHostLines === "function" ? aiHostLines(r, order) : null,
+        bcFreshQuestions(order.length * LIVE_Q_COUNT).catch(() => [])
+    ]);
+    bcFreshPool = fresh;
     /* أسئلة كل مواجهة تتجهز الحين وأجوبتها تنختم في السيرفر (الوثيقة العامة فيها السؤال والختم بس) */
     const secret = await bcSealRound(id, order);
     const data = Object.assign(bcQuizReset(), {
@@ -372,6 +458,7 @@ async function bcSealRound(id, order) {
             return { qs, gold };
         });
         const items = [].concat(...plan.map(p => p.qs.concat(p.gold)));
+        bcSaveQHistory(items.map(q => q.text));
         const res = await answerPost({ action: "seal", id, items }, 12000);
         const out = res.items || [];
         if (out.length !== items.length) throw new Error("seal count");

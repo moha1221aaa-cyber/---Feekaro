@@ -106,6 +106,7 @@ node tests/harness/wakelock.mjs                       # الشاشة ما تطف
 node tests/harness/forgot.mjs                         # نسيت كلمة المرور: الزر، إيميل بالعربي ورابط رجوع، ورسالة لو ما فيه حساب
 node tests/harness/tie.mjs                            # التعادل ينتهي تعادل (بدون سؤال ذهبي) وينكتب في الجدول
 node tests/harness/trial.mjs                          # المسابقة التجريبية: الأصلي ينحفظ ويرجع كامل، وتوقعات التجربة تنحذف، ونتيجة بثها ما تدخل الجدول الحقيقي
+node tests/harness/questions.mjs                      # أسئلة جديدة لكل بث: الذكاء الاصطناعي أول، وما ينعاد سؤال انسأل، والسجل في liveDiag/_qhistory
 node tests/harness/flow.mjs /tmp/out                  # 23 أكتوبر: الكلمات مع صوت المذيع، السؤال يختفي مع الجرس، شارة البداية، ولا انتقال تلقائي، وضع التبريد للجوال
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال  (ومنها stt-multi و whisper2: السمع بأكثر من محاولة، والأرقام بالكلام)
 ```
