@@ -57,6 +57,9 @@ try {
         check("question hidden instantly on the presser's phone", await p1.evaluate(() => window.__hid === true));
         check("question hidden for viewers once the buzz lands", await until(() => fan.evaluate(() => !!document.querySelector(".lv-qtext.lv-qhidden") && !document.querySelector(".lv-qtext .tv-w")), 4000));
         await fan.screenshot({ path: out + "/2-hidden-after-buzz.png" });
+        /* غلط وانتقل السؤال للثاني: يرجع كامل */
+        upd(db, { phase: "answer", answerer: 2, passed: true, tried2: true, lastAnswer: { by: 1, text: "جدة", correct: false }, deadline: Date.now() + 15000 });
+        check("question shown in full again when it passes to the other player", await until(async () => !(await fan.$(".lv-qtext.lv-qhidden")) && (await words(fan)) === total && (await words(p1)) === total, 4000));
         const errs = [fan, p1].flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
         check("no page errors (words/buzz)", !errs.length, errs.slice(0, 3));
         await fan.context().close(); await p1.context().close();
@@ -80,6 +83,26 @@ try {
         check("no name strip over the answer box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
         await p1.screenshot({ path: out + "/1b-short-answer.png" });
         await p1.context().close(); await host.context().close();
+    }
+    /* ===== 1ج) الآيفون: معالج الصوت ما يوصله ولا إطار (frames 0) ← MediaRecorder من نفس المايك ويوصل للسيرفر ===== */
+    {
+        const b2 = await launch({ wav: "speech_clip.wav" });
+        const db = new FakeDB(40);
+        const now = Date.now();
+        seed(db, "playing", { phase: "buzz", qIndex: 0, qAt: now - 20000, deadline: now + 60000, ready1: true, ready2: true });
+        const sent = [];
+        const api2 = Object.assign({}, api, { ai: async b => { if (b.task === "voice") { sent.push((b.audio || "").length); return { heard: "طوكيو", said: "طوكيو", ok: true }; } return { ok: false }; } });
+        const p1 = await device(b2, db, "p1", { api: api2 });
+        await until(() => p1.$("#lvBell"), 15000); await sleep(1500);
+        /* نفس اللي يصير في سفاري: معالج التسجيل ما يرجّع ولا إطار */
+        await p1.evaluate(() => { window.vaCapture = async () => ({ via: "dead", stop() {} }); liveBuzz(); });
+        const via = await until(() => p1.evaluate(() => { const t = VA.try; return t && t.steps.includes("recorder") && t.rtype; }), 5000);
+        check("no frames → MediaRecorder fallback starts", !!via, via);
+        check("recorded answer reaches the server", await until(() => sent.length > 0, 12000), sent);
+        check("sent audio is a real clip (not empty)", sent[0] > 4000, sent);
+        const steps = await p1.evaluate(() => VA.try && VA.try.steps);
+        check("no 'no-audio' when the recorder works", steps && !steps.includes("no-audio") && steps.includes("sent"), steps);
+        await b2.close();
     }
     /* ===== 2) شارة البداية ===== */
     {

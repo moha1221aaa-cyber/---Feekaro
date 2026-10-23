@@ -123,7 +123,7 @@ const BC_HOST = {
     situ: {
         streak: ["{p} على نار! ثلاث إجابات ورا بعض.", "{p} ما يوقفه أحد الليلة!"],
         comeback: ["{p} يرجع للمواجهة بقوة!", "ما استسلم {p}، ورجع من بعيد!"],
-        tie: ["وتعادل في النقاط!", "ورجعنا للتعادل!"],
+        tie: ["وتعادل في الأجوبة!", "ورجعنا للتعادل!"],
         lead: ["و{p} يتقدم الحين!", "{p} يخطف الصدارة في هذي المواجهة!"]
     },
     win: ["نهاية المواجهة. الفوز لـ {w} بنتيجة {a} مقابل {b}.", "انتهت المواجهة، و{w} يفوز {a} مقابل {b}. مبروك!"],
@@ -370,11 +370,5 @@ function bcReact(i) {
     const by = currentUser ? currentUser.uid : "guest";
     liveCol().doc("rx_" + openLiveId).set({ type: "rx", e: e, n: bcNow() + Math.random(), by: by }).catch(() => {});
 }
-function bcOnRx(x) {
-    if (!x || !x.n) return;
-    if (bcRxSeenN === null) { bcRxSeenN = x.n; return; }
-    if (x.n === bcRxSeenN) return;
-    bcRxSeenN = x.n;
-    if (currentUser && x.by === currentUser.uid) return;
-    if (BC_RX.indexOf(x.e) !== -1) bcFloat(x.e);
-}
+/* 23 أكتوبر 2026 (طلب محمد): أزرار التفاعل انشالت، وتفاعلات الجوالات اللي للحين على النسخة القديمة ما تطلع فوق البث */
+function bcOnRx(x) {}

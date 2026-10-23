@@ -323,7 +323,7 @@ ${isAdmin && (live || sched) ? `<button class="bc-endbtn" onclick="bcEnd()">${ic
 <i class="st-cone"></i>
 <img src="${safeSrc(bcAv(o, n))}" alt="">
 <div class="nm">${escapeHTML(n === 1 ? o.p1 : o.p2)}</div>
-<div class="st-desk">${showScoreHTML(d, n)}<i>نقاط</i></div>
+<div class="st-desk">${showScoreHTML(d, n)}<i>أجوبة</i></div>
 </div>`;
         const mid = d.scene === "talk" ? `الترحيب<small>قبل البداية</small>` : d.scene === "playing" ? (d.qIndex >= LIVE_Q_COUNT ? `ذهبي<small>سؤال الحسم</small>` : `السؤال ${d.qIndex + 1}<small>من ${LIVE_Q_COUNT}</small>`) : (d.scene === "result" ? "النتيجة" : "استعدوا");
         const mc = (d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") ? bcMicCtlHTML(d) : "";
@@ -403,11 +403,9 @@ function bcHostHTML(d) {
 <div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b><span>${micOn ? `<i class="bc-st">المايك مقفل</i>` : "مقدم البرنامج"}</span></div>
 </div>`;
 }
-/* أزرار صغيرة على جنب الشاشة: التفاعلات، الرابط، المقدم */
+/* أزرار صغيرة فوق يسار: الرابط، صوت المذيع، التشخيص (أزرار التفاعل بالإيموجي انشالت 23 أكتوبر 2026، طلب محمد) */
 function bcSideCtlHTML() {
     return `<div class="st-side">
-${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">${e}</button>`).join("")}
-<i class="sep"></i>
 <button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
 ${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()" aria-label="التشخيص">${ic("chart")}</button>` : ""}
@@ -610,8 +608,9 @@ function bcQuizHTML(d, me) {
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-${d.phase === "answer" || bcArmedHere(d, me)
-    /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات */
+${(d.phase === "answer" && !d.passed) || bcArmedHere(d, me)
+    /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات.
+       ولما ينتقل السؤال للمتسابق الثاني يرجع يطلع كامل (طلب محمد نفس اليوم) */
     ? `<div class="lv-qtext lv-qhidden">${ic("lock")} السؤال انخفى، جاوب من اللي سمعته</div>`
     : `<div class="lv-qtext tv-words">${showWordsHTML(q.text)}</div>`}
 </div>`;
