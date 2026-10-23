@@ -786,7 +786,7 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
 #liveScreen .lv-qtext{overflow-wrap:anywhere;}
 /* صف المنظم (طلب محمد 23 أكتوبر): المقدم في النص، والأزرار فوق يسار بنفس الصف. ثلاث أعمدة متساوية الجنبين عشان المقدم يظل بالنص بالضبط */
 /* الجنبين عرض ثابت (مكان الأزرار محجوز)، والمقدم في العمود اللي بالنص ما يطلع منه أبد (الاسم الطويل يتقص بنقاط) */
-.st-hostrow{--sidew:112px;display:grid;grid-template-columns:var(--sidew) minmax(0,1fr) var(--sidew);align-items:center;column-gap:4px;}
+.st-hostrow{display:grid;grid-template-columns:var(--sidew) minmax(0,1fr) var(--sidew);align-items:center;column-gap:4px;}
 .st-hostrow .st-host{grid-column:2;justify-self:center;max-width:100%;min-width:0;padding:4px 12px 4px 6px;gap:8px;}
 .st-hostrow .st-host .ring img{width:44px;height:44px;}
 .st-hostrow .st-side{grid-column:3;justify-self:end;gap:4px;}
@@ -818,3 +818,12 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
   /* وقت الأسئلة شريط الأخبار ياخذ مكان مربع الجواب، فيختفي */
   #liveScreen[data-scene="playing"] .st-ticker{display:none;}
 }
+
+/* صفحة "جاهز" (طلب محمد 23 أكتوبر، "فيه تداخل حتى مع المتسابقين"): الاسم الطويل كان يوسّع جهة المتسابق فتطلع البطاقات برا الشاشة.
+   الحين كل جهة ما تزيد عن نص الشاشة، والاسم يتقص بنقاط، وبطاقات الترتيب والفوز والنقاط تتقاسم العرض */
+.bc-vs{max-width:100%;min-width:0;}
+.bc-side{min-width:0;}
+.bc-vsx{flex-shrink:0;}
+.st-card{width:100%;max-width:100%;}
+.st-card div{flex:1 1 0;min-width:0;padding:3px 2px;}
+.st-card small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}

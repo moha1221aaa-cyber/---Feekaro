@@ -90,6 +90,16 @@ try {
         await p1.screenshot({ path: out + "/1b-short-answer.png" });
         await p1.context().close(); await host.context().close();
     }
+    /* ===== 1ب2) صفحة "جاهز" بأسماء طويلة على جوال صغير: ولا شي يطلع برا الشاشة ===== */
+    {
+        const db = new FakeDB(40);
+        seed(db, "intro", { sceneAt: Date.now() - 60000 });
+        const d0 = liveDoc(db); d0.order[0].p1 = "عبدالرحمن بن محمد الغامدي"; d0.order[0].p2 = "محمد بن عبدالله القحطاني";
+        const p1 = await device(browser, db, "p1", { api, viewport: { width: 360, height: 640 } });
+        await until(() => p1.$(".bc-vs"), 15000); await sleep(1500);
+        check("ready page: long names stay on screen (360px)", await p1.evaluate(() => [...document.querySelectorAll(".bc-vs *")].every(e => { const r = e.getBoundingClientRect(); return !r.width || (r.left >= -1 && r.right <= innerWidth + 1); })));
+        await p1.context().close();
+    }
     /* ===== 1ج) الآيفون: معالج الصوت ما يوصله ولا إطار (frames 0) ← MediaRecorder من نفس المايك ويوصل للسيرفر ===== */
     {
         const b2 = await launch({ wav: "speech_clip.wav" });
