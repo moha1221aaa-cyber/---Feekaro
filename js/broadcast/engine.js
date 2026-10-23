@@ -9,7 +9,7 @@
 const LIVE_Q_COUNT = 5;
 const LIVE_COUNT_MS = 3500;   /* العد التنازلي قبل البداية */
 const LIVE_BUZZ_MS = 15000;   /* وقت ضغط الجرس */
-const LIVE_ANSWER_MS = 15000; /* كان وقت الإجابة. من 23 أكتوبر 2026 المقدم يحكم بدون وقت، ويستخدم بس للوثائق القديمة (لحظة الجرس) */
+const LIVE_ANSWER_MS = 7000;  /* وقت الجواب بعد الجرس (طلب محمد 23 أكتوبر 2026): المقدم يحكم قبلها، ولو خلص الوقت ينتقل للثاني */
 const LIVE_REVEAL_MS = 6500;  /* عرض الإجابة قبل السؤال التالي */
 const BC_CHANNEL = "masro7_live_round"; /* قناة صوت البث (منفصلة عن الغرفة الصوتية) */
 const BC_MATCH_SCENES = ["intro", "talk", "countdown", "playing", "result"];
@@ -102,8 +102,10 @@ function liveRef(id) { return liveCol().doc(id); }
    liveBoxes/<id> صناديق أسئلة المواجهات (السيرفر بس يقراها)، liveDiag/<id> التشخيص (المنظم يقراها لما يفتح اللوحة) */
 function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
 function liveDiagRef(id) { return firebaseDB.collection("room").doc("main").collection("liveDiag").doc(id); }
-/* وقت المسابقة التجريبية (leagueTrial في app.js) البث له معرّف لحاله (round_trial<رقم>)، عشان ما ينكتب فوق بث الجولة الحقيقية */
-function bcId(r) { return "round_" + (leagueTrial ? "trial" : "") + r; }
+/* وقت المسابقة التجريبية (leagueTrial في app.js) البث له معرّف لحاله (round_trialall)، عشان ما ينكتب فوق بث الجولة الحقيقية */
+/* المسابقة التجريبية: بث واحد فيه كل الجولات (طلب محمد 23 أكتوبر 2026)، فمعرّفه واحد مهما كانت الجولة */
+function bcId(r) { return leagueTrial ? "round_trialall" : "round_" + r; }
+const BC_TRIAL_ROUND = "التجريبية";
 /* ===== وقت السيرفر: فرق ساعة الجوال عن السيرفر، عشان المؤقتات تكون عادلة للكل ===== */
 let bcClockOffset = 0, bcClockSynced = false;
 try { bcClockOffset = Number(sessionStorage.getItem("bcClockOffset")) || 0; } catch (e) {}
@@ -253,12 +255,17 @@ function buildRoundLiveRow(r) {
     const d = liveMatchesCache[id];
     const row = document.createElement("div");
     row.className = "round-live-row";
+    /* التجربة: زر واحد بس (عند أول جولة فيها مواجهات ما انلعبت) للبث اللي فيه كل الجولات */
+    if (leagueTrial) {
+        const left = matches.filter(m => m.s1 === "" || m.s2 === "").map(m => Number(m.round));
+        if (!left.length || Number(r) !== Math.min.apply(null, left)) return null;
+    }
     if (isLiveActive(d)) {
         const b = document.createElement("button");
         b.className = "live-watch-btn";
         b.innerHTML = d.status === "scheduled"
-            ? `${ic("hourglass")} بث الجولة ${escapeHTML(String(r))} يبدأ الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))} — ادخل`
-            : `<span class="dot" style="background:#fff;"></span> بث الجولة ${escapeHTML(String(r))} مباشر الآن — استمع`;
+            ? `${ic("hourglass")} بث الجولة ${escapeHTML(String(d.round || r))} يبدأ الساعة ${escapeHTML(bcTimeLabel(d.startAt || 0))} — ادخل`
+            : `<span class="dot" style="background:#fff;"></span> بث الجولة ${escapeHTML(String(d.round || r))} مباشر الآن — استمع`;
         b.onclick = () => openLiveScreen(id);
         row.appendChild(b);
         return row;
@@ -266,7 +273,7 @@ function buildRoundLiveRow(r) {
     if (isAdmin) {
         const b = document.createElement("button");
         b.className = "live-start-btn";
-        b.innerHTML = `${ic("megaphone")} بدء البث المباشر للجولة ${escapeHTML(String(r))}`;
+        b.innerHTML = leagueTrial ? `${ic("megaphone")} بدء بث التجربة (كل الجولات في بث واحد)` : `${ic("megaphone")} بدء البث المباشر للجولة ${escapeHTML(String(r))}`;
         b.onclick = () => bcStartRound(r);
         row.appendChild(b);
         return row;
@@ -361,9 +368,12 @@ async function bcStartRound(r) {
     if (!firebaseDB || !isAdmin || !currentUser) return;
     const id = bcId(r);
     if (isLiveActive(liveMatchesCache[id])) return openLiveScreen(id);
-    const ms = matches.filter(m => Number(m.round) === Number(r) && (m.s1 === "" || m.s2 === ""));
-    if (ms.length) r = ms[0].round;
-    if (!ms.length) return alert("ما فيه مواجهات متبقية في هذي الجولة.");
+    /* التجربة: كل المواجهات اللي ما انلعبت من كل الجولات بالترتيب، و round في الوثيقة اسم ("التجريبية") وجولة كل مواجهة في order[i].round */
+    const allRounds = !!leagueTrial;
+    const ms = matches.filter(m => (allRounds || Number(m.round) === Number(r)) && (m.s1 === "" || m.s2 === ""))
+        .map((m, i) => [m, i]).sort((a, b) => (Number(a[0].round) - Number(b[0].round)) || (a[1] - b[1])).map(x => x[0]);
+    if (ms.length) r = allRounds ? BC_TRIAL_ROUND : ms[0].round;
+    if (!ms.length) return alert(allRounds ? "ما فيه مواجهات متبقية في التجربة." : "ما فيه مواجهات متبقية في هذي الجولة.");
 
     const unlinked = [];
     ms.forEach(m => [m.p1.name, m.p2.name].forEach(n => { if (!playerLinks[n] && unlinked.indexOf(n) === -1) unlinked.push(n); }));
@@ -373,7 +383,7 @@ async function bcStartRound(r) {
     const myName = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "المنظم";
     const myAv = (currentUserDocData && currentUserDocData.photoURL) || getPlayerAvatar(myName).url;
     const order = ms.map(m => ({
-        p1: m.p1.name, p2: m.p2.name,
+        p1: m.p1.name, p2: m.p2.name, round: m.round,
         uid1: playerLinks[m.p1.name] || "", uid2: playerLinks[m.p2.name] || "",
         av1: getPlayerAvatar(m.p1.name).url, av2: getPlayerAvatar(m.p2.name).url,
         s1: 0, s2: 0, state: "pending", applied: false
@@ -584,7 +594,7 @@ function liveRevealUpd(d, winner, now, last) {
 function livePassUpd(d, n, now, last) {
     const o = n === 1 ? 2 : 1;
     if (!d["tried" + o]) {
-        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: 0, ansAt: now, pend: null };
+        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS, ansAt: now, pend: null };
         u["tried" + o] = true;
         return u;
     }
@@ -595,8 +605,9 @@ function liveNextStep(d, now) {
     if (d.scene === "countdown" && now >= d.deadline) return liveQuestionUpd(0, now);
     if (d.scene !== "playing" || now < d.deadline) return null;
     if (d.phase === "buzz") return liveRevealUpd(d, 0, now, null);
-    /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict)، فما فيه وقت للجواب،
-       والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ). الانتقال الوحيد بالوقت: محد ضغط الجرس خلال 15 ث ← الكشف */
+    /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict) خلال 7 ث، ولو ما حكم انتهى وقته وينتقل للثاني.
+       والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ) */
+    if (d.phase === "answer" && d.answerer) return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
     return null;
 }
 /* بعد الكشف: السؤال الجاي، أو نهاية المواجهة بعد آخر سؤال (بضغطة المقدم) */
@@ -623,8 +634,8 @@ function bcAdvanceLag(d) {
 function liveAdvanceIfDue() {
     const d = liveMatchesCache[openLiveId];
     if (!d || liveAdvanceBusy || d.status !== "live") return;
-    /* بالوقت بس: العد التنازلي، ووقت الجرس (الجواب والسؤال الجاي بيد المقدم) */
-    if (!(d.scene === "countdown" || (d.scene === "playing" && d.phase === "buzz")) || !d.deadline) return;
+    /* بالوقت بس: العد التنازلي، ووقت الجرس، ووقت الجواب (والسؤال الجاي بيد المقدم) */
+    if (!(d.scene === "countdown" || (d.scene === "playing" && (d.phase === "buzz" || d.phase === "answer"))) || !d.deadline) return;
     if (bcNow() < (d.deadline || 0) + bcAdvanceLag(d)) return;
     if (bcNow() - liveLastAdvanceTry < 900) return;
     liveLastAdvanceTry = bcNow();
@@ -873,7 +884,7 @@ function liveBuzz(ev) {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
         if (!n) return null;
-        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: 0, ansAt: now };
+        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: now + LIVE_ANSWER_MS, ansAt: now };
         u["tried" + n] = true;
         /* سرعة ضغطة الجرس (لإحصائيات المواجهة وأفضل لحظة في الجولة) */
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
@@ -920,7 +931,8 @@ function bcApplyResults(id) {
             const it = order[i];
             if (!it || it.state !== "done" || it.applied) return;
             const arr = (s.data().matches || []).slice();
-            const idx = arr.findIndex(x => x.round === d.round && x.p1 === it.p1 && x.p2 === it.p2);
+            const rr = it.round !== undefined ? it.round : d.round;
+            const idx = arr.findIndex(x => x.round === rr && x.p1 === it.p1 && x.p2 === it.p2);
             if (idx !== -1 && (arr[idx].s1 === "" || arr[idx].s2 === "")) {
                 arr[idx] = Object.assign({}, arr[idx], { s1: String(it.s1 || 0), s2: String(it.s2 || 0) });
                 tx.update(leagueRef, { matches: arr, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });

@@ -82,7 +82,7 @@ async function verifyQuestions(env, qs) {
 }
 
 async function taskHost(env, b) {
-  const round = clip(b.round, 6);
+  const round = clip(b.round, 12);
   const ms = (Array.isArray(b.matches) ? b.matches : []).slice(0, 12)
     .map(m => ({ p1: clip(m && m.p1, 30), p2: clip(m && m.p2, 30), ctx: clip(m && m.ctx, 120) }))
     .filter(m => m.p1 && m.p2);

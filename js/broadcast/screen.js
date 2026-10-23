@@ -142,6 +142,8 @@ function liveTick() {
     bcHostHeartbeat(d);
     if (!bcTyping()) bcFitViewport();
     bcTickMics();
+    /* المايك يفتح لحاله أول ما تخلص الشارة (ما فيه تغيير في الوثيقة يحرّكه) */
+    { const pub = bcShouldPublish(d); if (pub !== BC_PUB_LAST) { BC_PUB_LAST = pub; bcSyncAudio(); } }
     bcLowerThird(d);
     tvTick(d);
     showTick(d);
@@ -437,6 +439,7 @@ ${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()"
 </div>`;
 }
 /* تحكم مايكي: يطلع بس في صفحة بداية المواجهة */
+let BC_PUB_LAST = null;
 function bcMicCtlHTML(d) {
     const net = bcConnState === "RECONNECTING" ? `<div class="bc-note">${ic("alert")} النت تقطّع، نرجع نوصل الصوت...</div>`
         : (bcNetQ >= 5 && bcTrack ? `<div class="bc-note">${ic("alert")} النت عندك ضعيف، صوتك ممكن يتقطع</div>` : "");
@@ -527,13 +530,13 @@ ${uid ? `<div class="bc-st">المايك مقفل</div>` : `<div class="bc-st wa
         let action;
         if (me && !d["ready" + me]) action = `<button class="lv-ready-btn" onclick="liveSetReady()">${ic("check-circle")} جاهز</button>`;
         else if (me) action = `<div class="lv-muted">${ic("hourglass")} أنت جاهز، بانتظار خصمك...</div>`;
-        else action = `<div class="lv-muted">بانتظار المتسابقين يضغطون "جاهز"، وبعدها تبدأ فقرة الترحيب بالمايكات</div>`;
+        else action = `<div class="lv-muted">بانتظار المتسابقين يضغطون "جاهز"، وبعد الشارة تبدأ فقرة الترحيب بالمايكات</div>`;
         return `
 <div class="bc-mlabel big">المواجهة ${d.cur + 1} من ${total}</div>
 <div class="bc-vs">${side(1)}<div class="bc-vsx">VS</div>${side(2)}</div>
 ${ctx ? `<div class="st-ctx ${ctx.k}">${ic(ctx.k === "revenge" ? "zap" : "trophy")} ${escapeHTML(ctx.t)}</div>` : ""}
 ${bcPredHTML(d, o)}
-<div class="bc-note">${ic("mic-off")} المايكات تفتح أول ما يضغطون الاثنين "جاهز"</div>
+<div class="bc-note">${ic("mic-off")} المايكات تفتح بعد شارة البداية (لما يضغطون الاثنين "جاهز")</div>
 ${action}
 <div class="lv-rules">${LIVE_Q_COUNT} أسئلة · أسرع واحد يضغط الجرس يجاوب · إذا غلط أو خلص وقته ينتقل السؤال للثاني</div>
 ${adminBar(`<button class="bc-go" onclick="bcToTalk()">${ic("mic")} الترحيب بالمتسابقين الحين</button><button class="bc-ghost" onclick="bcNext(true)">تخطي المواجهة</button>`)}`;
@@ -627,8 +630,8 @@ function bcQuizHTML(d, me) {
         dots += `<span class="${cls}"></span>`;
     }
     const decider = bcIsDecider(d);
-    /* وقت الجواب ما فيه عداد: المقدم يحكم */
-    const ring = d.phase !== "buzz" ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
+    /* عداد للجرس (15 ث) وللجواب (7 ث) */
+    const ring = (d.phase !== "buzz" && d.phase !== "answer") || !d.deadline ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
     let html = `
 <div class="lv-dots">${dots}</div>
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
