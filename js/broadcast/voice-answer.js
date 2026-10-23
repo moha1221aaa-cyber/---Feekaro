@@ -279,9 +279,26 @@ async function vaStart(key) {
     }
     if (rec.stop === null) { cap.stop(); return; }   /* انلغى وهو يجهز */
     /* الإيقاف بمؤقت مستقل (مو مع الإطارات)، فلو الصوت ما وصل أبد ما يعلّق */
+    /* أندرويد (تجربة 23 أكتوبر، kSm73J): الإطارات توصل بس كلها صفر بالضبط (peak 0)، يعني مسار البث يرسل صمت (مكتوم من النظام).
+       لو أول 0.6 ث صفر بالضبط نفتح مايك مستقل للجواب بس (getUserMedia)، وينقفل أول ما يخلص الجواب */
+    const switchToOwnMic = async () => {
+        rec.gum = true;
+        let s2;
+        try { s2 = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+        catch (e) { vaDiag("own-mic-error", { err: String((e && (e.name || e.message)) || e).slice(0, 60) }); return; }
+        if (rec.stop === null) { s2.getTracks().forEach(x => x.stop()); return; }
+        try {
+            const next = await vaCapture(ctx, ctx.createMediaStreamSource(s2), onFrame);
+            if (rec.stop === null) { next.stop(); s2.getTracks().forEach(x => x.stop()); return; }
+            if (cap) cap.stop();
+            cap = next; stream = s2; own = true;
+            vaDiag("own-mic");
+        } catch (e) { s2.getTracks().forEach(x => x.stop()); }
+    };
     rec.timer = setInterval(() => {
         const now = performance.now();
         if (!frames.length && !rec.mr && now - startedAt > VA_REC_WATCH_MS) startRecorder();
+        if (!rec.gum && !rec.mr && !own && frames.length >= 30 && peak === 0 && navigator.mediaDevices) switchToOwnMic();
         if (rec.key.indexOf("arm|") === 0) {   /* لسا ما تأكد إني فزت بالجرس: نسجّل بس، وما نحكم */
             if (now - startedAt > VA_ARM_MS) { VA.arm = null; finish(false); }
             return;
