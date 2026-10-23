@@ -83,6 +83,17 @@ try {
             const im = document.querySelector(".st-host img").getBoundingClientRect(), nb = document.querySelector(".st-host .tx b").getBoundingClientRect();
             return sd.right <= h.left && Math.abs(mid - innerWidth / 2) < 30 && !document.querySelector(".st-side [aria-label='تفاعل']") && nb.top >= im.bottom - 2;
         }));
+        check("short screen: contestant pictures still shown under the mic bar (not hidden)", await p1.evaluate(() => {
+            const bar = document.querySelector(".st-microw"), imgs = [...document.querySelectorAll(".st-pod img")];
+            const b = bar && bar.getBoundingClientRect();
+            return imgs.length === 2 && imgs.every(i => { const r = i.getBoundingClientRect(); return r.width >= 30 && (!b || r.top >= b.bottom - 1); });
+        }));
+        check("top row: round label never under the end button", await host.evaluate(() => {
+            const e = document.querySelector(".bc-endbtn"), r = document.querySelector(".lv-round");
+            if (!e || !r || getComputedStyle(r).display === "none") return true;
+            const a = e.getBoundingClientRect(), c = r.getBoundingClientRect();
+            return a.right <= c.left + 1 || c.right <= a.left + 1;
+        }));
         check("no zoom inside the broadcast (touch-action pan-y)", await p1.evaluate(() => getComputedStyle(document.getElementById("liveScreen")).touchAction === "pan-y"));
         upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
         await until(() => p1.$(".va-box"), 5000); await sleep(1200);
