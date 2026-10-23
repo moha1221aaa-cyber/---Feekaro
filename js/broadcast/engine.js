@@ -9,7 +9,7 @@
 const LIVE_Q_COUNT = 5;
 const LIVE_COUNT_MS = 3500;   /* العد التنازلي قبل البداية */
 const LIVE_BUZZ_MS = 15000;   /* وقت ضغط الجرس */
-const LIVE_ANSWER_MS = 15000; /* كان وقت الإجابة. من 23 أكتوبر 2026 المقدم يحكم بدون وقت، ويستخدم بس للوثائق القديمة (لحظة الجرس) */
+const LIVE_ANSWER_MS = 7000;  /* وقت الجواب بعد الجرس (طلب محمد 23 أكتوبر 2026): المقدم يحكم قبلها، ولو خلص الوقت ينتقل للثاني */
 const LIVE_REVEAL_MS = 6500;  /* عرض الإجابة قبل السؤال التالي */
 const BC_CHANNEL = "masro7_live_round"; /* قناة صوت البث (منفصلة عن الغرفة الصوتية) */
 const BC_MATCH_SCENES = ["intro", "talk", "countdown", "playing", "result"];
@@ -584,7 +584,7 @@ function liveRevealUpd(d, winner, now, last) {
 function livePassUpd(d, n, now, last) {
     const o = n === 1 ? 2 : 1;
     if (!d["tried" + o]) {
-        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: 0, ansAt: now, pend: null };
+        const u = { phase: "answer", answerer: o, passed: true, lastAnswer: last, deadline: now + LIVE_ANSWER_MS, ansAt: now, pend: null };
         u["tried" + o] = true;
         return u;
     }
@@ -595,8 +595,9 @@ function liveNextStep(d, now) {
     if (d.scene === "countdown" && now >= d.deadline) return liveQuestionUpd(0, now);
     if (d.scene !== "playing" || now < d.deadline) return null;
     if (d.phase === "buzz") return liveRevealUpd(d, 0, now, null);
-    /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict)، فما فيه وقت للجواب،
-       والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ). الانتقال الوحيد بالوقت: محد ضغط الجرس خلال 15 ث ← الكشف */
+    /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict) خلال 7 ث، ولو ما حكم انتهى وقته وينتقل للثاني.
+       والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ) */
+    if (d.phase === "answer" && d.answerer) return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
     return null;
 }
 /* بعد الكشف: السؤال الجاي، أو نهاية المواجهة بعد آخر سؤال (بضغطة المقدم) */
@@ -623,8 +624,8 @@ function bcAdvanceLag(d) {
 function liveAdvanceIfDue() {
     const d = liveMatchesCache[openLiveId];
     if (!d || liveAdvanceBusy || d.status !== "live") return;
-    /* بالوقت بس: العد التنازلي، ووقت الجرس (الجواب والسؤال الجاي بيد المقدم) */
-    if (!(d.scene === "countdown" || (d.scene === "playing" && d.phase === "buzz")) || !d.deadline) return;
+    /* بالوقت بس: العد التنازلي، ووقت الجرس، ووقت الجواب (والسؤال الجاي بيد المقدم) */
+    if (!(d.scene === "countdown" || (d.scene === "playing" && (d.phase === "buzz" || d.phase === "answer"))) || !d.deadline) return;
     if (bcNow() < (d.deadline || 0) + bcAdvanceLag(d)) return;
     if (bcNow() - liveLastAdvanceTry < 900) return;
     liveLastAdvanceTry = bcNow();
@@ -873,7 +874,7 @@ function liveBuzz(ev) {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || now > x.deadline + 1500) return null;
         const n = myLiveNum(x);
         if (!n) return null;
-        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: 0, ansAt: now };
+        const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: now + LIVE_ANSWER_MS, ansAt: now };
         u["tried" + n] = true;
         /* سرعة ضغطة الجرس (لإحصائيات المواجهة وأفضل لحظة في الجولة) */
         const ms = Math.max(150, now - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));

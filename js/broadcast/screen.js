@@ -627,8 +627,8 @@ function bcQuizHTML(d, me) {
         dots += `<span class="${cls}"></span>`;
     }
     const decider = bcIsDecider(d);
-    /* وقت الجواب ما فيه عداد: المقدم يحكم */
-    const ring = d.phase !== "buzz" ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
+    /* عداد للجرس (15 ث) وللجواب (7 ث) */
+    const ring = (d.phase !== "buzz" && d.phase !== "answer") || !d.deadline ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
     let html = `
 <div class="lv-dots">${dots}</div>
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}

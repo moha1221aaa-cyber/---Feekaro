@@ -132,14 +132,15 @@ try {
         const p2 = await device(browser, db, "p2", { api });
         await until(() => p1.$("#lvBell"), 15000); await sleep(1200);
         await p1.evaluate(() => liveBuzz());
-        check("buzz → answer phase without a timer", await until(() => liveDoc(db).phase === "answer" && liveDoc(db).answerer === 1 && !liveDoc(db).deadline, 5000), liveDoc(db).phase);
+        check("buzz → answer phase with a 7 s timer", await until(() => { const x = liveDoc(db); return x.phase === "answer" && x.answerer === 1 && Math.abs(x.deadline - x.ansAt - 7000) < 50; }, 5000), liveDoc(db).phase);
+        check("answer timer shown", await until(() => p1.$(".st-ring #lvTimerNum"), 3000));
         check("presser sees 'say your answer', no input or recorder", await until(() => p1.$(".bc-sayit"), 5000) && !(await p1.$("#liveScreen input, #liveScreen textarea, .va-box")));
         check("other player sees no verdict buttons", !(await p2.$(".bc-verdict")) && !(await p1.$(".bc-verdict")));
         check("host sees the correct answer privately + ✓/✗", await until(() => host.evaluate(() => { const a = document.querySelector(".bc-judge-a b"); return !!a && a.textContent === "الرياض" && !!document.querySelector(".bc-verdict .ok"); }), 6000));
         check("players never see the answer text", !(await p1.evaluate(() => document.body.textContent.includes("الرياض"))));
         await host.screenshot({ path: out + "/1c-host-judge.png" });
-        await sleep(3000);
-        check("no answer timeout while waiting for the host", liveDoc(db).phase === "answer");
+        await sleep(2000);
+        check("still answering before 7 s", liveDoc(db).phase === "answer" && liveDoc(db).answerer === 1);
         /* غلط ← ينتقل للثاني */
         await host.click(".bc-verdict .no");
         check("wrong → passes to the other player", await until(() => liveDoc(db).phase === "answer" && liveDoc(db).answerer === 2 && liveDoc(db).passed, 5000));
@@ -163,6 +164,15 @@ try {
         seed(db2, "playing", { phase: "buzz", qIndex: 0, qAt: Date.now() - 14000, deadline: Date.now() + 1000, ready1: true, ready2: true });
         const h2 = await device(browser, db2, "host", { api });
         check("no buzz in time → auto reveal 'no one answered'", await until(() => liveDoc(db2).phase === "reveal" && liveDoc(db2).outcome === 0, 15000), liveDoc(db2).phase);
+        /* الجواب 7 ث والمقدم ما حكم ← انتهى الوقت وينتقل للثاني، وبعده الكشف */
+        const db3 = new FakeDB(40);
+        const t3 = Date.now();
+        seed(db3, "playing", { phase: "answer", qIndex: 0, qAt: t3 - 9000, ansAt: t3 - 6000, deadline: t3 + 1000, buzzer: 1, answerer: 1, tried1: true, ready1: true, ready2: true });
+        const h3 = await device(browser, db3, "host", { api });
+        check("no verdict in 7 s → time up, passes to the other", await until(() => liveDoc(db3).answerer === 2 && liveDoc(db3).passed && (liveDoc(db3).lastAnswer || {}).timeout, 12000), liveDoc(db3).answerer);
+        check("screen says time is up", await until(() => h3.evaluate(() => /انتهى وقت/.test(document.body.textContent)), 4000));
+        check("other also runs out → reveal, no one scores", await until(() => liveDoc(db3).phase === "reveal" && liveDoc(db3).outcome === 0, 12000), liveDoc(db3).phase);
+        await h3.context().close();
         const errs = [host, p1, p2, h2].flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
         check("no page errors (host judging)", !errs.length, errs.slice(0, 3));
         for (const p of [host, p1, p2, h2]) await p.context().close();
