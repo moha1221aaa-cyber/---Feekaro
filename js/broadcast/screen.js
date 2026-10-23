@@ -51,18 +51,41 @@ function openLiveScreen(id) {
     bcFitViewport();
 }
 
-/* الكيبورد (23 أكتوبر 2026، صور محمد): بعد ما ينقفل، سامسونج يخلي الصفحة مرفوعة فينقص فوق ويطلع فراغ تحت.
-   الشاشة تاخذ مقاس الجزء الظاهر فعلاً (visualViewport) ومكانه، ولما يرجع المقاس كامل ترجع الصفحة لفوق */
+/* الكيبورد (23 أكتوبر 2026، صور محمد): بعد ما ينقفل كانت الشاشة تظل مرفوعة ومعلقة.
+   السبب: لما ينفتح الكيبورد المتصفح يمرّر شاشة البث نفسها (overflow:hidden بس تتمرر برمجياً) عشان تبان خانة الكتابة،
+   والمستخدم ما يقدر يرجّعها بإصبعه. الحين: وقت الكتابة بس الشاشة على مقاس الجزء الظاهر (visualViewport)،
+   وأول ما يطلع من الخانة أو ينقفل الكيبورد كل شي يرجع لمكانه (الصفحة وشاشة البث وجسمها)، ويتأكد كل 200ms من liveTick */
+function bcTyping() {
+    const a = document.activeElement, scr = document.getElementById("liveScreen");
+    return !!(a && scr && scr.contains(a) && (a.tagName === "INPUT" || a.tagName === "TEXTAREA"));
+}
+function bcUnshift() {
+    const scr = document.getElementById("liveScreen"), body = document.getElementById("liveScreenBody");
+    if (scr) { if (scr.scrollTop) scr.scrollTop = 0; if (scr.scrollLeft) scr.scrollLeft = 0; }
+    if (body && body.scrollTop && body.scrollHeight <= body.clientHeight + 1) body.scrollTop = 0;
+    if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
+    const se = document.scrollingElement; if (se && se.scrollTop) se.scrollTop = 0;
+    if (document.body.scrollTop) document.body.scrollTop = 0;
+}
 function bcFitViewport() {
     const scr = document.getElementById("liveScreen"), vv = window.visualViewport;
-    if (!scr || !vv) return;
-    if (!openLiveId) { scr.style.top = scr.style.height = scr.style.bottom = ""; return; }
+    if (!scr) return;
+    if (!openLiveId || !vv || !bcTyping()) {
+        if (scr.style.top || scr.style.height || scr.style.bottom) { scr.style.top = scr.style.height = scr.style.bottom = ""; }
+        if (openLiveId) bcUnshift();
+        return;
+    }
     scr.style.top = Math.round(vv.offsetTop) + "px";
     scr.style.height = Math.round(vv.height) + "px";
     scr.style.bottom = "auto";
-    if (vv.height >= window.innerHeight - 2 && (window.scrollY || vv.offsetTop)) window.scrollTo(0, 0);
 }
 if (window.visualViewport) { visualViewport.addEventListener("resize", bcFitViewport); visualViewport.addEventListener("scroll", bcFitViewport); }
+/* طلع من خانة الكتابة (ضغط إرسال، أو سكّر الكيبورد بزر الرجوع): نرجّع على طول وبعد ما يخلص الكيبورد حركته */
+document.addEventListener("focusout", e => {
+    const scr = document.getElementById("liveScreen");
+    if (!scr || !scr.contains(e.target)) return;
+    [0, 120, 350, 800].forEach(ms => setTimeout(bcFitViewport, ms));
+}, true);
 
 function closeLiveScreen(fromPop) {
     if (!openLiveId) return;
@@ -117,6 +140,7 @@ function liveTick() {
     }
     bcAirClock(d);
     bcHostHeartbeat(d);
+    if (!bcTyping()) bcFitViewport();
     bcTickMics();
     bcLowerThird(d);
     tvTick(d);

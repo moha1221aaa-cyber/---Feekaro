@@ -39,4 +39,15 @@ const silence = (() => { const n = 16000 * 3, b = Buffer.alloc(44 + n * 2); b.wr
     for (const a of keys) for (const b of keys) if (a !== b) for (const w of NUMW[b].split("|")) if (numberMatch(w, a)) col.push(a + "<-" + w);
     check("numbers: no number word matches a different number", !col.length, col);
 }
+{
+    /* الفلتر رمى الجواب (ثقة واطية، تجربة 23 أكتوبر): ينقبل بس لو طابق الجواب، وغير كذا ما يروح للحكم */
+    const seg = (text, ns, lp) => ({ text, segments: [{ text, no_speech_prob: ns, avg_logprob: lp }] });
+    let llm = 0;
+    const mk = text => ({ STT_WHISPER1: "0", AI: { run: async (m, i) => { if (m.includes("whisper")) return seg(text, 0.95, -1.5); llm++; return { response: '{"ok":true}' }; } } });
+    const r = await taskVoice(mk("المشتري"), { q: "ما أكبر كوكب في المجموعة الشمسية؟", answer: "المشتري", audio: wavB64 });
+    check("low-confidence hearing that matches the answer is accepted (fast-weak)", r.ok === true && r.t.path === "fast-weak" && llm === 0, r);
+    llm = 0;
+    const w = await taskVoice(mk("زحل"), { q: "ما أكبر كوكب في المجموعة الشمسية؟", answer: "المشتري", audio: wavB64 });
+    check("low-confidence hearing that does not match: empty, never graded", w.ok === false && w.heard === "" && llm === 0, { w, llm });
+}
 done();
