@@ -290,7 +290,6 @@ function renderLiveScreenNow() {
     bcBuzzSeen(d);
     bcDiagPanel(d);
     if (d && d.scene === "playing" && d.phase === "reveal") bcPublishShown(d);
-    if (d && d.pend) bcHostJudge(d);
 
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
@@ -628,13 +627,14 @@ function bcQuizHTML(d, me) {
         dots += `<span class="${cls}"></span>`;
     }
     const decider = bcIsDecider(d);
-    const ring = d.phase === "reveal" ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
+    /* وقت الجواب ما فيه عداد: المقدم يحكم */
+    const ring = d.phase !== "buzz" ? "" : `<div class="st-ring"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" id="lvRing" cx="22" cy="22" r="19"/></svg><b id="lvTimerNum"></b></div>`;
     let html = `
 <div class="lv-dots">${dots}</div>
 ${decider ? `<div class="st-decider ${bcIsGolden(d) ? "gold" : ""}">${ic(bcIsGolden(d) ? "crown" : "zap")} ${bcIsGolden(d) ? "السؤال الذهبي · أول إجابة صحيحة تفوز" : "سؤال الحسم"}</div>` : ""}
 <div class="st-qcard ${decider ? "decider" : ""}" data-q="${d.cur}-${d.qIndex}">
 <div class="st-qhead"><span>${d.qIndex >= LIVE_Q_COUNT ? "السؤال الذهبي" : `السؤال ${d.qIndex + 1} من ${LIVE_Q_COUNT}`}</span>${ring}</div>
-${(d.phase === "answer" && !d.passed) || bcArmedHere(d, me)
+${d.phase === "answer" && !d.passed
     /* أحد ضغط الجرس: السؤال يختفي (23 أكتوبر 2026)، فاللي يضغط بدري عشان السرعة يجاوب من اللي سمعه بس، مثل برامج المسابقات.
        ولما ينتقل السؤال للمتسابق الثاني يرجع يطلع كامل (طلب محمد نفس اليوم) */
     ? `<div class="lv-qtext lv-qhidden">${ic("lock")} السؤال انخفى، جاوب من اللي سمعته</div>`
@@ -643,37 +643,35 @@ ${(d.phase === "answer" && !d.passed) || bcArmedHere(d, me)
 
     const last = d.lastAnswer;
     const lastHTML = (last && last.by && !last.correct)
-        ? `<div class="lv-last">${last.timeout ? ic("alarm") + " انتهى وقت " + escapeHTML(livePlayerName(d, last.by)) : ic("x-circle") + " " + escapeHTML(livePlayerName(d, last.by)) + " جاوب: «" + escapeHTML(last.text) + "» غلط"}</div>`
+        ? `<div class="lv-last">${last.timeout ? ic("alarm") + " انتهى وقت " + escapeHTML(livePlayerName(d, last.by)) : ic("x-circle") + " " + escapeHTML(livePlayerName(d, last.by)) + (last.text ? " جاوب: «" + escapeHTML(last.text) + "» غلط" : " جاوب غلط")}</div>`
         : "";
 
     if (d.phase === "buzz") {
         const canBuzz = !!me;
-        /* ضغطت الجرس وننتظر السيرفر: الجرس يظل مضغوط والتسجيل ظاهر لو انعاد الرسم */
-        if (canBuzz && bcArmedHere(d, me)) {
-            return html + `<button class="lv-bell rung" id="lvBell" disabled>${ic("bell")}<span>ضغطت!</span></button>` + vaHTML();
-        }
         html += `
 <button class="lv-bell ${canBuzz ? "" : "idle"}" id="lvBell" ${canBuzz ? `onpointerdown="event.preventDefault();liveBuzz(event)"` : "disabled"}>${ic("bell")}<span>${canBuzz ? "اضغط!" : "الجرس"}</span></button>
 <div class="lv-muted">${canBuzz ? "أسرع واحد يضغط الجرس هو اللي يجاوب" : "بانتظار أحد المتسابقين يضغط الجرس"}</div>`;
     } else if (d.phase === "answer") {
+        /* 23 أكتوبر 2026 (قرار محمد): المتسابق يقول جوابه بالمايك، والمقدم يحكم. ما فيه تسجيل ولا كتابة */
         const nm = escapeHTML(livePlayerName(d, d.answerer));
         html += `
 ${lastHTML}
 <div class="lv-turn">${d.passed ? ic("chevron-right") + " انتقل السؤال إلى " + nm : ic("bell") + " " + nm + " ضغط الجرس أول"}</div>`;
-        if (me && me === d.answerer) {
-            /* الجواب بالصوت (js/broadcast/voice-answer.js)، والكتابة احتياط */
-            vaSync(d);
-            html += vaHTML();
-        } else {
-            vaStop(false);
-            html += `<div class="lv-muted">${nm} يجاوب الحين...</div>`;
+        if (me && me === d.answerer) html += `<div class="bc-sayit">${ic("mic")}<b>قل جوابك الحين بالمايك</b><span>المقدم يسمعك ويحكم</span></div>`;
+        else html += `<div class="lv-muted">${nm} يجاوب الحين، والمقدم يحكم...</div>`;
+        if (isAdmin) {
+            const ans = String(bcAnswerOf(d, d.qIndex) || "").split("|");
+            if (!ans[0]) bcLoadSecret(openLiveId);
+            html += `<div class="bc-judge">
+<div class="bc-judge-a"><small>الإجابة الصحيحة (تشوفها أنت بس)</small><b>${escapeHTML(ans[0] || "…")}</b>${ans.length > 1 ? `<span>${escapeHTML(ans.slice(1).join("، "))}</span>` : ""}</div>
+<div class="bc-verdict"><button class="ok" onclick="bcHostVerdict(true)">${ic("check-circle")} صح</button><button class="no" onclick="bcHostVerdict(false)">${ic("x-circle")} غلط</button></div>
+</div>`;
         }
     } else if (d.phase === "reveal") {
-        vaStop(false);
         /* لحظة تشويق قبل كشف الإجابة */
         const w = d.outcome;
         const hold = bcNow() < bcRevealAt(d);
-        const okLast = last && last.correct ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : lastHTML;
+        const okLast = last && last.correct ? (last.text ? `<div class="lv-last ok">${ic("check-circle")} «${escapeHTML(last.text)}»</div>` : "") : lastHTML;
         html += `
 <div class="st-reveal ${hold ? "hold" : ""}" id="stReveal">
 <div class="st-wait">والإجابة الصحيحة هي<span>.</span><span>.</span><span>.</span><i class="tv-drum" style="animation-delay:${-Math.max(0, 1600 - Math.max(0, bcRevealAt(d) - bcNow()))}ms"></i></div>
@@ -684,12 +682,16 @@ ${lastHTML}
 </div>
 ${okLast}
 </div>
-<div class="lv-muted">${d.qIndex + 1 >= (d.questions || []).length ? "نهاية المواجهة بعد لحظات..." : "السؤال التالي بعد لحظات..."}</div>`;
+${(() => {
+    /* السؤال الجاي بضغطة المقدم (23 أكتوبر 2026، قرار محمد) */
+    const lastQ = d.qIndex + 1 >= (d.questions || []).length;
+    return isAdmin
+        ? `<div class="bc-admin"><button class="bc-go bc-nextq" onclick="bcHostNextQ()">${ic(lastQ ? "trophy" : "zap")} ${lastQ ? "نتيجة المواجهة" : "السؤال التالي"}</button></div>`
+        : `<div class="lv-muted">${lastQ ? "بانتظار المقدم يعلن النتيجة" : "بانتظار المقدم يبدأ السؤال التالي"}</div>`;
+})()}`;
     }
     return html;
 }
-/* ضغطت الجرس من هالجهاز والسيرفر للحين ما رد */
-function bcArmedHere(d, me) { return !!me && d.phase === "buzz" && typeof VA !== "undefined" && !!VA.arm && VA.arm.id === openLiveId && VA.arm.qIndex === d.qIndex; }
 /* وقت كشف الإجابة: بعد 1.6 ثانية من بداية لحظة الكشف */
 function bcRevealAt(d) { return (d.deadline || 0) - LIVE_REVEAL_MS + 1600; }
 

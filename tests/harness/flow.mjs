@@ -4,6 +4,7 @@
    - شارة البداية (الشعار واسم الدوري ونغمة ident) بين "جاهز" والترحيب، وبعدها لقطة الترحيب
    - ولا انتقال لحاله: البث المجدول ما يبدأ لما يخلص العداد، والمنظم الغايب ما يخلّي المشاهد تمشي
    - الجوال (لمس) يشتغل عليه وضع التبريد (bc-lite) لحاله
+   - المقدم يحكم على الجواب (صح/غلط) ويبدأ كل سؤال، بدون تسجيل ولا كتابة
    node tests/harness/flow.mjs [مجلد] */
 import { serve, FakeDB, seed, launch, device, until, sleep, liveDoc } from "./harness.mjs";
 import fs from "node:fs";
@@ -96,9 +97,9 @@ try {
         }));
         check("no zoom inside the broadcast (touch-action pan-y)", await p1.evaluate(() => getComputedStyle(document.getElementById("liveScreen")).touchAction === "pan-y"));
         upd(db, { phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: Date.now() + 15000 });
-        await until(() => p1.$(".va-box"), 5000); await sleep(1200);
+        await until(() => p1.$(".bc-sayit"), 5000); await sleep(1200);
         check("short screen: question card not squeezed (answer)", await card(p1) && await card(host));
-        check("no name strip over the answer box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
+        check("no name strip over the say-it box during questions", await p1.evaluate(() => { const l = document.getElementById("stL3"); return !l || !l.classList.contains("on"); }));
         await p1.screenshot({ path: out + "/1b-short-answer.png" });
         /* الكيبورد: المتصفح يمرّر شاشة البث نفسها لما تنفتح الخانة، وبعد ما ينقفل لازم ترجع (كانت تظل مرفوعة ومعلقة) */
         const pre = await p1.evaluate(() => {
@@ -121,44 +122,50 @@ try {
         check("ready page: long names stay on screen (360px)", await p1.evaluate(() => [...document.querySelectorAll(".bc-vs *")].every(e => { const r = e.getBoundingClientRect(); return !r.width || (r.left >= -1 && r.right <= innerWidth + 1); })));
         await p1.context().close();
     }
-    /* ===== 1ج) الآيفون: معالج الصوت ما يوصله ولا إطار (frames 0) ← MediaRecorder من نفس المايك ويوصل للسيرفر ===== */
+    /* ===== 1ج) المقدم يحكم (قرار محمد 23 أكتوبر 2026): ما فيه تسجيل ولا كتابة، المقدم يضغط صح أو غلط، والسؤال الجاي بضغطته ===== */
     {
-        const b2 = await launch({ wav: "speech_clip.wav" });
         const db = new FakeDB(40);
         const now = Date.now();
-        seed(db, "playing", { phase: "buzz", qIndex: 0, qAt: now - 20000, deadline: now + 60000, ready1: true, ready2: true });
-        const sent = [];
-        const api2 = Object.assign({}, api, { ai: async b => { if (b.task === "voice") { sent.push((b.audio || "").length); return { heard: "طوكيو", said: "طوكيو", ok: true }; } return { ok: false }; } });
-        const p1 = await device(b2, db, "p1", { api: api2 });
-        await until(() => p1.$("#lvBell"), 15000); await sleep(1500);
-        /* نفس اللي يصير في سفاري: معالج التسجيل ما يرجّع ولا إطار */
-        await p1.evaluate(() => { window.vaCapture = async () => ({ via: "dead", stop() {} }); liveBuzz(); });
-        const via = await until(() => p1.evaluate(() => { const t = VA.try; return t && t.steps.includes("recorder") && t.rtype; }), 5000);
-        check("no frames → MediaRecorder fallback starts", !!via, via);
-        check("recorded answer reaches the server", await until(() => sent.length > 0, 12000), sent);
-        check("sent audio is a real clip (not empty)", sent[0] > 4000, sent);
-        const steps = await p1.evaluate(() => VA.try && VA.try.steps);
-        check("no 'no-audio' when the recorder works", steps && !steps.includes("no-audio") && steps.includes("sent"), steps);
-        await p1.context().close();
-        /* أندرويد: مسار البث يرسل أصفار بالضبط (peak 0) ← مايك مستقل للجواب ويوصل الصوت */
-        const db3 = new FakeDB(40);
-        seed(db3, "playing", { phase: "buzz", qIndex: 0, qAt: Date.now() - 20000, deadline: Date.now() + 60000, ready1: true, ready2: true });
-        sent.length = 0;
-        const p3 = await device(b2, db3, "p1", { api: api2 });
-        await until(() => p3.$("#lvBell"), 15000); await sleep(1500);
-        await p3.evaluate(() => {
-            const real = window.vaCapture; let first = true;
-            window.vaCapture = async (ctx, src, onFrame) => {
-                if (!first) return real(ctx, src, onFrame);
-                first = false;
-                const t = setInterval(() => onFrame({ pcm: new Float32Array(320), talking: false, soft: false, softMs: 0, rms: 0, e: 0, floor: 0, speechMs: 0, peak: 0 }), 20);
-                return { via: "zeros", stop() { clearInterval(t); } };
-            };
-            liveBuzz();
-        });
-        check("all-zero mic → own mic for the answer", await until(() => p3.evaluate(() => VA.try && VA.try.steps.includes("own-mic")), 5000), await p3.evaluate(() => VA.try && VA.try.steps));
-        check("own-mic answer reaches the server", await until(() => sent.length > 0, 12000), sent);
-        await b2.close();
+        seed(db, "playing", { phase: "buzz", qIndex: 0, qAt: now - 2000, deadline: now + 60000, ready1: true, ready2: true });
+        const host = await device(browser, db, "host", { api });
+        const p1 = await device(browser, db, "p1", { api });
+        const p2 = await device(browser, db, "p2", { api });
+        await until(() => p1.$("#lvBell"), 15000); await sleep(1200);
+        await p1.evaluate(() => liveBuzz());
+        check("buzz → answer phase without a timer", await until(() => liveDoc(db).phase === "answer" && liveDoc(db).answerer === 1 && !liveDoc(db).deadline, 5000), liveDoc(db).phase);
+        check("presser sees 'say your answer', no input or recorder", await until(() => p1.$(".bc-sayit"), 5000) && !(await p1.$("#liveScreen input, #liveScreen textarea, .va-box")));
+        check("other player sees no verdict buttons", !(await p2.$(".bc-verdict")) && !(await p1.$(".bc-verdict")));
+        check("host sees the correct answer privately + ✓/✗", await until(() => host.evaluate(() => { const a = document.querySelector(".bc-judge-a b"); return !!a && a.textContent === "الرياض" && !!document.querySelector(".bc-verdict .ok"); }), 6000));
+        check("players never see the answer text", !(await p1.evaluate(() => document.body.textContent.includes("الرياض"))));
+        await host.screenshot({ path: out + "/1c-host-judge.png" });
+        await sleep(3000);
+        check("no answer timeout while waiting for the host", liveDoc(db).phase === "answer");
+        /* غلط ← ينتقل للثاني */
+        await host.click(".bc-verdict .no");
+        check("wrong → passes to the other player", await until(() => liveDoc(db).phase === "answer" && liveDoc(db).answerer === 2 && liveDoc(db).passed, 5000));
+        check("passed player sees 'say your answer'", await until(() => p2.$(".bc-sayit"), 5000));
+        await until(() => host.evaluate(() => { const b = document.querySelector(".bc-verdict .ok"); return b && !b.disabled; }), 5000);
+        await host.click(".bc-verdict .ok");
+        check("correct → reveal with the winner", await until(() => liveDoc(db).phase === "reveal" && liveDoc(db).outcome === 2, 5000), { ph: liveDoc(db).phase, o: liveDoc(db).outcome });
+        check("score counts", (liveDoc(db).log || [])[0] === 2);
+        await sleep(9000);
+        check("reveal waits for the host (no auto next question)", liveDoc(db).phase === "reveal" && liveDoc(db).qIndex === 0);
+        check("viewer told the host starts the next question", /بانتظار المقدم/.test(await p1.evaluate(() => document.body.textContent)));
+        await host.click(".bc-nextq");
+        check("host 'next question' → question 2 starts", await until(() => liveDoc(db).qIndex === 1 && liveDoc(db).phase === "buzz", 5000));
+        /* آخر سؤال ← نتيجة المواجهة */
+        upd(db, { qIndex: 4, phase: "reveal", outcome: 1, log: [2, 1, 1, 2, 1], deadline: Date.now() + 3000 });
+        check("last question: button says match result", await until(() => host.evaluate(() => /نتيجة المواجهة/.test((document.querySelector(".bc-nextq") || {}).textContent || "")), 5000));
+        await host.click(".bc-nextq");
+        check("→ match result scene", await until(() => liveDoc(db).scene === "result", 5000), liveDoc(db).scene);
+        /* محد ضغط الجرس 15 ث ← تنكشف الإجابة لحالها */
+        const db2 = new FakeDB(40);
+        seed(db2, "playing", { phase: "buzz", qIndex: 0, qAt: Date.now() - 14000, deadline: Date.now() + 1000, ready1: true, ready2: true });
+        const h2 = await device(browser, db2, "host", { api });
+        check("no buzz in time → auto reveal 'no one answered'", await until(() => liveDoc(db2).phase === "reveal" && liveDoc(db2).outcome === 0, 15000), liveDoc(db2).phase);
+        const errs = [host, p1, p2, h2].flatMap(p => p.__logs.filter(l => /PAGEERROR/.test(l)));
+        check("no page errors (host judging)", !errs.length, errs.slice(0, 3));
+        for (const p of [host, p1, p2, h2]) await p.context().close();
     }
     /* ===== 2) شارة البداية ===== */
     {
