@@ -301,11 +301,21 @@ function buildMatchLiveRow(m) {
 
 /* ===== أسئلة جديدة لكل بث (23 أكتوبر 2026، "الأسئلة صارت معروفة وتتكرر") =====
    بنك الأسئلة كان فاضي، فكل بث ياخذ من نفس الأسئلة الاحتياطية، والتكرار ممنوع داخل البث الواحد بس.
-   الحين: (1) سجل دائم لكل سؤال انسأل (liveDiag/_qhistory، آخر 800)، وما ينعاد سؤال فيه إلا لو خلصت كل الأسئلة.
+   الحين: (1) سجل دائم لكل سؤال انسأل (liveDiag/_qhistory، آخر 1500)، وما ينعاد سؤال فيه إلا لو خلصت كل الأسئلة.
    (2) أول ما يبدأ المنظم بث جولة، الذكاء الاصطناعي يولّد أسئلة جديدة على قد المواجهات (تصنيفات مختلفة، ومدقق ثاني يراجعها)
    وتنحط قبل البنك والاحتياطي. لو تأخر أو فشل، البث يكمّل من البنك والاحتياطي (اللي ما انسأل أول، وبعدها الأقدم) */
-const BC_QHIST_MAX = 800;
+const BC_QHIST_MAX = 1500;   /* أكبر من الـ500 الصعبة عشان ما تنعاد */
 let bcFreshPool = [], bcQHist = [];
+/* 500 سؤال صعب جاهز (طلب محمد 23 أكتوبر 2026، js/broadcast/qbank-hard.json): ينحمّل عند المنظم بس وقت بدء البث،
+   وياخذ الأولوية قبل أسئلة الذكاء الاصطناعي. اللي انسأل منها ما ينعاد (bcQHist) */
+let BC_HARD = [];
+function bcLoadHard() {
+    if (BC_HARD.length) return Promise.resolve(BC_HARD);
+    return fetch("js/broadcast/qbank-hard.json").then(r => r.ok ? r.json() : []).then(a => {
+        BC_HARD = (Array.isArray(a) ? a : []).filter(q => q && q.text && q.answer);
+        return BC_HARD;
+    }).catch(() => []);
+}
 function bcQHistRef() { return liveDiagRef("_qhistory"); }
 function bcQKey(t) { return liveNormalize(String(t || "")).replace(/\s+/g, ""); }
 async function bcLoadQHistory() {
@@ -345,6 +355,7 @@ function pickLiveQuestions(exclude) {
         picked = picked.concat((order ? order(ok) : shuffle(ok)).slice(0, LIVE_Q_COUNT - picked.length));
     };
     const fresh = q => !hist.has(bcQKey(q.text));
+    fill(BC_HARD.filter(fresh));                                         /* الـ500 الصعبة اللي ما انسألت */
     fill(bcFreshPool.filter(fresh));                                     /* جديدة من الذكاء الاصطناعي */
     fill(bank.filter(fresh));                                            /* البنك: اللي ما انسأل */
     fill(LIVE_FALLBACK_QUESTIONS.filter(fresh));                         /* الاحتياطي: اللي ما انسأل */
@@ -390,11 +401,14 @@ async function bcStartRound(r) {
     }));
     /* جمل جديدة للمقدم في هذي الجولة (js/ai.js)، ولو تأخرت أو فشلت يرجع للجمل الثابتة.
        وبنفس اللحظة: سجل الأسئلة اللي انسألت، وأسئلة جديدة من الذكاء الاصطناعي على قد المواجهات */
-    roomToast("جاري تجهيز أسئلة جديدة للجولة (دقيقة تقريباً)...", "hourglass");
-    await bcLoadQHistory();
+    roomToast("جاري تجهيز أسئلة جديدة للجولة...", "hourglass");
+    await Promise.all([bcLoadQHistory(), bcLoadHard()]);
+    /* الذكاء الاصطناعي يولّد بس اللي ناقص بعد الأسئلة الصعبة اللي ما انسألت */
+    const asked = new Set(bcQHist.map(bcQKey));
+    const need = Math.max(0, order.length * LIVE_Q_COUNT - BC_HARD.filter(q => !asked.has(bcQKey(q.text))).length);
     const [aiLines, fresh] = await Promise.all([
         typeof aiHostLines === "function" ? aiHostLines(r, order) : null,
-        bcFreshQuestions(order.length * LIVE_Q_COUNT).catch(() => [])
+        need ? bcFreshQuestions(need).catch(() => []) : []
     ]);
     bcFreshPool = fresh;
     /* أسئلة كل مواجهة تتجهز الحين وأجوبتها تنختم في السيرفر (الوثيقة العامة فيها السؤال والختم بس) */
