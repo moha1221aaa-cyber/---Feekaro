@@ -784,8 +784,10 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
 #liveScreen .lv-stage>*{flex-shrink:0;max-width:100%;box-sizing:border-box;}
 #liveScreen .lv-stage{overscroll-behavior:contain;}
 #liveScreen .lv-qtext{overflow-wrap:anywhere;}
-/* صف المنظم: النص سطر واحد، ولو ما كفى العرض الأزرار تنزل تحت بدل ما تركب على الاسم */
-.st-hostrow{flex-wrap:wrap;row-gap:6px;}
+/* صف المنظم (طلب محمد 23 أكتوبر): المقدم في النص، والأزرار فوق يسار بنفس الصف. ثلاث أعمدة متساوية الجنبين عشان المقدم يظل بالنص بالضبط */
+.st-hostrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto) minmax(0,1fr);align-items:center;}
+.st-hostrow .st-host{grid-column:2;max-width:100%;}
+.st-hostrow .st-side{grid-column:3;justify-self:end;}
 .st-host .tx span,.st-host .tx .bc-st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* شريط اسم المتكلم وقت الترحيب: المشهد يترك له مكان تحت */
 #liveScreen[data-scene="talk"] .lv-stage{padding-bottom:64px;}

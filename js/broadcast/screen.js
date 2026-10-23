@@ -403,11 +403,9 @@ function bcHostHTML(d) {
 <div class="tx"><b>${escapeHTML(d.hostName || "المنظم")}</b><span>${micOn ? `<i class="bc-st">المايك مقفل</i>` : "مقدم البرنامج"}</span></div>
 </div>`;
 }
-/* أزرار صغيرة على جنب الشاشة: التفاعلات، الرابط، المقدم */
+/* أزرار صغيرة فوق يسار: الرابط، صوت المذيع، التشخيص (أزرار التفاعل بالإيموجي انشالت 23 أكتوبر 2026، طلب محمد) */
 function bcSideCtlHTML() {
     return `<div class="st-side">
-${BC_RX.map((e, i) => `<button onclick="bcReact(${i})" aria-label="تفاعل">${e}</button>`).join("")}
-<i class="sep"></i>
 <button onclick="bcShare()" aria-label="رابط البث">${ic("share")}</button>
 <button class="${bcVoiceOn ? "" : "off"}" onclick="bcToggleVoice()" aria-label="صوت المقدم">${ic(bcVoiceOn ? "volume-2" : "volume-x")}</button>
 ${isAdmin ? `<button class="${bcDiagOpen ? "" : "off"}" onclick="bcToggleDiag()" aria-label="التشخيص">${ic("chart")}</button>` : ""}

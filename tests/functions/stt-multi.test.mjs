@@ -5,7 +5,7 @@ import { taskVoice } from "../../lib/grading.js";
 
 const auth = await setupAuth();
 const seen = [];
-let azure = null, eleven = null;
+let azure = null, eleven = null, nova = "";
 auth.routes.push({ match: u => u.includes("stt.speech.microsoft.com"), handle: async (u, init) => { seen.push({ eng: "azure", u, h: init.headers }); return azure(); } });
 auth.routes.push({ match: u => u.includes("api.elevenlabs.io/v1/speech-to-text"), handle: async (u, init) => { seen.push({ eng: "eleven", model: init.body.get("model_id"), lang: init.body.get("language_code") }); return eleven(); } });
 const J = o => new Response(JSON.stringify(o), { headers: { "Content-Type": "application/json" } });
@@ -13,6 +13,7 @@ const az = (...texts) => () => J({ RecognitionStatus: "Success", DisplayText: te
 const mkEnv = (whisper, extra) => {
     const llm = [];
     return { llm, env: Object.assign({ AZURE_TTS_KEY: "k", AZURE_TTS_REGION: "uaenorth", ELEVEN_KEY: "e", AI: { run: async (m, i) => {
+        if (m.includes("nova")) { if (nova instanceof Error) throw nova; return { results: { channels: [{ alternatives: nova ? [{ transcript: nova }] : [] }] } }; }
         if (m.includes("whisper")) { if (whisper instanceof Error) throw whisper; return { text: whisper }; }
         llm.push(m); return { response: '{"ok":false,"said":""}' };
     } } }, extra || {}) };
@@ -41,7 +42,7 @@ const go = (env, q, answer) => taskVoice(env, { q, answer, audio });
     azure = () => new Response("no", { status: 401 }); eleven = () => new Response("quota", { status: 429 });
     const k = mkEnv("الرياض");
     const r = await go(k.env, "ما عاصمة السعودية؟", "الرياض");
-    check("other engines down → Whisper alone still works", r.ok === true && r.t.by === "whisper" && r.t.errs && r.t.errs.azure, r);
+    check("other engines down → Whisper alone still works", r.ok === true && /^whisper/.test(r.t.by) && r.t.errs && r.t.errs.azure, r);
 }
 {
     /* Whisper طاح و Azure سمع: يكمل بدون خطأ */
@@ -64,6 +65,26 @@ const go = (env, q, answer) => taskVoice(env, { q, answer, audio });
     await go(k.env, "ما عاصمة السعودية؟", "الرياض");
     await new Promise(r => setTimeout(r, 50));
     check("ELEVEN_STT=0 skips ElevenLabs", !seen.some(x => x.eng === "eleven"));
+}
+{
+    /* تجربة 23 أكتوبر: Whisper سمع "أمسا" والجواب خمسة (التاء المربوطة تنطق "ا"، والخاء ضاعت) */
+    azure = () => new Response("no", { status: 401 }); eleven = () => new Response("x", { status: 401 }); nova = "";
+    const k = mkEnv("أمسا");
+    const r = await go(k.env, "كم عدد أركان الإسلام؟", "5|خمس|خمسة");
+    check("أمسا accepted as خمسة on the fast path", r.ok === true && r.t.path === "fast" && k.llm.length === 0, r);
+    const w = await go(mkEnv("أمسا").env, "كم عدد أركان الإسلام؟", "4|اربعة");
+    check("أمسا is still wrong for اربعة", w.ok === false, w);
+}
+{
+    /* Deepgram Nova-3 سمع صح و Whisper غلط */
+    azure = () => new Response("no", { status: 401 }); eleven = () => new Response("x", { status: 401 }); nova = "الأرجنتين";
+    const k = mkEnv("يوم");
+    const r = await go(k.env, "من فاز بكأس العالم 2022؟", "الأرجنتين|الارجنتين");
+    check("Nova-3 rescues when Whisper mishears", r.ok === true && r.t.by === "nova" && k.llm.length === 0, r);
+    nova = new Error("model does not support ar");
+    const e = await go(mkEnv("الأرجنتين").env, "من فاز بكأس العالم 2022؟", "الأرجنتين|الارجنتين");
+    check("Nova-3 error is skipped quietly", e.ok === true && e.t.errs && e.t.errs.nova, e);
+    nova = "";
 }
 auth.restore();
 done();

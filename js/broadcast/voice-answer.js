@@ -24,6 +24,8 @@ const VA_SOFT_MS = 250;          /* الكاشف الحساس (احتياط): ك
 const VA_SOFT_IGNORE_MS = 500;   /* أول نص ثانية من الضغط: صوت الجرس ودقة الإصبع ما تنحسب للحساس */
 const VA_QUIET_MS = 5000;
 const VA_END_SILENCE_MS = 900;   /* سكوت حقيقي (ولا كاشف سمع شي) بعد الكلام = خلص. 0.55 ث كانت تقطع الكلمة من نصها (تجربة 22 أكتوبر) */
+const VA_REC_WATCH_MS = 800;     /* ما وصل ولا إطار من المايك خلال كذا (الآيفون): نسجّل بـ MediaRecorder */
+const VA_REC_MS = 5000;          /* مدة تسجيل MediaRecorder (ما فيه كاشف كلام يوقفه) */
 const VA_SEND_MAX_MS = 8000;     /* أطول تسجيل ينرسل (من الضغطة) */        /* 5 ث بدون أي كلام من بداية الدور: نطلّع الكتابة بدل ما ننتظر نهاية الوقت */
 
 /* st: "" | "rec" (يسمع) | "think" (يتحقق) | "type" (الكتابة احتياط) | "done" */
@@ -190,6 +192,8 @@ async function vaStart(key) {
     let cap = null;
     const finish = (send) => {
         if (rec.stop === null) return;
+        /* تسجيل الآيفون الاحتياطي: نوقفه أول، وأول ما يسلّم آخر جزء نكمّل نفس الخطوات */
+        if (rec.mr && rec.mr.state !== "inactive") { rec.mr.onstop = () => finish(send); try { rec.mr.stop(); return; } catch (e) {} }
         rec.stop = null;
         clearInterval(rec.timer);
         if (cap) cap.stop();
@@ -200,6 +204,7 @@ async function vaStart(key) {
         const key = rec.key;
         if (!send || VA.key !== key || key.indexOf("arm|") === 0) return;
         const info = { frames: frames.length, speechMs: Math.round(speechMs), softMs: Math.round(softMs), actMs: Math.round(actMs), eMax: +eMax.toFixed(4), peak: +peak.toFixed(3), noise: +floor.toFixed(4) };
+        if (rec.mrParts) { vaFromRecorder(key, rec.mrParts, rec.mr && rec.mr.mimeType, info); return; }
         if (!frames.length) { vaDiag("no-audio", info); vaToType("المايك ما وصل منه صوت، اكتب جوابك"); return; }
         /* لو الكاشف لقط كلام قصير بس الصوت واضح، نرسله والسيرفر يحكم بدل ما نضيّع الجواب.
            وموسيقى أو ضجة بدون أي كلام ما تنرسل (Whisper يتخيّل منها كلام) */
@@ -214,6 +219,23 @@ async function vaStart(key) {
         vaSend(key, clip(), ctx.sampleRate, speechMs < VA_MIN_SPEECH_MS);
     };
     rec.stop = finish;
+
+    /* الآيفون (تجربة 23 أكتوبر، 3 آيفونات iOS 18.7): معالج الصوت ما يوصله ولا إطار من مايك البث (frames 0)، فكل جواب صار "المايك ما وصل منه صوت".
+       لو ما وصل أي إطار خلال 0.8 ث نسجّل نفس المايك بـ MediaRecorder (يشتغل على مسار أجورا في سفاري)، 5 ث من بدايته،
+       وبعدها الجوال نفسه يفك الملف لصوت عادي ويرسله بنفس الطريقة. بدون كاشف كلام، فالتسجيل وقته ثابت */
+    const startRecorder = () => {
+        if (typeof MediaRecorder === "undefined") return false;
+        const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(x => { try { return MediaRecorder.isTypeSupported(x); } catch (e) { return false; } });
+        let mr;
+        try { mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined); } catch (e) { return false; }
+        rec.mrParts = []; rec.mr = mr; rec.mrAt = performance.now();
+        mr.ondataavailable = e => { if (e.data && e.data.size && rec.mrParts) rec.mrParts.push(e.data); };
+        try { mr.start(); } catch (e) { rec.mr = null; rec.mrParts = null; return false; }
+        if (cap) { cap.stop(); cap = null; }
+        vaDiag("recorder", { rtype: mr.mimeType || type || "" });
+        const t = document.getElementById("vaT"); if (t) t.textContent = "قل جوابك الحين";
+        return true;
+    };
 
     const onFrame = (f) => {
         if (rec.stop === null) return;
@@ -259,6 +281,7 @@ async function vaStart(key) {
     /* الإيقاف بمؤقت مستقل (مو مع الإطارات)، فلو الصوت ما وصل أبد ما يعلّق */
     rec.timer = setInterval(() => {
         const now = performance.now();
+        if (!frames.length && !rec.mr && now - startedAt > VA_REC_WATCH_MS) startRecorder();
         if (rec.key.indexOf("arm|") === 0) {   /* لسا ما تأكد إني فزت بالجرس: نسجّل بس، وما نحكم */
             if (now - startedAt > VA_ARM_MS) { VA.arm = null; finish(false); }
             return;
@@ -267,6 +290,7 @@ async function vaStart(key) {
            - ما فيه أي صوت 5 ث ← نوقف (وينرسل لو فيه صوت واضح، وإلا الكتابة)
            - فيه كلام ← نوقف بعد 0.9 ث سكوت من الكاشفين الاثنين، وبعد 0.7 ث على الأقل من أول الكلام
            - أطول جواب 6 ث من أول كلام، ونهاية الوقت */
+        if (rec.mr) { if (now - rec.mrAt > VA_REC_MS || bcNow() >= stopAt()) finish(true); return; }
         if (!frames.length && now - startedAt > 1500) finish(true);
         else if (!firstActAt && now - startedAt > VA_QUIET_MS) finish(true);
         else if (firstActAt && now - lastActAt > VA_END_SILENCE_MS && now - firstActAt > 700) finish(true);
@@ -274,6 +298,25 @@ async function vaStart(key) {
         else if (bcNow() >= stopAt()) finish(true);
     }, 100);
     vaDiag("rec", { via: cap.via + (own ? "+getUserMedia" : "+bcTrack"), armed: key.indexOf("arm|") === 0 });
+}
+
+/* تسجيل MediaRecorder (الآيفون): الجوال يفكه لصوت عادي (decodeAudioData يدعم mp4/aac في سفاري) ويرسله زي التسجيل العادي */
+function vaFromRecorder(key, parts, type, info) {
+    const blob = new Blob(parts || [], { type: type || "audio/mp4" });
+    const fail = (st, msg, extra) => { if (VA.key !== key) return; vaDiag(st, Object.assign({}, info, { via: "recorder", bytes: blob.size }, extra || {})); vaToType(msg); };
+    if (!blob.size) return fail("no-audio", "المايك ما وصل منه صوت، اكتب جوابك");
+    blob.arrayBuffer()
+        .then(ab => new Promise((res, rej) => liveCtx().decodeAudioData(ab, res, rej)))
+        .then(buf => {
+            if (VA.key !== key) return;
+            const pcm = buf.getChannelData(0);
+            let pk = 0; for (let i = 0; i < pcm.length; i++) { const a = Math.abs(pcm[i]); if (a > pk) pk = a; }
+            const inf = Object.assign({}, info, { via: "recorder", bytes: blob.size, peak: +pk.toFixed(3), sec: +buf.duration.toFixed(1) });
+            if (pk < 0.01) { vaDiag("no-speech", inf); vaToType("ما سمعت جواب، اكتبه"); return; }
+            vaDiag("sent", inf);
+            vaSend(key, [pcm.slice(Math.max(0, pcm.length - Math.ceil(buf.sampleRate * VA_SEND_MAX_MS / 1000)))], buf.sampleRate, false);
+        })
+        .catch(e => fail("rec-error", "ما قدرت أسجّل صوتك، اكتب جوابك", { err: String((e && (e.name || e.message)) || e).slice(0, 60) }));
 }
 
 function vaStop(send) { if (VA.rec && VA.rec.stop) VA.rec.stop(send); }
