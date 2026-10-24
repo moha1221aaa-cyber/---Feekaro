@@ -71,6 +71,13 @@ try {
     /* كل شي انسأل والبنك فاضي والاحتياطي سؤال واحد: لازم 5 أسئلة برضو (من الأقدم في الصعبة) */
     const short = await host.evaluate(() => { roomState.qbank = []; bcFreshPool = []; bcQHist = BC_HARD.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); return pickLiveQuestions([]).length; });
     check("never fewer than 5 questions per match", short === 5, short);
+    /* عشوائية: كل بث ياخذ أسئلة مختلفة، مو بترتيب الملف */
+    const rnd = await host.evaluate(() => {
+        bcQHist = []; bcFreshPool = []; const keys = BC_HARD.slice(0, 5).map(q => q.text).join("|");
+        const runs = Array.from({ length: 20 }, () => pickLiveQuestions([]).map(q => q.text).join("|"));
+        return { distinct: new Set(runs).size, sameAsFile: runs.filter(r => r === keys).length };
+    });
+    check("questions come in random order (20 picks all different, none = file order)", rnd.distinct === 20 && rnd.sameAsFile === 0, rnd);
     const errs = host.__logs.filter(l => /PAGEERROR/.test(l));
     check("no page errors", !errs.length, errs.slice(0, 3));
 } catch (e) { ok = false; console.log(e.stack || e); }
