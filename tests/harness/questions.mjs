@@ -59,11 +59,11 @@ try {
         bcQHist = []; bcFreshPool = [{ text: "سؤال من الذكاء؟", answer: "ذكاء" }];
         const p = pickLiveQuestions([]);
         const fb = new Set(LIVE_FALLBACK_QUESTIONS.map(q => bcQKey(q.text)));
-        bcQHist = all.slice(0, 498).map(q => q.text);
+        bcQHist = all.slice(0, all.length - 2).map(q => q.text);
         const p2 = pickLiveQuestions([]).map(q => q.text);
-        return { n: all.length, uniq: new Set(keys).size, inFb: keys.filter(k => fb.has(k)).length, first: p.every(q => keys.includes(bcQKey(q.text))), p2, last2: all.slice(498).map(q => q.text) };
+        return { n: all.length, uniq: new Set(keys).size, inFb: keys.filter(k => fb.has(k)).length, first: p.every(q => keys.includes(bcQKey(q.text))), p2, last2: all.slice(all.length - 2).map(q => q.text) };
     });
-    check("500 hard questions loaded, all unique, none from the fallback list", hard.n === 500 && hard.uniq === 500 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
+    check("hard questions loaded (469 after removing literature), all unique, none from the fallback list", hard.n === 469 && hard.uniq === 469 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
     check("hard questions come first", hard.first);
     check("asked hard questions are not repeated (2 left → those 2 then others)", hard.last2.every(t => hard.p2.includes(t)), hard.p2);
     const errs = host.__logs.filter(l => /PAGEERROR/.test(l));
