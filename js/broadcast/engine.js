@@ -16,70 +16,8 @@ const BC_MATCH_SCENES = ["intro", "talk", "countdown", "playing", "result"];
 
 /* أسئلة احتياطية تُستخدم فقط إذا قاعدة الأسئلة ما تكفي */
 const LIVE_FALLBACK_QUESTIONS = [
-    { text: "ما عاصمة اليابان؟", answer: "طوكيو" },
-    { text: "كم عدد قارات العالم؟", answer: "7|سبع|سبعة" },
-    { text: "ما أكبر كوكب في المجموعة الشمسية؟", answer: "المشتري" },
-    { text: "كم عدد سور القرآن الكريم؟", answer: "114|مئة واربعة عشر|مائة واربعة عشر" },
-    { text: "ما أطول سورة في القرآن الكريم؟", answer: "البقرة|سورة البقرة" },
-    { text: "من أول الخلفاء الراشدين؟", answer: "أبو بكر الصديق|ابو بكر|ابوبكر" },
-    { text: "كم عدد أركان الإسلام؟", answer: "5|خمس|خمسة" },
-    { text: "ما أول سورة في ترتيب المصحف؟", answer: "الفاتحة|سورة الفاتحة" },
-    { text: "ما النبي الذي التقمه الحوت؟", answer: "يونس|يونس عليه السلام" },
-    { text: "ما عاصمة أستراليا؟", answer: "كانبرا" },
-    { text: "ما عاصمة كندا؟", answer: "أوتاوا|اوتاوا" },
-    { text: "ما عاصمة تركيا؟", answer: "أنقرة|انقره" },
-    { text: "ما أكبر محيط في العالم؟", answer: "الهادي|المحيط الهادي|الهادئ|المحيط الهادئ" },
-    { text: "ما أعلى جبل في العالم؟", answer: "إيفرست|ايفرست|افرست" },
-    { text: "ما أسرع حيوان بري؟", answer: "الفهد" },
-    { text: "كم عدد عظام جسم الإنسان البالغ؟", answer: "206" },
-    { text: "ما الرمز الكيميائي للذهب؟", answer: "Au" },
-    { text: "ما الغاز الذي تمتصه النباتات لصنع غذائها؟", answer: "ثاني أكسيد الكربون|ثاني اكسيد الكربون|co2" },
-    { text: "كم عدد لاعبي فريق كرة القدم داخل الملعب؟", answer: "11|احدى عشر|احد عشر" },
-    { text: "ما عملة اليابان؟", answer: "الين|ين" },
-    { text: "كم عدد أيام السنة الكبيسة؟", answer: "366" },
-    { text: "كم عدد كواكب المجموعة الشمسية؟", answer: "8|ثمانية|ثمان" },
-    { text: "ما أصغر دولة في العالم مساحة؟", answer: "الفاتيكان" },
-    { text: "من فاز بكأس العالم لكرة القدم 2022؟", answer: "الأرجنتين|الارجنتين" },
-    { text: "في أي عام أُعلن توحيد المملكة العربية السعودية ميلادياً؟", answer: "1932" },
     /* 23 أكتوبر 2026: احتياط أكبر (لو توليد الأسئلة فشل)، معلومات ثابتة بدون خلاف */
-    { text: "ما عاصمة مصر؟", answer: "القاهرة|القاهره" },
-    { text: "ما عاصمة فرنسا؟", answer: "باريس" },
-    { text: "ما عاصمة إيطاليا؟", answer: "روما" },
-    { text: "ما عاصمة ألمانيا؟", answer: "برلين" },
-    { text: "ما عاصمة إسبانيا؟", answer: "مدريد" },
-    { text: "ما عاصمة الإمارات العربية المتحدة؟", answer: "أبوظبي|ابوظبي|أبو ظبي|ابو ظبي" },
-    { text: "ما عاصمة المغرب؟", answer: "الرباط" },
-    { text: "ما عاصمة روسيا؟", answer: "موسكو" },
-    { text: "ما عاصمة الصين؟", answer: "بكين" },
-    { text: "ما عاصمة اليمن؟", answer: "صنعاء" },
-    { text: "ما عاصمة العراق؟", answer: "بغداد" },
-    { text: "ما عاصمة الأردن؟", answer: "عمّان|عمان" },
-    { text: "ما عاصمة سلطنة عمان؟", answer: "مسقط" },
-    { text: "ما عاصمة قطر؟", answer: "الدوحة|الدوحه" },
     { text: "ما عاصمة البحرين؟", answer: "المنامة|المنامه" },
-    { text: "كم عدد أيام الأسبوع؟", answer: "7|سبعة|سبع" },
-    { text: "كم عدد أشهر السنة؟", answer: "12|اثنا عشر|اثني عشر|اثنعش" },
-    { text: "ما الكوكب الأقرب إلى الشمس؟", answer: "عطارد" },
-    { text: "ما الكوكب الملقب بالكوكب الأحمر؟", answer: "المريخ" },
-    { text: "ما أكبر قارة في العالم مساحة؟", answer: "آسيا|اسيا" },
-    { text: "كم عدد ألوان قوس قزح؟", answer: "7|سبعة|سبع" },
-    { text: "ما اللغة الرسمية في البرازيل؟", answer: "البرتغالية|البرتغالي|البرتغاليه" },
-    { text: "كم عدد لاعبي فريق كرة السلة داخل الملعب؟", answer: "5|خمسة|خمس" },
-    { text: "في أي مدينة يقع المسجد النبوي؟", answer: "المدينة المنورة|المدينة|المدينه" },
-    { text: "كم عدد الصلوات المفروضة في اليوم والليلة؟", answer: "5|خمس|خمسة" },
-    { text: "من النبي الذي رفع قواعد الكعبة مع ابنه إسماعيل؟", answer: "إبراهيم|ابراهيم" },
-    { text: "ما الحيوان الملقب بسفينة الصحراء؟", answer: "الجمل|الإبل|الابل|البعير" },
-    { text: "ما أكبر حيوان على وجه الأرض؟", answer: "الحوت الأزرق|الحوت الازرق" },
-    { text: "كم عدد أرجل العنكبوت؟", answer: "8|ثمانية|ثمان|ثماني" },
-    { text: "ما المعدن الوحيد السائل في درجة حرارة الغرفة؟", answer: "الزئبق" },
-    { text: "ما الغاز الذي يحتاجه الإنسان للتنفس؟", answer: "الأكسجين|الاكسجين" },
-    { text: "كم دقيقة في الساعة؟", answer: "60|ستين|ستون" },
-    { text: "في أي قارة تقع مصر؟", answer: "أفريقيا|افريقيا|إفريقيا" },
-    { text: "ما أكبر صحراء حارة في العالم؟", answer: "الصحراء الكبرى|الكبرى" },
-    { text: "من أول إنسان مشى على سطح القمر؟", answer: "نيل آرمسترونغ|آرمسترونغ|ارمسترونغ|نيل ارمسترونج|ارمسترونج" },
-    { text: "كم عدد أضلاع المثلث؟", answer: "3|ثلاثة|ثلاث" },
-    { text: "ما العضو الذي يضخ الدم في جسم الإنسان؟", answer: "القلب" },
-    { text: "في أي سنة هجرية كانت غزوة بدر الكبرى؟", answer: "2|الثانية|الثانيه|السنة الثانية" }
 ];
 
 let liveMatchesCache = {};   /* بثوث الجولات فقط (type: "round") */
@@ -361,8 +299,10 @@ function pickLiveQuestions(exclude) {
     fill(LIVE_FALLBACK_QUESTIONS.filter(fresh));                         /* الاحتياطي: اللي ما انسأل */
     /* خلصت الأسئلة اللي ما انسألت: الأقدم في السجل أول */
     const oldest = arr => arr.slice().sort((a, b) => (hist.get(bcQKey(a.text)) || 0) - (hist.get(bcQKey(b.text)) || 0));
-    fill(bank.concat(LIVE_FALLBACK_QUESTIONS), oldest);
-    if (picked.length < LIVE_Q_COUNT) { ex.clear(); fill(bank.concat(LIVE_FALLBACK_QUESTIONS), oldest); }
+    /* خلصت كلها: الأقدم في السجل (الصعبة والبنك والاحتياطي)، عشان كل مواجهة تاخذ 5 أسئلة دايماً */
+    const all = BC_HARD.concat(bank, LIVE_FALLBACK_QUESTIONS);
+    fill(all, oldest);
+    if (picked.length < LIVE_Q_COUNT) { ex.clear(); fill(all, oldest); }
     return picked.map(q => ({ text: String(q.text), answer: String(q.answer) }));
 }
 
@@ -388,6 +328,7 @@ async function bcStartRound(r) {
 
     const unlinked = [];
     ms.forEach(m => [m.p1.name, m.p2.name].forEach(n => { if (!playerLinks[n] && unlinked.indexOf(n) === -1) unlinked.push(n); }));
+    await Promise.all([bcLoadQHistory(), bcLoadHard()]).catch(() => {});   /* لتنبيه عدد الأسئلة الجاهزة */
     const choice = await bcAskStart(r, ms.length, unlinked);
     if (!choice) return;
 
@@ -690,7 +631,7 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-card">
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
-${(() => { const have = (roomState.qbank || []).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} بنك الأسئلة فيه ${have} سؤال بس، والجولة تحتاج ${need}. البث بيكمّل من ${LIVE_FALLBACK_QUESTIONS.length} سؤال احتياطي وبتتكرر الأسئلة. الأفضل تضيف أسئلة من الغرفة الصوتية (بنك الأسئلة) قبل البث.</div>` : ""; })()}
+${(() => { const asked = new Set(bcQHist.map(bcQKey)), have = BC_HARD.concat(roomState.qbank || []).filter(q => q && q.text && !asked.has(bcQKey(q.text))).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} الأسئلة الجاهزة اللي ما انسألت ${have} بس، والجولة تحتاج ${need}. الباقي يولّده الذكاء الاصطناعي، ولو ما رد بتتكرر أسئلة قديمة.</div>` : ""; })()}
 ${unlinked.length ? `<div class="bc-ask-x">
 <div class="t">${ic("alert")} ${unlinked.length} متسابق مو مربوط بحساب</div>
 <div class="s">ما ينفتح له مايك (محد يسمعه)، وما يقدر يضغط "جاهز" ولا الجرس. اربطه قبل البث: المتسابق يسجّل في الموقع، وبعدها تضغط "ربط" وتختار حسابه.</div>

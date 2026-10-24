@@ -27,9 +27,11 @@ try {
     const host = await device(browser, db, "host", { api });
     await until(() => host.$(".lv-stage"), 15000); await sleep(1000);
     const r = await host.evaluate(async () => {
-        bcQHist = ["ما عاصمة اليابان؟"].concat(LIVE_FALLBACK_QUESTIONS.slice(0, -7).map(q => q.text));
+        /* بنك تجريبي 12 سؤال (الاحتياطي صار سؤال واحد بعد مراجعة محمد 24 أكتوبر) */
+        roomState.qbank = Array.from({ length: 12 }, (_, i) => ({ text: "سؤال البنك رقم " + (i + 1) + "؟", answer: "ج" + (i + 1) }));
+        bcQHist = ["ما عاصمة اليابان؟"].concat(roomState.qbank.slice(0, -7).map(q => q.text), LIVE_FALLBACK_QUESTIONS.map(q => q.text));
         bcFreshPool = [];
-        const left = LIVE_FALLBACK_QUESTIONS.slice(-7).map(q => q.text);
+        const left = roomState.qbank.slice(-7).map(q => q.text);
         const p1 = pickLiveQuestions([]);
         const fresh = await bcFreshQuestions(10);
         bcFreshPool = fresh;
@@ -46,11 +48,11 @@ try {
     const saved = (db.data("room/main/liveDiag/_qhistory") || {}).texts || [];
     check("history saved in liveDiag/_qhistory", r.p2.every(t => saved.includes(t)) && saved.length === r.hist, saved.length);
     const all = await host.evaluate(() => {
-        bcQHist = LIVE_FALLBACK_QUESTIONS.map(q => q.text); bcFreshPool = [];
+        bcQHist = roomState.qbank.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); bcFreshPool = [];
         return pickLiveQuestions([]).map(q => q.text);
     });
     check("everything asked before: still 5 questions", all.length === 5, all);
-    const oldest = await host.evaluate(() => { const first5 = LIVE_FALLBACK_QUESTIONS.slice(0, 5).map(q => q.text); return pickLiveQuestions([]).every(q => first5.includes(q.text)); });
+    const oldest = await host.evaluate(() => { const first5 = roomState.qbank.slice(0, 5).map(q => q.text); return pickLiveQuestions([]).every(q => first5.includes(q.text)); });
     check("…and they are exactly the 5 oldest", oldest);
     /* الـ500 الصعبة: تنحمّل، ما فيها تكرار ولا شي انسأل قبل، وتجي قبل أسئلة الذكاء الاصطناعي */
     const hard = await host.evaluate(async () => {
@@ -59,13 +61,23 @@ try {
         bcQHist = []; bcFreshPool = [{ text: "سؤال من الذكاء؟", answer: "ذكاء" }];
         const p = pickLiveQuestions([]);
         const fb = new Set(LIVE_FALLBACK_QUESTIONS.map(q => bcQKey(q.text)));
-        bcQHist = all.slice(0, 498).map(q => q.text);
+        bcQHist = all.slice(0, all.length - 2).map(q => q.text);
         const p2 = pickLiveQuestions([]).map(q => q.text);
-        return { n: all.length, uniq: new Set(keys).size, inFb: keys.filter(k => fb.has(k)).length, first: p.every(q => keys.includes(bcQKey(q.text))), p2, last2: all.slice(498).map(q => q.text) };
+        return { n: all.length, uniq: new Set(keys).size, inFb: keys.filter(k => fb.has(k)).length, first: p.every(q => keys.includes(bcQKey(q.text))), p2, last2: all.slice(all.length - 2).map(q => q.text) };
     });
-    check("500 hard questions loaded, all unique, none from the fallback list", hard.n === 500 && hard.uniq === 500 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
+    check("hard questions loaded (184 after Mohammed's review), all unique, none from the fallback list", hard.n === 184 && hard.uniq === 184 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
     check("hard questions come first", hard.first);
     check("asked hard questions are not repeated (2 left → those 2 then others)", hard.last2.every(t => hard.p2.includes(t)), hard.p2);
+    /* كل شي انسأل والبنك فاضي والاحتياطي سؤال واحد: لازم 5 أسئلة برضو (من الأقدم في الصعبة) */
+    const short = await host.evaluate(() => { roomState.qbank = []; bcFreshPool = []; bcQHist = BC_HARD.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); return pickLiveQuestions([]).length; });
+    check("never fewer than 5 questions per match", short === 5, short);
+    /* عشوائية: كل بث ياخذ أسئلة مختلفة، مو بترتيب الملف */
+    const rnd = await host.evaluate(() => {
+        bcQHist = []; bcFreshPool = []; const keys = BC_HARD.slice(0, 5).map(q => q.text).join("|");
+        const runs = Array.from({ length: 20 }, () => pickLiveQuestions([]).map(q => q.text).join("|"));
+        return { distinct: new Set(runs).size, sameAsFile: runs.filter(r => r === keys).length };
+    });
+    check("questions come in random order (20 picks all different, none = file order)", rnd.distinct === 20 && rnd.sameAsFile === 0, rnd);
     const errs = host.__logs.filter(l => /PAGEERROR/.test(l));
     check("no page errors", !errs.length, errs.slice(0, 3));
 } catch (e) { ok = false; console.log(e.stack || e); }
