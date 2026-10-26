@@ -203,6 +203,7 @@ html += `
 if(roomState.game && roomState.game.active) {
 html += renderGameWidgetHTML();
 }
+if (typeof somRoomPill === "function") html += somRoomPill();
 
 html += `
 <div class="mic-stage">
@@ -292,6 +293,7 @@ html += `
 
 container.innerHTML = html;
 updateComposerState();
+if (typeof somRender === "function") somRender();
 
 let chatBox = document.getElementById("roomChatMessagesBox");
 if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
