@@ -259,12 +259,14 @@ function buildMatchLiveRow(m) {
    وتنحط قبل البنك والاحتياطي. لو تأخر أو فشل، البث يكمّل من البنك والاحتياطي (اللي ما انسأل أول، وبعدها الأقدم) */
 const BC_QHIST_MAX = 1500;   /* أكبر من الـ500 الصعبة عشان ما تنعاد */
 let bcFreshPool = [], bcQHist = [];
-/* 500 سؤال صعب جاهز (طلب محمد 23 أكتوبر 2026، js/broadcast/qbank-hard.json): ينحمّل عند المنظم بس وقت بدء البث،
+/* الأسئلة الصعبة (طلب محمد 23 أكتوبر 2026): ينحمّل عند المنظم بس وقت بدء البث من /qbank (functions/qbank.js، للمنظم بس،
+   والملف في lib/qbank-hard.js ما ينتشر للعامة: كان js/broadcast/qbank-hard.json وأي متسابق يقدر يحفظ أجوبته قبل البث)،
    وياخذ الأولوية قبل أسئلة الذكاء الاصطناعي. اللي انسأل منها ما ينعاد (bcQHist) */
 let BC_HARD = [];
 function bcLoadHard() {
     if (BC_HARD.length) return Promise.resolve(BC_HARD);
-    return fetch("js/broadcast/qbank-hard.json").then(r => r.ok ? r.json() : []).then(a => {
+    if (!isAdmin) return Promise.resolve([]);
+    return authHeaders().then(h => fetch("/qbank", { headers: h, cache: "no-store" })).then(r => r.ok ? r.json() : []).then(a => {
         BC_HARD = (Array.isArray(a) ? a : []).filter(q => q && q.text && q.answer);
         return BC_HARD;
     }).catch(() => []);

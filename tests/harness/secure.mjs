@@ -2,6 +2,7 @@
    + قاعدة وهمية (Firestore REST للسيرفر يقرا من نفس القاعدة). ما فيه أي اتصال بالخدمات الحقيقية.
    يتأكد: الجواب ما يطلع في الوثيقة العامة ولا عند المشاهدين قبل الكشف، والتصحيح في السيرفر، والغش ينرفض.
    node tests/harness/secure.mjs [مجلد] */
+import HARD from "../../lib/qbank-hard.js";
 import fs from "node:fs";
 import { serve, FakeDB, seed, launch, device, until, sleep, liveDoc, PORT } from "./harness.mjs";
 import { setupAuth, fakeCaches } from "../functions/helpers.mjs";
@@ -49,6 +50,8 @@ async function callAnswer(body, who) {
     return { status: res.status, contentType: res.headers.get("Content-Type"), body: text };
 }
 const api = {
+    /* الأسئلة الصعبة للمنظم بس (functions/qbank.js، التحقق نفسه في tests/functions/qbank.test.mjs) */
+    qbank: async (b, info) => info.who === "host" ? { json: HARD } : { status: 403, json: { error: "للمنظم بس" } },
     answer: async (b, info) => ({ raw: await callAnswer(b, info.headers.authorization ? info.who : "") }),
     ai: async b => (b.task === "host" ? { open: "", intros: [], close: "" } : { ok: false })
 };
@@ -89,7 +92,7 @@ try {
     await sleep(800);
     await host.click("button.bc-go");
     const dm = liveDoc(db);
-    check("only the current match's questions opened", dm.questions.length === 5 && dm.questions.every(q => plan[0].qs.some(x => x.text === q.text)) && !plan[1].qs.some(x => JSON.stringify(dm).includes(x.text)));
+    check("only the current match's questions opened", dm.questions.length === 5 && dm.questions.every(q => plan[0].qs.some(x => x.text === q.text)) && !plan[1].qs.some(x => JSON.stringify(dm).includes(x.text)), { n: dm.questions.length, scene: dm.scene, inPlan0: dm.questions.map(q => plan[0].qs.some(x => x.text === q.text)), leak: plan[1].qs.filter(x => JSON.stringify(dm).includes(x.text)).map(x => x.text) });
     check("question live", await until(() => liveDoc(db).scene === "playing" && liveDoc(db).phase === "buzz", 12000));
     await sleep(800);
     const fanCache = await fan.evaluate(() => JSON.stringify(liveMatchesCache));
@@ -98,7 +101,7 @@ try {
     await until(() => liveDoc(db).phase === "answer", 5000);
     /* غش: المتسابق الثاني يحاول يصحح جواب على دور غيره */
     const cheat = await p2.evaluate(() => answerPost({ action: "grade", id: "round_2", qIndex: 0, given: "أي شي" }).then(() => "accepted", e => String(e.status)));
-    check("other player cannot grade (403)", cheat === "403", cheat);
+    check("server grading is gone (410), nobody can grade", cheat === "410", cheat);
     await fan.screenshot({ path: out + "/1-answering-viewer.png" });
     /* 23 أكتوبر 2026: المقدم يحكم (bcHostVerdict) بدل التصحيح الصوتي في السيرفر. والمقدم يشوف الجواب (من liveSecrets) عنده بس */
     const judge = await until(() => host.evaluate(() => (document.querySelector(".bc-judge") || {}).textContent || ""), 6000);
@@ -111,7 +114,7 @@ try {
     check("answer shown in the same reveal write", !!(liveDoc(db).shown || {})["0_0"], liveDoc(db).shown);
     /* بعد ما انحكم: المتسابق يحاول يصحح مرة ثانية بجواب ثاني */
     const again = await p1.evaluate(() => answerPost({ action: "grade", id: "round_2", qIndex: 0, given: "غلط" }).then(r => r, e => ({ status: e.status })));
-    check("no second grading after the turn ended", again.status === 409 || again.repeat === true, again);
+    check("no grading after the turn either (410)", again.status === 410, again);
     const shown = await until(() => fan.evaluate(() => { const a = document.querySelector(".st-reveal:not(.hold) .lv-reveal .a"); return a && a.textContent !== "…" ? a.textContent : ""; }), 6000);
     check("viewer sees the right answer after the reveal", shown === truth[qText].split("|")[0], { shown, want: truth[qText] });
     await sleep(300);

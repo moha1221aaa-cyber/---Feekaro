@@ -45,39 +45,21 @@ const t = sealed[0].seal; const tampered = t.slice(0, -3) + (t.slice(-3) === "AA
 check("unseal: tampered → null", await unseal(key, ID, sealed[0].text, tampered) === null);
 check("seal 503 without secret", (await onRequestPost(ctxFor(new Request("https://masro7-league.pages.dev/answer", { method: "POST", headers: { Origin: "https://masro7-league.pages.dev", Authorization: "Bearer " + admin }, body: JSON.stringify({ action: "seal", id: ID, items: [{ text: "a", answer: "b" }] }) }), {}))).status === 503);
 
-/* --- grade --- */
+/* --- grade: انشال 26 أكتوبر 2026 (المقدم يحكم من 23 أكتوبر، وكان يصرف رصيد السمع لأي حساب: فحص 25 أكتوبر البند 20) --- */
 const now = Date.now();
 const base = () => ({ type: "round", status: "live", scene: "playing", phase: "answer", cur: 0, qIndex: 0, answerer: 1, passed: false, deadline: now + 10000,
     order: [{ p1: "سعد", p2: "فهد", uid1: "u_p1", uid2: "u_p2" }], questions: sealed.map(x => ({ text: x.text, seal: x.seal })) });
 DOC = base();
-check("grade: other player refused (403)", (await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p2)).status === 403);
-check("grade: wrong qIndex (409)", (await post({ action: "grade", id: ID, qIndex: 1, given: "الرياض" }, p1)).status === 409);
-let r = await post({ action: "grade", id: ID, qIndex: 0, given: "جدة" }, p1);
-let j = await r.json();
-check("grade: wrong typed answer → ok:false (AI asked)", r.status === 200 && j.ok === false, j);
-r = await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1); j = await r.json();
-check("grade: second try in same turn returns first verdict", j.ok === false && j.repeat === true && j.given === "جدة", j);
-DOC = Object.assign(base(), { answerer: 2, passed: true });
-r = await post({ action: "grade", id: ID, qIndex: 0, given: "رياض" }, p2); j = await r.json();
-check("grade: passed turn (p2) correct alt → ok:true", j.ok === true && !j.repeat, j);
-DOC = Object.assign(base(), { phase: "buzz" });
-check("grade: not answer phase (409)", (await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1)).status === 409);
-DOC = Object.assign(base(), { deadline: now - 5000 });
-check("grade: time over (409)", (await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1)).status === 409);
-DOC = Object.assign(base(), { qIndex: 1, questions: [{ text: "x", seal: sealed[0].seal }, { text: "كم عدد قارات العالم؟", answer: "7|سبعة" }] });
-r = await post({ action: "grade", id: ID, qIndex: 1, given: "سبعه" }, p1); j = await r.json();
-check("grade: legacy plaintext doc still graded on server", j.ok === true, j);
-/* متسابق ثالث (ما أخذ حكم على هالسؤال) يجاوب بالصوت */
-const p3 = await auth.token("u_p3");
-DOC = Object.assign(base(), { order: [{ uid1: "u_p3", uid2: "u_p2" }] });
+let aiCalls = 0; const realRun = env.AI.run; env.AI.run = async (m, i) => { aiCalls++; return realRun(m, i); };
+const readsBefore = reads;
 const audio = Buffer.alloc(4000, 1).toString("base64");
-const lines = await readNdjson(await post({ action: "grade", id: ID, qIndex: 0, audio, stream: true }, p3));
-check("grade voice stream: heard then verdict", lines[0].heard === "امم الرياض" && lines[1].final && lines[1].ok === true && lines[1].said === "الرياض", lines);
-
-/* المتسابق نفسه ما يقدر يجرّب مرة ثانية حتى لو انعبث بحقول الدور (passed/cur) */
-DOC = Object.assign(base(), { passed: true, cur: 0, order: [{ uid1: "u_p1", uid2: "u_p2" }] });
-r = await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1); j = await r.json();
-check("grade: tampered turn fields don't reset the first verdict", j.repeat === true && j.ok === false, j);
+let r = await post({ action: "grade", id: ID, qIndex: 0, given: "الرياض" }, p1);
+check("grade: gone (410) for the player on turn", r.status === 410);
+check("grade: voice gone too (410), nothing heard", (await post({ action: "grade", id: ID, qIndex: 0, audio, stream: true }, p1)).status === 410);
+check("grade: gone even without login (410)", (await post({ action: "grade", id: ID, qIndex: 0, given: "x" })).status === 410);
+check("grade: no AI and no Firestore read", aiCalls === 0 && reads === readsBefore, { aiCalls, reads: reads - readsBefore });
+env.AI.run = realRun;
+let j;
 
 /* --- reveal: للمنظم بس (الوثيقة مفتوحة، فمراحلها ما تنصدّق) --- */
 DOC = Object.assign(base(), { qIndex: 1, phase: "reveal" });
@@ -90,14 +72,6 @@ check("reveal: admin gets revealed answers (first alt)", j.answers["0"] === "ا�
 const sl = await (await post({ action: "seal", id: ID, items: [{ text: "ق1", answer: "7" }, { text: "ق2", answer: "عبدالرحمن بن عوف|عبد الرحمن بن عوف" }] }, admin)).json();
 check("seal length doesn't leak answer length", sl.items[0].seal.length === sl.items[1].seal.length, sl.items.map(x => x.seal.length));
 
-/* --- المحاولات المتوازية: وحدة بس تتصحح --- */
-const p4 = await auth.token("u_p4");
-DOC = Object.assign(base(), { order: [{ uid1: "u_p4", uid2: "u_p2" }] });
-/* طلبات ورا بعض بفرق بسيط (اللي يجي والأول للحين يتصحح ينرفض). نفس اللحظة بالضبط ممكن يعدّي: يحتاج تخزين ذرّي (مكتوب في SECURITY-PLAN) */
-let slowAI = env.AI.run; env.AI.run = async (m, i) => { await new Promise(r => setTimeout(r, 80)); return slowAI(m, i); };
-const par = await Promise.all([0, 30, 60].map(ms => new Promise(r => setTimeout(r, ms)).then(() => post({ action: "grade", id: ID, qIndex: 0, given: "جدة" }, p4)).then(r => r.status)));
-env.AI.run = slowAI;
-check("staggered grading: one graded, the rest refused", par.filter(x => x === 200).length === 1 && par.filter(x => x === 409).length === 2, par);
 /* --- open: صندوق أسئلة المواجهة الجاية --- */
 const box = (await (await post({ action: "seal", id: ID, boxes: [JSON.stringify({ qs: [{ text: "م1", seal: "x" }], gold: [] }), JSON.stringify({ qs: [{ text: "م2 سؤال", seal: "y" }], gold: [{ text: "ذهبي", seal: "z" }] })] }, admin)).json()).boxes;
 check("seal boxes (admin)", box.length === 2 && box.every(b => /^v1\./.test(b)) && !JSON.stringify(box).includes("م2"));
@@ -105,24 +79,20 @@ check("seal boxes refused for player", (await post({ action: "seal", id: ID, box
 const od = (extra) => Object.assign({ type: "round", status: "live", scene: "result", cur: 0, hostSeen: Date.now() - 60000,
     order: [{ state: "done", box: box[0] }, { state: "pending", box: box[1] }] }, extra || {});
 DOC = od();
-j = await (await post({ action: "open", id: ID, m: 1 }, p1)).json();
-check("open: autopilot (host gone, next match) gets texts", j.qs && j.qs[0].text === "م2 سؤال" && j.gold[0].text === "ذهبي", j);
+/* البند 22 في فحص 25 أكتوبر: الطيار الآلي انشال، وشروطه (hostSeen و scene) من وثيقة مفتوحة للكتابة، فالمتسابق ما يفتح صندوق أبد */
+check("open: player refused even when the doc says host gone + next match (403)", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 403);
 DOC = od({ hostSeen: Date.now() - 2000 });
-check("open: refused while host is present", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 403);
-DOC = od({ order: [{ state: "pending", box: box[0] }, { state: "pending", box: box[1] }], cur: -1, scene: "opening" });
-check("open: refused for a match that is not next", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 409);
-DOC = od({ scene: "playing" });
-check("open: refused mid-match", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 409);
+check("open: player refused while host is present (403)", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 403);
 DOC = od({ hostSeen: Date.now(), scene: "playing" });
 check("open: admin any time", (await (await post({ action: "open", id: ID, m: 1 }, admin)).json()).qs[0].text === "م2 سؤال");
 check("open: guest refused (401)", (await post({ action: "open", id: ID, m: 1 })).status === 401);
 /* الصناديق في وثيقة liveBoxes/<id> لحالها (وثيقة البث فيها boxed بس) */
 BOXES = { boxes: box };
 DOC = od({ order: [{ state: "done", boxed: true }, { state: "pending", boxed: true }] });
-j = await (await post({ action: "open", id: ID, m: 1 }, p1)).json();
+j = await (await post({ action: "open", id: ID, m: 1 }, admin)).json();
 check("open: box from liveBoxes doc", j.qs && j.qs[0].text === "م2 سؤال", j);
 BOXES = null;
-check("open: boxed but no boxes doc → 404", (await post({ action: "open", id: ID, m: 1 }, p1)).status === 404);
+check("open: boxed but no boxes doc → 404", (await post({ action: "open", id: ID, m: 1 }, admin)).status === 404);
 
 check("bad origin refused", (await onRequestPost(ctxFor(new Request("https://masro7-league.pages.dev/answer", { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }), env))).status === 403);
 auth.restore(); done();
