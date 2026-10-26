@@ -106,6 +106,6 @@ node tests/harness/trialall.mjs                       # التجربة: كل ا�
 node tests/harness/trial.mjs                          # المسابقة التجريبية: الأصلي ينحفظ ويرجع كامل، وتوقعات التجربة تنحذف، ونتيجة بثها ما تدخل الجدول الحقيقي
 node tests/harness/questions.mjs                      # أسئلة جديدة لكل بث: الذكاء الاصطناعي أول، وما ينعاد سؤال انسأل، والسجل في liveDiag/_qhistory
 node tests/harness/flow.mjs /tmp/out                  # 23 أكتوبر: الكلمات مع صوت المذيع، السؤال يختفي مع الجرس، المقدم يحكم ويبدأ كل سؤال، شارة البداية، ولا انتقال تلقائي، وضع التبريد للجوال
-node tests/harness/som.mjs /tmp/out                   # لعبة السوم: 3 أجهزة + functions/som.js الحقيقي، كل واحد يشوف أوراقه بس، السوم والمفاوضة والمداقشة والحساب
+node tests/harness/som.mjs /tmp/out                   # لعبة السوم: 3 أجهزة + functions/som.js الحقيقي، كل واحد يشوف أوراقه بس، السوم والمفاوضة والمداقشة والحساب، ما شي يتغير لحاله، الأصوات، زر الرجوع، و 8 لاعبين بدون تداخل
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال (ومنها som-rules: قوانين السوم وقوة اليد والحساب)  (ومنها stt-multi و whisper2: السمع بأكثر من محاولة، والأرقام بالكلام)
 ```
