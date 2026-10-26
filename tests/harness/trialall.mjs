@@ -45,8 +45,9 @@ try {
         db.write({ op: "update", path: "room/main/liveMatches/round_2", data: { ready2: true, scene: "talk", sceneAt: t0, v: 9 } });
         await until(() => p1.$(".cine.ident"), 4000);
         await sleep(2500);
-        check("mic stays closed during the opening sting", await p1.evaluate(() => !bcShouldPublish(liveMatchesCache[openLiveId]) && !(window.__agora && window.__agora.published && window.__agora.published.length)));
-        const at = await until(() => p1.evaluate(() => !!(window.__agora && window.__agora.publishes > 0)) .then(v => v ? Date.now() : 0), 9000);
+        /* 26 أكتوبر 2026: المايك منشور مكتوم من صفحة المواجهة (stability.mjs)، فالمقياس: مكتوم وقت الشارة، وينفتح بعدها */
+        check("mic stays closed during the opening sting", await p1.evaluate(() => !bcShouldPublish(liveMatchesCache[openLiveId]) && !bcMicOpen() && (!bcTrack || window.__micMuted)));
+        const at = await until(() => p1.evaluate(() => bcMicOpen()).then(v => v ? Date.now() : 0), 9000);
         check("mic opens by itself right after the sting (~5.6 s)", at && at - t0 >= 5500 && at - t0 < 8500, at && at - t0);
         await p1.context().close();
     }

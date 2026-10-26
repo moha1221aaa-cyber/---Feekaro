@@ -106,11 +106,12 @@ async function bcPublish() {
             await agoraUpgradeToken(bcClient, BC_CHANNEL);
             /* speech_standard: مخصص للكلام وأثبت على النت الضعيف من الافتراضي (مخصص للموسيقى) */
             const track = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true, encoderConfig: "speech_standard" });
+            /* ينتشر مكتوم لو مو وقت الكلام (bcApplyMute يفتحه بلحظة بدون أي اتصال) */
+            track.__m = bcSelfMuted || bcPolicyMuted;
+            if (track.__m) await track.setMuted(true).catch(() => {});
             try { await bcClient.publish([track]); } catch (e) { track.close(); throw e; }
-            if (bcSelfMuted) await track.setMuted(true).catch(() => {});
             bcTrack = track;
             bcMicErr = "";
-            roomToast("مايكك مفتوح في البث، الكل يسمعك الحين", "mic");
         })().finally(() => { bcPubPromise = null; });
     }
     await bcPubPromise;
@@ -133,7 +134,25 @@ async function bcLeave() {
 
 /* شارة البداية شغالة (أول CINE_IDENT_MS من فقرة الترحيب): المايكات تنتظرها عشان صوتها ما يتداخل مع الشارة (طلب محمد 23 أكتوبر 2026) */
 function bcIdentOn(d) { return !!d && d.scene === "talk" && bcNow() < (Number(d.sceneAt) || 0) + CINE_IDENT_MS + 300; }
-/* هل لازم مايكي يكون مفتوح الحين؟ المنظم دايماً، وللمتسابقين أول ما تبدأ مواجهتهم */
+/* 26 أكتوبر 2026 (شكوى "صوت المتسابق ما ينسمع خصوصاً لما تبدأ المواجهة"): كان المايك يتقفل ويتسكّر مع كل انتقال
+   (نهاية المواجهة، الشارة)، ويرجع ينفتح من الصفر أول ما تبدأ: إذن المايك، توكن جديد، نشر، والطرف الثاني يشترك من جديد،
+   وفي الآيفون فتح المايك يغيّر جلسة الصوت. كل هذا 1-3 ث وأحياناً يفشل، بالضبط لحظة الترحيب.
+   الحين: المايك ينفتح وينتشر مرة وحدة (المنظم طول البث، والمتسابق من صفحة مواجهته لين نتيجتها) ويتكتم ويتفتح بس (setMuted). */
+function bcMicRole(d) {
+    if (!currentUser || !d || d.status !== "live") return false;
+    if (amBcHost(d)) return true;
+    return BC_MATCH_SCENES.indexOf(d.scene) !== -1 && !!bcCur(d) && !!myLiveNum(d);
+}
+let bcPolicyMuted = true;   /* مكتوم لأنه مو وقت الكلام (الشارة، الافتتاح، صفحة المتسابقين، النتيجة) */
+function bcApplyMute() {
+    if (!bcTrack) return;
+    const m = bcSelfMuted || bcPolicyMuted;
+    if (bcTrack.__m === m) return;
+    bcTrack.__m = m;
+    bcTrack.setMuted(m).catch(() => { bcTrack && (bcTrack.__m = null); });
+}
+function bcMicOpen() { return !!bcTrack && !bcSelfMuted && !bcPolicyMuted; }
+/* هل لازم مايكي يكون مفتوح (مو مكتوم) الحين؟ المنظم والمتسابقين وقت الترحيب والمواجهة، بعد الشارة */
 function bcShouldPublish(d) {
     /* المايك يفتح بس وقت اللعب: من بداية المواجهة (العد التنازلي والأسئلة)، ويتقفل أول ما تنتهي */
     if (!currentUser || !d || d.status !== "live" || !(d.scene === "talk" || d.scene === "countdown" || d.scene === "playing") || !bcCur(d)) return false;
@@ -159,16 +178,19 @@ function bcSyncAudio() {
                     try { await agoraUpgradeToken(bcClient, BC_CHANNEL); await bcClient.publish([bcTrack]); bcNetDiag("republished"); }
                     catch (e) { bcRepub = true; bcNetDiag("republish-failed"); bcRejoinLater(); }   /* المايك يظل مفتوح (التسجيل ما ينقطع) ونحاول بعدين */
                 }
-                const want = bcShouldPublish(d);
-                if (want && !bcTrack && bcNow() - bcMicFailAt > 10000) {
-                    try { await bcPublish(); }
+                const role = bcMicRole(d), want = bcShouldPublish(d);
+                const wasMuted = bcPolicyMuted;
+                bcPolicyMuted = !want;
+                bcApplyMute();
+                if (bcTrack && wasMuted !== bcPolicyMuted && !bcSelfMuted) roomToast(want ? "مايكك مفتوح في البث، الكل يسمعك الحين" : "تقفل مايكك في البث", want ? "mic" : "mic-off");
+                if (role && !bcTrack && bcNow() - bcMicFailAt > 10000) {
+                    try { await bcPublish(); if (want && !bcSelfMuted) roomToast("مايكك مفتوح في البث، الكل يسمعك الحين", "mic"); }
                     catch (e) {
                         bcMicFailAt = bcNow();
                         bcMicErr = e && e.code === "PERMISSION_DENIED" ? "ارفض المتصفح إذن المايك، فعّله من إعدادات المتصفح" : ("تعذّر فتح المايك: " + (e.message || e.code || e));
                     }
-                } else if (!want && bcTrack) {
+                } else if (!role && bcTrack) {
                     await bcUnpublish();
-                    roomToast("تقفل مايكك في البث", "mic-off");
                 }
             } catch (e) { console.error("بث:", e); }
         } while (bcSyncAgain);
@@ -182,7 +204,7 @@ function bcSyncAudio() {
 function bcToggleSelfMute() {
     if (!bcTrack) { bcMicFailAt = 0; bcMicErr = ""; bcSyncAudio(); return; }
     bcSelfMuted = !bcSelfMuted;
-    bcTrack.setMuted(bcSelfMuted).catch(() => {});
+    bcApplyMute();
     liveLastSig = ""; renderLiveScreen();
 }
 
@@ -228,7 +250,7 @@ function bcSpeakers(d) {
 function bcMicLevel(uid) {
     const num = bcNumUid(uid);
     if (currentUser && uid === currentUser.uid) {
-        if (!bcTrack || bcSelfMuted) return { on: false, lvl: 0 };
+        if (!bcMicOpen()) return { on: false, lvl: 0 };
         return { on: true, lvl: bcTrack.getVolumeLevel() };
     }
     if (!bcClient) return { on: false, lvl: 0 };

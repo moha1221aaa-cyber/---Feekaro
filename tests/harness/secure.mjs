@@ -100,11 +100,15 @@ try {
     const cheat = await p2.evaluate(() => answerPost({ action: "grade", id: "round_2", qIndex: 0, given: "أي شي" }).then(() => "accepted", e => String(e.status)));
     check("other player cannot grade (403)", cheat === "403", cheat);
     await fan.screenshot({ path: out + "/1-answering-viewer.png" });
-    check("voice answer graded on server and committed", await until(() => liveDoc(db).phase === "reveal", 15000));
-    const la = liveDoc(db).lastAnswer;
-    check("server verdict: correct", la && la.correct === true, la);
+    /* 23 أكتوبر 2026: المقدم يحكم (bcHostVerdict) بدل التصحيح الصوتي في السيرفر. والمقدم يشوف الجواب (من liveSecrets) عنده بس */
+    const judge = await until(() => host.evaluate(() => (document.querySelector(".bc-judge") || {}).textContent || ""), 6000);
     const qText = liveDoc(db).questions[0].text;
-    check("voice went to /answer (not /ai)", calls.some(c => c.action === "grade" && c.who === "p1"));
+    check("host sees the right answer to judge", judge && judge.includes(truth[qText].split("|")[0]), judge);
+    await host.evaluate(() => bcHostVerdict(true));
+    check("host verdict committed", await until(() => liveDoc(db).phase === "reveal", 8000));
+    const la = liveDoc(db).lastAnswer;
+    check("verdict: correct, judged by the host", la && la.correct === true && la.judged === 1, la);
+    check("answer shown in the same reveal write", !!(liveDoc(db).shown || {})["0_0"], liveDoc(db).shown);
     /* بعد ما انحكم: المتسابق يحاول يصحح مرة ثانية بجواب ثاني */
     const again = await p1.evaluate(() => answerPost({ action: "grade", id: "round_2", qIndex: 0, given: "غلط" }).then(r => r, e => ({ status: e.status })));
     check("no second grading after the turn ended", again.status === 409 || again.repeat === true, again);
@@ -113,6 +117,8 @@ try {
     await sleep(300);
     await fan.screenshot({ path: out + "/2-reveal-viewer.png" });
     /* غش: مشاهد يغيّر مرحلة البث في الوثيقة المفتوحة لـ reveal (والسؤال الجاي) ويطلب الأجوبة من السيرفر */
+    await until(() => host.$(".bc-nextq"), 8000);
+    await host.evaluate(() => bcHostNextQ());
     await until(() => liveDoc(db).qIndex === 1 && liveDoc(db).phase === "buzz", 15000);
     const peek = await fan.evaluate(() => liveRef("round_2").update({ phase: "reveal", qIndex: 4 }).then(() => answerPost({ action: "reveal", id: "round_2" })).then(r => JSON.stringify(r), e => String(e.status)));
     check("viewer can't unlock answers by rewriting the phase", peek === "403", peek);

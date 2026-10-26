@@ -131,7 +131,8 @@ ${adminButton}
 openModal("viewProfileModal");
 }
 
-function table() {
+/* الحساب بس (بدون رسم): البث يحتاج الترتيب حتى لو رسم الجدول متأجل (bcDeferPage) */
+function tableStats() {
 players.forEach(p => { p.w = 0; p.d = 0; p.l = 0; p.gf = 0; p.ga = 0; p.pts = 0; });
 
 matches.forEach(m => {
@@ -149,7 +150,10 @@ else { m.p1.d++; m.p2.d++; m.p1.pts += 1; m.p2.pts += 1; }
 });
 
 players.sort((a,b) => b.pts - a.pts || ((b.gf-b.ga) - (a.gf-a.ga)) || b.gf - a.gf);
+}
 
+function table() {
+tableStats();
 let tbody = document.getElementById("standings");
 if(!tbody) return;
 tbody.innerHTML = "";
