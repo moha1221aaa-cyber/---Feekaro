@@ -4,6 +4,7 @@
    - السجل ينحفظ في liveDiag/_qhistory ويرجع ينقرا
    node tests/harness/questions.mjs */
 import { serve, FakeDB, seed, launch, device, until, sleep } from "./harness.mjs";
+import HARD from "../../lib/qbank-hard.js";
 const srv = await serve();
 let ok = true;
 const check = (name, v, extra) => { if (!v) ok = false; console.log((v ? "PASS " : "FAIL ") + name + (extra !== undefined ? " " + JSON.stringify(extra) : "")); };
@@ -12,7 +13,8 @@ seed(db, "result", { sceneAt: Date.now() - 60000 });
 db.docs.set("room/main", { ver: 1, data: { qbank: [], mics: {}, chat: [] } });
 const browser = await launch({ wav: "silence.wav" });
 const asked = [];
-const api = { ai: async b => {
+/* /qbank للمنظم بس (functions/qbank.js، والتحقق نفسه في tests/functions/qbank.test.mjs) */
+const api = { qbank: async (b, info) => info.who === "host" ? { json: HARD } : { status: 403, json: { error: "للمنظم بس" } }, ai: async b => {
     if (b.task !== "questions") return { ok: false };
     asked.push(b);
     return { questions: [

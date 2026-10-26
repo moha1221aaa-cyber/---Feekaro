@@ -172,8 +172,8 @@ cachedUsersData = {};
 snapshot.forEach(doc => {
 cachedUsersData[doc.id] = thumbUser(doc.data());
 });
-renderRankingUI();
-table();
+if (typeof bcDeferPage === "function") { tableStats(); bcDeferPage("users", () => { renderRankingUI(); table(); }); }
+else { renderRankingUI(); table(); }
 });
 
 }

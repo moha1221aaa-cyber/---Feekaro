@@ -174,7 +174,7 @@ export async function device(browser, db, who, opts) {
         return r.abort();
     });
     const api = opts.api || {};
-    await ctx.route(/\/(time|tts|agora-token|ai|answer|som)(\?|$)/, async r => {
+    await ctx.route(/\/(time|tts|agora-token|ai|answer|som|qbank)(\?|$)/, async r => {
         const u = new URL(r.request().url());
         const name = u.pathname.slice(1);
         if (name === "time") return r.fulfill({ contentType: "application/json", body: JSON.stringify({ t: Date.now() }) });

@@ -43,7 +43,9 @@ function showEstimate(d) {
     const q = ((d.questions || [])[d.qIndex] || {}).text || "";
     const spoken = typeof bcQText === "function" ? bcQText(d, d.qIndex) : q;
     const pre = Math.max(0, spoken.lastIndexOf(q));
-    const at = (Number(d.qAt) || bcNow()) + (bcIsDecider(d) ? 600 : 150) + 300;
+    /* صوت المذيع شغال: التقدير احتياط بس لو الصوت ما وصل الجهاز خلال 2.2 ث، فالكلمات ما تسبقه (أول ما يبدأ تتوزع عليه، showSpeechAt) */
+    const wait = typeof bcVoiceOn !== "undefined" && bcVoiceOn && typeof bcTtsServerOk !== "undefined" && bcTtsServerOk ? 2200 : 0;
+    const at = (Number(d.qAt) || bcNow()) + (bcIsDecider(d) ? 600 : 150) + 300 + wait;
     return showWordTimes(q, at + pre * SHOW_MS_PER_CHAR, q.length * SHOW_MS_PER_CHAR);
 }
 /* المذيع بدأ جملة على هالجهاز: zero بداية الصوت بساعة السيرفر، dur مدته بالثواني */

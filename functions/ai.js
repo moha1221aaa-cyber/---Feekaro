@@ -2,17 +2,15 @@
    POST /ai  بجسم JSON فيه task:
    - questions: يولّد أسئلة جديدة لبنك الأسئلة      { category, count, avoid: [نصوص أسئلة موجودة] }
    - grade:     يحكم هل إجابة المتسابق صحيحة         { q, answer, given }
-   - voice:     جواب المتسابق بالصوت: يحوّله نص (Whisper)، يطلّع الجواب من كلامه، ويحكم   { q, answer, audio: WAV base64, stream? }
-                مع stream: true الرد NDJSON على دفعتين: {"heard"} أول ما يخلص Whisper (نص مباشر عند المتسابق)، وبعدها {"final":true,...}
-   - hear:      نص مباشر وقت الكلام (Whisper بس، بدون حكم)                                   { q, audio }
+   (voice و hear انشالوا: الجواب الصوتي انشال 23 أكتوبر، وكانوا يشغّلون ElevenLabs Scribe من رصيد المذيع لأي حساب، فحص 25 أكتوبر البند 20)
    - host:      جمل جديدة للمقدم في بداية الجولة     { round, matches: [{ p1, p2, ctx }] }
    - chat:      مساعد الموقع                         { messages: [{ role, content }], context }
    الحماية: بس صفحات موقع الدوري، وحد للطلبات لكل جهاز بالدقيقة، وكل المدخلات مقصوصة */
 
 import { verifyFirebaseToken, bearer, jwksCount } from "../lib/firebase-auth.js";
-import { MODEL, clip, run, runSmart, pickJSON, taskGrade, taskHear, taskVoice } from "../lib/grading.js";
+import { MODEL, clip, run, runSmart, pickJSON, taskGrade } from "../lib/grading.js";
 
-const LIMIT_PER_MIN = { questions: 4, grade: 40, host: 4, chat: 12, voice: 30, hear: 20 };
+const LIMIT_PER_MIN = { questions: 4, grade: 40, host: 4, chat: 12 };
 const CATEGORIES = ["علوم", "ثقافة عامة", "دين", "تاريخ", "رياضة", "جغرافيا"];
 
 const json = (status, obj) => new Response(JSON.stringify(obj), {
@@ -134,24 +132,7 @@ async function taskChat(env, b) {
   return { reply: plain.slice(0, 1500) };
 }
 
-const TASKS = { questions: taskQuestions, grade: taskGrade, voice: taskVoice, hear: taskHear, host: taskHost, chat: taskChat };
-
-/* الجواب الصوتي على دفعتين (NDJSON): النص أول، والحكم بعده. الخطأ يطلع سطر {"final":true,"error"} */
-function streamVoice(context, env, b) {
-  const { readable, writable } = new TransformStream();
-  const w = writable.getWriter(), enc = new TextEncoder();
-  const line = o => w.write(enc.encode(JSON.stringify(o) + "\n"));
-  context.waitUntil((async () => {
-    try {
-      const r = await taskVoice(env, b, heard => line({ heard }));
-      await line(Object.assign({ final: true }, r));
-    } catch (e) {
-      await line({ final: true, error: String((e && e.message) || e).slice(0, 200) }).catch(() => {});
-    }
-    await w.close().catch(() => {});
-  })());
-  return new Response(readable, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
-}
+const TASKS = { questions: taskQuestions, grade: taskGrade, host: taskHost, chat: taskChat };
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -168,7 +149,6 @@ export async function onRequestPost(context) {
   if (!fn) return json(400, { error: "unknown task" });
   if (await overLimit(request, url, b.task)) return json(429, { error: "كثرت الطلبات، جرّب بعد دقيقة" });
 
-  if (b.task === "voice" && b.stream === true) return streamVoice(context, env, b);
   try {
     return json(200, await fn(env, b));
   } catch (e) {

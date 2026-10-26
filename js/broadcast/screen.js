@@ -31,7 +31,7 @@ function openLiveScreen(id) {
     if (!document.getElementById("stShots")) {
         const w = document.createElement("div");
         w.id = "stShots"; w.className = "st-shots";
-        w.innerHTML = BC_SHOTS.map(k => `<img data-shot="${k}" src="media/shot_${k}.jpg" alt="" decoding="async">`).join("");
+        w.innerHTML = BC_SHOTS.map(k => `<img data-shot="${k}" alt="" decoding="async">`).join("");
         const v = document.getElementById("stVideo");
         scr.insertBefore(w, v ? v.nextSibling : scr.firstChild);
     }
@@ -45,6 +45,7 @@ function openLiveScreen(id) {
     cineLoadSamples(CINE_CORE);
     cineLoadSamples(cineNeedFor(liveMatchesCache[id]));
     bcLoadSecret(id);
+    bcPredListen(id);
     renderLiveScreen();
     bcSyncAudio();
     if (!liveTickTimer) liveTickTimer = setInterval(liveTick, 200);
@@ -101,6 +102,8 @@ function closeLiveScreen(fromPop) {
     if (scr) scr.classList.remove("open");
     document.body.classList.remove("live-open");
     if (liveTickTimer) { clearInterval(liveTickTimer); liveTickTimer = null; }
+    bcPredListen("");
+    bcFlushPage();   /* اللي تأجل رسمه من صفحات الموقع وقت البث */
     bcStopSpeech();
     cineCloseAll();
     bcTicker(null);
@@ -296,7 +299,7 @@ function renderLiveScreenNow() {
     /* نعيد الرسم فقط إذا تغيّر شي مهم (عشان ما ينمسح اللي تكتبه في خانة الإجابة) */
     const applied = d ? (d.order || []).map(o => o.state + (o.applied ? 1 : 0)).join(",") : "";
     const sig = d ? [d.v, d.status, d.scene, d.cur, d.phase, d.qIndex, d.answerer, d.ready1, d.ready2, d.s1, d.s2, applied, me, isAdmin,
-        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
+        bcTrack ? 1 : 0, bcSelfMuted ? 1 : 0, bcPolicyMuted ? 1 : 0, bcMicErr, bcAudioErr, bcJoined ? 1 : 0, bcConnState, bcNetQ >= 5 ? 1 : 0, bcVoiceOn ? 1 : 0, bcDiagOpen ? 1 : 0, bcAnswerOf(d, d.qIndex) ? 1 : 0, bcPredSig(d)].join("|") : "none";
     if (sig === liveLastSig) return false;
     liveLastSig = sig;
 
@@ -443,6 +446,7 @@ let BC_PUB_LAST = null;
 function bcMicCtlHTML(d) {
     const net = bcConnState === "RECONNECTING" ? `<div class="bc-note">${ic("alert")} النت تقطّع، نرجع نوصل الصوت...</div>`
         : (bcNetQ >= 5 && bcTrack ? `<div class="bc-note">${ic("alert")} النت عندك ضعيف، صوتك ممكن يتقطع</div>` : "");
+    if (bcTrack && bcPolicyMuted) return net + `<div class="bc-note">${ic("mic-off")} مايكك جاهز، ينفتح بعد الشارة</div>`;
     if (bcTrack) return net + `<button class="bc-mybtn ${bcSelfMuted ? "muted" : ""}" onclick="bcToggleSelfMute()">${ic(bcSelfMuted ? "mic-off" : "mic")} ${bcSelfMuted ? "مايكك مكتوم · اضغط للفتح" : "مايكك مفتوح · اضغط للكتم"}</button>`;
     if (bcShouldPublish(d)) return bcMicErr
         ? `<button class="bc-mybtn err" onclick="bcToggleSelfMute()">${ic("alert")} ${escapeHTML(bcMicErr)} · اضغط للمحاولة</button>`

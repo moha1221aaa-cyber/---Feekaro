@@ -34,11 +34,26 @@ let bcPrevKey = null;
 let bcLocalBuzzQ = "";   /* السؤال اللي ضغطت جرسه من هالجهاز (صوت الجرس اشتغل محلياً، فما نعيده) */
 const bcEndedStale = {};
 
+/* 26 أكتوبر 2026 (شكوى "كل شي يعلق" وقت البث): صفحات الموقع اللي ورا شاشة البث (الترتيب والمواجهات وشريط البث)
+   كانت تنعاد رسمتها كاملة مع كل تحديث (نتيجة تنكتب في الجدول، أو المواجهة تتغير)، فيعلق الجوال 2-3 ث في نص البث.
+   الحين: وشاشة البث مفتوحة الرسم يتأجل لين تنقفل (آخر نسخة من كل دالة بس) */
+const bcPageQueue = new Map();
+function bcDeferPage(key, fn) {
+    if (!openLiveId) { fn(); return; }
+    bcPageQueue.set(key, fn);
+}
+function bcFlushPage() {
+    const list = [...bcPageQueue.values()];
+    bcPageQueue.clear();
+    list.forEach(f => { try { f(); } catch (e) { console.log("page:", e); } });
+}
+
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
 function liveRef(id) { return liveCol().doc(id); }
 /* وثائق جنب وثيقة البث عشان تبقى صغيرة (كل تغيير فيها ينرسل كامل لكل جوال فاتح البث، وكانت 73KB):
    liveBoxes/<id> صناديق أسئلة المواجهات (السيرفر بس يقراها)، liveDiag/<id> التشخيص (المنظم يقراها لما يفتح اللوحة) */
 function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
+function livePredRef(id) { return firebaseDB.collection("room").doc("main").collection("livePred").doc(id); }
 function liveDiagRef(id) { return firebaseDB.collection("room").doc("main").collection("liveDiag").doc(id); }
 /* وقت المسابقة التجريبية (leagueTrial في app.js) البث له معرّف لحاله (round_trialall)، عشان ما ينكتب فوق بث الجولة الحقيقية */
 /* المسابقة التجريبية: بث واحد فيه كل الجولات (طلب محمد 23 أكتوبر 2026)، فمعرّفه واحد مهما كانت الجولة */
@@ -103,6 +118,7 @@ function myLiveNum(d) {
 }
 function amBcHost(d) { return !!(currentUser && d && d.hostUid === currentUser.uid); }
 function livePlayerName(d, n) { const o = bcCur(d) || {}; return n === 1 ? (o.p1 || "") : (n === 2 ? (o.p2 || "") : ""); }
+function bcRealAv(name) { const a = getPlayerAvatar(name); return a && a.url && a.url.indexOf("ui-avatars.com") === -1 ? a.url : ""; }
 function bcAv(o, n) { return cdnThumb((n === 1 ? o.av1 : o.av2) || getPlayerAvatar(n === 1 ? o.p1 : o.p2).url); }
 
 function initLiveMatches() {
@@ -123,8 +139,7 @@ function initLiveMatches() {
         }).join("|");
         if (sig !== liveMatchesSig) {
             liveMatchesSig = sig;
-            renderMatches();
-            renderLiveBars();
+            bcDeferPage("matches", () => { renderMatches(); renderLiveBars(); });
         }
         if (openLiveId) { renderLiveScreen(); bcSyncAudio(); }
         if (bcDeepLink && next[bcDeepLink] && !openLiveId) {
@@ -244,12 +259,14 @@ function buildMatchLiveRow(m) {
    وتنحط قبل البنك والاحتياطي. لو تأخر أو فشل، البث يكمّل من البنك والاحتياطي (اللي ما انسأل أول، وبعدها الأقدم) */
 const BC_QHIST_MAX = 1500;   /* أكبر من الـ500 الصعبة عشان ما تنعاد */
 let bcFreshPool = [], bcQHist = [];
-/* 500 سؤال صعب جاهز (طلب محمد 23 أكتوبر 2026، js/broadcast/qbank-hard.json): ينحمّل عند المنظم بس وقت بدء البث،
+/* الأسئلة الصعبة (طلب محمد 23 أكتوبر 2026): ينحمّل عند المنظم بس وقت بدء البث من /qbank (functions/qbank.js، للمنظم بس،
+   والملف في lib/qbank-hard.js ما ينتشر للعامة: كان js/broadcast/qbank-hard.json وأي متسابق يقدر يحفظ أجوبته قبل البث)،
    وياخذ الأولوية قبل أسئلة الذكاء الاصطناعي. اللي انسأل منها ما ينعاد (bcQHist) */
 let BC_HARD = [];
 function bcLoadHard() {
     if (BC_HARD.length) return Promise.resolve(BC_HARD);
-    return fetch("js/broadcast/qbank-hard.json").then(r => r.ok ? r.json() : []).then(a => {
+    if (!isAdmin) return Promise.resolve([]);
+    return authHeaders().then(h => fetch("/qbank", { headers: h, cache: "no-store" })).then(r => r.ok ? r.json() : []).then(a => {
         BC_HARD = (Array.isArray(a) ? a : []).filter(q => q && q.text && q.answer);
         return BC_HARD;
     }).catch(() => []);
@@ -337,7 +354,8 @@ async function bcStartRound(r) {
     const order = ms.map(m => ({
         p1: m.p1.name, p2: m.p2.name, round: m.round,
         uid1: playerLinks[m.p1.name] || "", uid2: playerLinks[m.p2.name] || "",
-        av1: getPlayerAvatar(m.p1.name).url, av2: getPlayerAvatar(m.p2.name).url,
+        /* الصورة بس لو حقيقية (الافتراضية تنحسب من الاسم في bcAv): 30 مواجهة بروابط الصور الافتراضية كانت 8KB تنرسل لكل جوال مع كل تحديث */
+        av1: bcRealAv(m.p1.name), av2: bcRealAv(m.p2.name),
         s1: 0, s2: 0, state: "pending", applied: false
     }));
     /* جمل جديدة للمقدم في هذي الجولة (js/ai.js)، ولو تأخرت أو فشلت يرجع للجمل الثابتة.
@@ -389,6 +407,14 @@ function liveTx(id, fn) {
         const upd = fn(d, bcNow());
         if (upd) {
             upd.v = (d.v || 0) + 1;
+            /* المنظم موجود: أي كتابة منه تكفي (بدل كتابة "أنا موجود" كل 10 ث، وكل كتابة توصل كل الجوالات) */
+            if (amBcHost(d)) upd.hostSeen = bcNow();
+            /* الكشف من جهاز المنظم: الجواب ينكتب بنفس الكتابة (كان كتابة ثانية بعدها على طول) */
+            if (upd.phase === "reveal" && isAdmin) {
+                const cur = upd.cur != null ? upd.cur : d.cur, qi = upd.qIndex != null ? upd.qIndex : d.qIndex;
+                const q = (d.questions || [])[qi], a = q && bcSealed(q) && (bcSecrets[id] || {})[q.text];
+                if (a && !(d.shown || {})[cur + "_" + qi]) { upd["shown." + cur + "_" + qi] = String(a).split("|")[0]; bcShownSent[id + "|" + cur + "_" + qi] = 1; }
+            }
             upd.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             tx.update(ref, upd);
         }
@@ -672,21 +698,25 @@ function bcNextUpd(x, now, skip) {
     /* المواجهة أسئلتها مختومة (box) وما انفتحت للحين على هالجهاز: ما ننتقل (bcOpenNext يفتحها قبل) */
     const opened = bcBoxed(order[next]) ? bcOpenedFor(openLiveId, x, next) : null;
     if (bcBoxed(order[next]) && !opened) return null;
-    return Object.assign(bcQuizReset(), {
-        scene: "intro", cur: next, order: order, sceneAt: now,
-        usedQ: used, questions: opened ? opened.qs.slice() : pickLiveQuestions(used), gold: opened ? opened.gold.slice() : null
+    /* shown (أجوبة الأسئلة اللي انكشفت) يبدأ فاضي لكل مواجهة (الشاشة تحتاج المواجهة الحالية بس)، و usedQ بس للطريقة القديمة بدون صناديق */
+    const u = Object.assign(bcQuizReset(), {
+        scene: "intro", cur: next, order: order, sceneAt: now, shown: {},
+        questions: opened ? opened.qs.slice() : pickLiveQuestions(used), gold: opened ? opened.gold.slice() : null
     });
+    if (!opened) u.usedQ = used;
+    return u;
 }
 
 /* ===== حضور المنظم =====
-   جهاز المنظم يكتب "أنا موجود" كل 10 ثواني (hostSeen). يستخدمه الانتقال بالوقت داخل السؤال (bcAdvanceLag) ومزامنة المذيع.
+   كل كتابة من جهاز المنظم فيها hostSeen (liveTx)، ولو ما كتب شي 20 ث يكتب "أنا موجود" بروحه (bcHostHeartbeat). يستخدمه الانتقال بالوقت داخل السؤال (bcAdvanceLag) ومزامنة المذيع.
    الطيار الآلي انشال (23 أكتوبر 2026، طلب محمد): ولا مشهد ينتقل لحاله (الافتتاح، صفحة المتسابقين، الترحيب، النتيجة، الختام)،
    ولا البث المجدول يبدأ لحاله لما يخلص العداد. كل انتقال بين الصفحات بضغطة من المنظم بس */
-const BC_HOST_GONE_MS = 25000;
+const BC_HOST_GONE_MS = 45000;
 let bcLastBeat = 0;
 function bcHostGone(d) { return !d.hostSeen || bcNow() - Number(d.hostSeen) > BC_HOST_GONE_MS; }
 function bcHostHeartbeat(d) {
-    if (!firebaseDB || !d || d.status !== "live" || !amBcHost(d) || bcNow() - bcLastBeat < 10000) return;
+    /* بس لو ما كتب شي من 20 ث (كل كتابة منه فيها hostSeen، liveTx) */
+    if (!firebaseDB || !d || d.status !== "live" || !amBcHost(d) || bcNow() - bcLastBeat < 20000 || bcNow() - (Number(d.hostSeen) || 0) < 20000) return;
     bcLastBeat = bcNow();
     liveRef(openLiveId).update({ hostSeen: bcNow() }).catch(() => {});
 }
@@ -709,7 +739,9 @@ function bcHostNextQ() {
     const id = openLiveId, d0 = liveMatchesCache[id];
     if (!id || !d0 || !isAdmin || d0.phase !== "reveal") return;
     document.querySelectorAll(".bc-nextq").forEach(b => { b.disabled = true; });
-    liveTx(id, (x, now) => (x.qIndex === d0.qIndex && x.cur === d0.cur) ? liveRevealNext(x, now) : null)
+    /* صوت السؤال الجاي يكون جاهز عند المنظم قبل ما يبدأ (presenter.js) */
+    (typeof bcWaitNextQVoice === "function" ? bcWaitNextQVoice(d0) : Promise.resolve())
+        .then(() => liveTx(id, (x, now) => (x.qIndex === d0.qIndex && x.cur === d0.cur) ? liveRevealNext(x, now) : null))
         .then(u => { if (!u) bcRedrawAll(); }).catch(err => { roomToast("تعذّر: " + err.message, "alert"); bcRedrawAll(); });
 }
 
@@ -873,7 +905,8 @@ function bcApplyResults(id) {
     if (!!d.trial !== !!leagueTrial) return;
     (d.order || []).forEach((o, i) => {
         if (o.state !== "done" || o.applied) return;
-        if (!isAdmin && o.uid1 !== currentUser.uid && o.uid2 !== currentUser.uid) return;
+        /* المنظم بس: القواعد ما تسمح لغيره يكتب في league، فمحاولات المتسابقين كانت transaction ترجع permission-denied كل 15 ث */
+        if (!isAdmin) return;
         const key = id + "#" + i;
         if (liveApplyTried[key] && bcNow() - liveApplyTried[key] < 15000) return;
         liveApplyTried[key] = bcNow();
@@ -942,6 +975,13 @@ function liveAnswerMatches(given, answer) {
 /* ===== المؤثرات الصوتية (تنعزف على كل جهاز بنفس اللحظة) ===== */
 let liveAudioCtx = null;
 function liveCtx() {
-    if (!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!liveAudioCtx) {
+        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        /* الآيفون يوقف الصوت (interrupted) لما ينفتح المايك أو تجي مكالمة أو إشعار، وكان يظل ساكت (المذيع والمؤثرات) لين الضغطة الجاية */
+        liveAudioCtx.onstatechange = () => {
+            const c = liveAudioCtx;
+            if (openLiveId && c && c.state !== "running" && c.state !== "closed") setTimeout(() => { try { if (c.state !== "running") c.resume().catch(() => {}); } catch (e) {} }, 300);
+        };
+    }
     return liveAudioCtx;
 }

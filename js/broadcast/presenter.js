@@ -108,6 +108,32 @@ function bcPrefetchVoice(d) {
     (d.questions || []).forEach((q, i) => { bcTtsLoad(bcQText(d, i, true)).catch(() => {}); });
 }
 
+/* 26 أكتوبر 2026 (شكوى "السؤال يظهر والمذيع باقي ما قراه"): الأسئلة 3-5 وسؤال الحسم ينقرون بصيغة غير اللي تجهزت مسبقاً
+   (bcQText بدون plain: "سؤال الحسم..." أو صيغة التوتر حسب النتيجة)، فصوتها كان يتولّد لحظة السؤال نفسه (1-3 ث) والكلمات تسبقه.
+   الحين: وقت كشف السؤال اللي قبله النتيجة معروفة، فنعرف الصيغة بالضبط ونجهّزها: المنظم على طول، والباقين بعده بـ 1.5 ث من الكاش */
+function bcNextQState(d) {
+    if (!d || d.scene !== "playing" || d.phase !== "reveal") return null;
+    const i = (d.qIndex || 0) + 1;
+    if (i >= (d.questions || []).length) return null;
+    return Object.assign({}, d, { phase: "buzz", qIndex: i, outcome: 0 });
+}
+function bcNextQSpoken(d) { const n = bcNextQState(d); return n ? bcQText(n, n.qIndex) : ""; }
+let bcNextQKey = "";
+function bcPrefetchNextQ(d) {
+    const t = bcNextQSpoken(d);
+    if (!t || !bcVoiceOn || !bcTtsServerOk) return;
+    const k = openLiveId + ":" + d.cur + "_" + d.qIndex;
+    if (bcNextQKey === k) return;
+    bcNextQKey = k;
+    setTimeout(() => { bcTtsLoad(t).catch(() => {}); }, amBcHost(d) ? 0 : 1500);
+}
+/* المنظم ضغط "السؤال التالي": ننتظر صوت السؤال يكون جاهز عنده (لين 2.5 ث)، عشان يبدأ مع الكلمات */
+function bcWaitNextQVoice(d) {
+    const t = bcNextQSpoken(d);
+    if (!t || !bcVoiceOn || !bcTtsServerOk) return Promise.resolve();
+    return Promise.race([bcTtsLoad(t).catch(() => {}), new Promise(r => setTimeout(r, 2500))]);
+}
+
 /* المقدم يتكلم حسب اللحظة في البث */
 function bcAnnouncer(d) {
     if (!d || d.status !== "live") return;
@@ -136,6 +162,7 @@ function bcAnnouncer(d) {
         /* جملة الجواب (متجهزة مسبقاً) وبعدها جملة الموقف لو فيه موقف. جهاز المنظم يطلبها الحين عشان تكون في الكاش للكل */
         const situ = bcSituText(d);
         text = [bcRevealText(d, d.qIndex, true), situ];
+        bcPrefetchNextQ(d);
         /* جهاز المنظم يطلب جملة الجواب والموقف أول ما يبدأ الكشف (الجواب صار علني)، والأجهزة الثانية تقراها بعد 1.75 ث من الكاش */
         if (amBcHost(d) && key !== bcLastSpokenKey && bcVoiceOn && bcTtsServerOk) [text[0], situ].forEach(t => { if (t) bcTtsLoad(t).catch(() => {}); });
     } else if (d.scene === "result" && o) {

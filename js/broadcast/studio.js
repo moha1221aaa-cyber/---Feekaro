@@ -285,23 +285,42 @@ function bcDirector(d) {
     const shot = bcShotFor(d);
     if (scr.dataset.shot === shot) return;
     scr.dataset.shot = shot;
-    document.querySelectorAll("#stShots img").forEach(img => img.classList.toggle("on", img.dataset.shot === shot));
+    /* الصورة تتحمل أول مرة تحتاجها بس (كانت الـ 9 صور، 720KB، تنزل كلها أول ما يفتح البث) */
+    document.querySelectorAll("#stShots img").forEach(img => {
+        const on = img.dataset.shot === shot;
+        if (on && !img.getAttribute("src")) img.src = "media/shot_" + shot + ".jpg";
+        img.classList.toggle("on", on);
+    });
 }
 
 /* ===== توقّع الفائز (للمشاهدين، قبل بداية كل مواجهة) ===== */
-function bcPredMap(d, cur) { const p = (d && d.pred) || {}; return p["c" + cur] || {}; }
+/* 26 أكتوبر 2026: التوقعات في وثيقة لحالها (room/main/livePred/<id>)، لأن كل توقّع من أي مشاهد كان يكتب في وثيقة البث
+   فتنرسل كاملة لكل الجوالات وتتعارض مع الجرس. الوثائق القديمة: d.pred */
+let bcPredDoc = null, bcPredSub = null, bcPredSubId = "";
+function bcPredListen(id) {
+    if (bcPredSubId === (id || "")) return;
+    if (bcPredSub) { bcPredSub(); bcPredSub = null; }
+    bcPredSubId = id || ""; bcPredDoc = null;
+    if (!id || !firebaseDB) return;
+    bcPredSub = livePredRef(id).onSnapshot(s => {
+        bcPredDoc = s.exists ? s.data() : null;
+        if (openLiveId === id) { liveLastSig = ""; renderLiveScreen(); }
+    }, () => {});
+}
+function bcPredAll(d) { return Object.assign({}, (d && d.pred) || {}, bcPredDoc || {}); }
+function bcPredMap(d, cur) { return bcPredAll(d)["c" + cur] || {}; }
 function bcPredCounts(d, cur) {
     const m = bcPredMap(d, cur); let a = 0, b = 0;
     Object.keys(m).forEach(k => { if (m[k] && m[k].n === 1) a++; else if (m[k] && m[k].n === 2) b++; });
     return { a, b, t: a + b };
 }
-function bcPredSig(d) { if (!d || !d.pred) return ""; const m = bcPredMap(d, d.cur); const c = bcPredCounts(d, d.cur); return c.a + "-" + c.b + "-" + (currentUser && m[currentUser.uid] ? m[currentUser.uid].n : 0); }
+function bcPredSig(d) { if (!d) return ""; const m = bcPredMap(d, d.cur); const c = bcPredCounts(d, d.cur); return c.a + "-" + c.b + "-" + (currentUser && m[currentUser.uid] ? m[currentUser.uid].n : 0); }
 function bcCanPredict(d) { return !!currentUser && !!d && d.status === "live" && d.scene === "intro" && !myLiveNum(d); }
 function bcPredict(n) {
     const d = liveMatchesCache[openLiveId];
     if (!bcCanPredict(d)) return;
     const name = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "مشاهد";
-    liveRef(openLiveId).update({ ["pred.c" + d.cur + "." + currentUser.uid]: { n: n, name: name } })
+    livePredRef(openLiveId).set({ ["c" + d.cur]: { [currentUser.uid]: { n: n, name: name } } }, { merge: true })
         .then(() => roomToast("انحفظ توقعك", "check"))
         .catch(err => roomToast(err && err.code === "permission-denied" ? "ما قدرنا نحفظ توقعك (صلاحيات قاعدة البيانات)" : "تعذّر حفظ توقعك", "alert"));
 }

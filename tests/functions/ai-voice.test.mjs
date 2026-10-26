@@ -1,6 +1,20 @@
-/* functions/ai.js: الجواب الصوتي على دفعتين (stream)، والنص المباشر (hear)، والرد القديم (JSON) للأدوات اللي تعتمد عليه */
+/* السمع والحكم الصوتي (lib/grading.js taskVoice و taskHear): الطريق السريع، الهلوسات، وهيكل الحروف.
+   26 أكتوبر 2026: /ai ما عاد فيه voice و hear (فحص 25 أكتوبر البند 20: كانوا يصرفون رصيد ElevenLabs لأي حساب)،
+   فالاختبارات تمشي على lib مباشرة عن طريق onRequestPost المحلي تحت (نفس شكل الرد القديم)، و grade للحين من /ai الحقيقي */
 import { setupAuth, fakeCaches, ctxFor, readNdjson, check, done } from "./helpers.mjs";
-import { onRequestPost } from "../../functions/ai.js";
+import { onRequestPost as realPost } from "../../functions/ai.js";
+import { taskVoice, taskHear } from "../../lib/grading.js";
+const jsonRes = o => new Response(JSON.stringify(o), { headers: { "Content-Type": "application/json" } });
+async function onRequestPost(c) {
+    const b = await c.request.clone().json();
+    if (b.task !== "voice" && b.task !== "hear") return realPost(c);
+    if (b.task === "hear") return jsonRes(await taskHear(c.env, b));
+    if (b.stream !== true) return jsonRes(await taskVoice(c.env, b));
+    const lines = [];
+    try { const r = await taskVoice(c.env, b, heard => lines.push({ heard })); lines.push(Object.assign({ final: true }, r)); }
+    catch (e) { lines.push({ final: true, error: String((e && e.message) || e) }); }
+    return new Response(lines.map(x => JSON.stringify(x)).join("\n") + "\n", { headers: { "Content-Type": "application/x-ndjson" } });
+}
 
 const auth = await setupAuth(); fakeCaches();
 const calls = [];
@@ -32,8 +46,12 @@ const req = async (body, tok) => new Request("https://masro7-league.pages.dev/ai
     check("hear: whisper only", j.heard === "امم خلني أفكر الرياض" && calls.length === n + 1 && calls[n].includes("whisper"), { j, calls });
 }
 {
-    const res = await onRequestPost(ctxFor(await req({ task: "hear", q: "س", audio }, "a.b.c"), env));
-    check("hear needs login (401)", res.status === 401);
+    /* /ai الحقيقي: voice و hear انشالوا، وما يصرفون شي */
+    const n = calls.length;
+    for (const task of ["voice", "hear"]) {
+        const res = await realPost(ctxFor(await req({ task, stream: true, q: "س", answer: "ج", audio }), env));
+        check("/ai refuses " + task + " (400, nothing run)", res.status === 400 && calls.length === n, res.status);
+    }
 }
 {
     const bad = { STT_NOVA: "0", STT_WHISPER1: "0", AI: { run: async m => { if (m.includes("whisper")) throw new Error("stt down"); } } };

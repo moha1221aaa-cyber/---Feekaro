@@ -408,7 +408,8 @@ try { localStorage.setItem(LEAGUE_CACHE_KEY, JSON.stringify({ playersList: data.
 } else {
 generateMatches();
 }
-renderLeagueAll();
+/* وقت البث: الرسم يتأجل لين تنقفل شاشة البث (bcDeferPage في engine.js) */
+if (typeof bcDeferPage === "function") { tableStats(); bcDeferPage("league", renderLeagueAll); } else renderLeagueAll();
 notifScoresCheck();
 });
 
