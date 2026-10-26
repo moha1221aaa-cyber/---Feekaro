@@ -31,7 +31,7 @@ function aiGenQuestions() {
     btn.disabled = true;
     btn.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg> يكتب الأسئلة...`;
     box.innerHTML = "";
-    const avoid = (roomState.qbank || []).map(q => q && q.text).filter(Boolean)
+    const avoid = (roomBank || []).map(q => q && q.text).filter(Boolean)
         .concat((typeof LIVE_FALLBACK_QUESTIONS !== "undefined" ? LIVE_FALLBACK_QUESTIONS : []).map(q => q.text));
     btn.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg> يكتب الأسئلة ويراجعها (دقيقة تقريباً)...`;
     aiCall("questions", { category: cat, count, avoid }, 120000).then(d => {
@@ -63,11 +63,10 @@ function aiAddGen() {
     const picked = [];
     document.querySelectorAll(".ai-gen-chk").forEach(c => { if (c.checked && aiGenList[Number(c.dataset.i)]) picked.push(aiGenList[Number(c.dataset.i)]); });
     if (!picked.length) return alert("ما اخترت ولا سؤال");
-    if (!roomState.qbank) roomState.qbank = [];
-    const have = new Set(roomState.qbank.map(q => q && q.text));
+    const have = new Set(roomBank.map(q => q && q.text));
     let n = 0;
-    picked.forEach(q => { if (!have.has(q.text)) { roomState.qbank.push({ text: q.text, answer: q.answer }); n++; } });
-    saveRoomState();
+    picked.forEach(q => { if (!have.has(q.text)) { roomBank.push({ text: q.text, answer: q.answer }); n++; } });
+    saveRoomBank();
     renderQBankList();
     aiGenList = [];
     const box = document.getElementById("aiGenBox");

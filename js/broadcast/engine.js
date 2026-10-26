@@ -49,7 +49,11 @@ function bcFlushPage() {
 }
 
 function liveCol() { return firebaseDB.collection("room").doc("main").collection("liveMatches"); }
-function liveRef(id) { return liveCol().doc(id); }
+/* البث الخاص (بروفة المنظم، 27 أكتوبر 2026، طلب محمد): وثيقته في liveSecrets (المنظم بس يقراها ويكتبها)،
+   فما يطلع لأحد في شريط البث ولا يوصل منه إشعار، وصوته في قناة أجورا لحالها، ومتسابقيه وهميين (bcBotTick) */
+const BC_REH = "rehearsal";
+function bcIsReh(id) { return id === BC_REH; }
+function liveRef(id) { return bcIsReh(id) ? firebaseDB.collection("liveSecrets").doc(BC_REH) : liveCol().doc(id); }
 /* وثائق جنب وثيقة البث عشان تبقى صغيرة (كل تغيير فيها ينرسل كامل لكل جوال فاتح البث، وكانت 73KB):
    liveBoxes/<id> صناديق أسئلة المواجهات (السيرفر بس يقراها)، liveDiag/<id> التشخيص (المنظم يقراها لما يفتح اللوحة) */
 function liveBoxesRef(id) { return firebaseDB.collection("room").doc("main").collection("liveBoxes").doc(id); }
@@ -130,6 +134,7 @@ function initLiveMatches() {
             if (x && x.type === "round") next[doc.id] = x;
             else if (x && x.type === "rx" && openLiveId && doc.id === "rx_" + openLiveId) bcOnRx(x);
         });
+        if (liveMatchesCache[BC_REH]) next[BC_REH] = liveMatchesCache[BC_REH];   /* البث الخاص من مستمع ثاني (bcRehListen) */
         bcNotifyChanges(liveMatchesCache, next);
         liveMatchesCache = next;
 
@@ -301,7 +306,7 @@ function pickLiveQuestions(exclude) {
     const ex = new Set((exclude || []).map(bcQKey));
     const hist = new Map(bcQHist.map((t, i) => [bcQKey(t), i]));
     const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-    const bank = (roomState.qbank || []).filter(q => q && q.text && q.answer);
+    const bank = (roomBank || []).filter(q => q && q.text && q.answer);
     let picked = [];
     const fill = (pool, order) => {
         if (picked.length >= LIVE_Q_COUNT) return;
@@ -507,7 +512,7 @@ async function bcOpenNext(id, skip) {
 /* المنظم يجيب الأجوبة الأصلية (لو فتح البث من جهاز ثاني أو بعد تحديث الصفحة) */
 let bcSecretTry = {};
 function bcLoadSecret(id, force) {
-    if (!isAdmin || (bcSecrets[id] && bcPlans[id])) return Promise.resolve();
+    if (!isAdmin || bcIsReh(id) || (bcSecrets[id] && bcPlans[id])) return Promise.resolve();   /* البث الخاص: الأجوبة في وثيقته نفسها */
     if (bcSecretTry[id] && !force) return bcSecretTry[id];
     bcSecretTry[id] = firebaseDB.collection("liveSecrets").doc(id).get().then(s => {
         if (!s.exists) { delete bcSecretTry[id]; return; }   /* لسا ما انكتبت: نجرب مرة ثانية بعدين */
@@ -657,7 +662,7 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-card">
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
-${(() => { const asked = new Set(bcQHist.map(bcQKey)), have = BC_HARD.concat(roomState.qbank || []).filter(q => q && q.text && !asked.has(bcQKey(q.text))).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} الأسئلة الجاهزة اللي ما انسألت ${have} بس، والجولة تحتاج ${need}. الباقي يولّده الذكاء الاصطناعي، ولو ما رد بتتكرر أسئلة قديمة.</div>` : ""; })()}
+${(() => { const asked = new Set(bcQHist.map(bcQKey)), have = BC_HARD.concat(roomBank || []).filter(q => q && q.text && !asked.has(bcQKey(q.text))).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} الأسئلة الجاهزة اللي ما انسألت ${have} بس، والجولة تحتاج ${need}. الباقي يولّده الذكاء الاصطناعي، ولو ما رد بتتكرر أسئلة قديمة.</div>` : ""; })()}
 ${unlinked.length ? `<div class="bc-ask-x">
 <div class="t">${ic("alert")} ${unlinked.length} متسابق مو مربوط بحساب</div>
 <div class="s">ما ينفتح له مايك (محد يسمعه)، وما يقدر يضغط "جاهز" ولا الجرس. اربطه قبل البث: المتسابق يسجّل في الموقع، وبعدها تضغط "ربط" وتختار حسابه.</div>
@@ -791,7 +796,7 @@ function bcTap(el, cls, sound, vib) {
    برا وثيقة البث: كتابته وقت الجرس والجواب كانت ترسل الوثيقة كاملة لكل الجوالات في أحرج لحظة */
 const bcDiagMine = {};   /* id|نوع ← آخر 5 (الجهاز يعرف قياساته، فما يحتاج يقرا) */
 function bcDiagWrite(id, field, list) {
-    if (!firebaseDB || !currentUser || !id) return;
+    if (!firebaseDB || !currentUser || !id || bcIsReh(id)) return;   /* liveDiag يقراه الكل: البث الخاص ما يكتب فيه */
     liveDiagRef(id).set({ [field]: { [currentUser.uid]: list }, at: bcNow() }, { merge: true }).catch(() => {});
 }
 function bcDiagPush(kind, entry) {
@@ -901,7 +906,8 @@ function liveBuzz(ev) {
 function bcApplyResults(id) {
     const d = liveMatchesCache[id];
     if (!d || !firebaseDB || !currentUser) return;
-    /* نتيجة بث التجربة ما تنكتب إلا في جدول التجربة، ونتيجة البث الحقيقي ما تنكتب في جدول التجربة */
+    /* نتيجة بث التجربة ما تنكتب إلا في جدول التجربة، ونتيجة البث الحقيقي ما تنكتب في جدول التجربة، والبث الخاص ما ينكتب أبد */
+    if (bcIsReh(id) || d.rehearsal) return;
     if (!!d.trial !== !!leagueTrial) return;
     (d.order || []).forEach((o, i) => {
         if (o.state !== "done" || o.applied) return;
@@ -984,4 +990,86 @@ function liveCtx() {
         };
     }
     return liveAudioCtx;
+}
+
+/* ===== البث الخاص (بروفة المنظم لحاله، 27 أكتوبر 2026، طلب محمد) =====
+   محد يشوفه ولا يدخله: الوثيقة في liveSecrets/rehearsal (القواعد: المنظم بس)، والصوت قناة masro7_live_rehearsal.
+   المتسابقين وهميين: يضغطون جاهز، ويضغطون الجرس بوقت عشوائي (وأحياناً ما أحد يضغط)، والمنظم يحكم صح أو غلط مثل البث الحقيقي.
+   الأسئلة من نفس البنك بس ما تنحسب "انسألت" (ما فيه ختم ولا سجل)، والنتيجة ما تنكتب في الجدول، وما فيه تشخيص في liveDiag */
+const BC_REH_NAMES = ["سالم", "فيصل", "نواف", "تركي", "ماجد", "راكان", "بندر", "خالد", "يزيد", "مشعل", "عبدالله", "سلطان"];
+let bcRehSub = null;
+function bcRehListen(on) {
+    if (!on || !isAdmin || !firebaseDB) { if (bcRehSub) { bcRehSub(); bcRehSub = null; } return; }
+    if (bcRehSub) return;
+    bcRehSub = liveRef(BC_REH).onSnapshot(s => {
+        if (s.exists) liveMatchesCache[BC_REH] = s.data(); else delete liveMatchesCache[BC_REH];
+        if (openLiveId === BC_REH) { renderLiveScreen(); bcSyncAudio(); }
+    }, err => console.log("rehearsal:", err));
+}
+async function bcStartRehearsal() {
+    if (!firebaseDB || !isAdmin || !currentUser) return;
+    bcRehListen(true);
+    const snap = await liveRef(BC_REH).get().catch(() => null);
+    const old = snap && snap.exists ? snap.data() : null;
+    if (old && isLiveActive(old)) {
+        if (confirm("عندك بث خاص شغال. تكمّله؟\n(إلغاء = تبدأ واحد جديد)")) { liveMatchesCache[BC_REH] = old; return openLiveScreen(BC_REH); }
+    }
+    const ans = prompt("بث خاص لك بس، بمتسابقين وهميين (محد يشوفه ولا يوصله إشعار، والنتيجة ما تنكتب في الدوري).\nكم مواجهة تبي؟ (1 لين 6)", "2");
+    if (ans === null) return;   /* إلغاء */
+    const n = Math.max(1, Math.min(6, parseInt(String(ans).replace(/[٠-٩]/g, c => "٠١٢٣٤٥٦٧٨٩".indexOf(c)), 10) || 2));
+    await Promise.all([bcLoadQHistory(), bcLoadHard()]).catch(() => {});
+    bcFreshPool = [];
+    const names = BC_REH_NAMES.slice().sort(() => Math.random() - 0.5);
+    const order = Array.from({ length: n }, (_, i) => ({
+        p1: names[(2 * i) % names.length], p2: names[(2 * i + 1) % names.length], round: 0,
+        uid1: "bot_" + (2 * i + 1), uid2: "bot_" + (2 * i + 2), av1: "", av2: "", s1: 0, s2: 0, state: "pending", applied: false
+    }));
+    const myName = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "المنظم";
+    const myAv = (currentUserDocData && currentUserDocData.photoURL) || getPlayerAvatar(myName).url;
+    const data = Object.assign(bcQuizReset(), {
+        aiLines: null, type: "round", rehearsal: 1, trial: leagueTrial ? 1 : 0, round: "البث الخاص", status: "live", scene: "opening", cur: -1, order,
+        startAt: bcNow(), startedAt: bcNow(), hostUid: currentUser.uid, hostName: myName, hostAv: myAv,
+        questions: [], usedQ: [], sceneAt: bcNow(), hostSeen: bcNow(), v: 1, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    try {
+        await liveRef(BC_REH).set(data);
+        liveMatchesCache[BC_REH] = data;
+        openLiveScreen(BC_REH);
+        roomToast("بثك الخاص بدأ: محد يشوفه غيرك", "lock");
+    } catch (err) { alert("تعذّر بدء البث الخاص: " + err.message); }
+}
+/* المتسابقين الوهميين (جهاز المنظم بس، من liveTick): جاهز بعد 2.5 ث، والجرس بين 3 و 9 ث من بداية السؤال (وسؤال من كل 5 ما أحد يضغط) */
+const BC_BOT = { readyKey: "", qKey: "", at: 0, n: 0 };
+function bcBotTick(d) {
+    if (openLiveId !== BC_REH || !d || d.status !== "live" || !isAdmin) return;
+    const now = bcNow();
+    if (d.scene === "intro" && !(d.ready1 && d.ready2)) {
+        const k = "r" + d.cur + ":" + d.sceneAt;
+        if (BC_BOT.readyKey !== k) { BC_BOT.readyKey = k; BC_BOT.at = now + 2500; return; }
+        if (BC_BOT.at && now >= BC_BOT.at) {
+            BC_BOT.at = 0;
+            liveTx(BC_REH, (x, t) => (x.status === "live" && x.scene === "intro") ? { ready1: true, ready2: true, scene: "talk", sceneAt: t } : null).catch(() => {});
+        }
+        return;
+    }
+    if (d.scene === "playing" && d.phase === "buzz") {
+        const k = d.cur + "_" + d.qIndex + ":" + d.qAt;
+        if (BC_BOT.qKey !== k) {
+            BC_BOT.qKey = k;
+            BC_BOT.n = Math.random() < 0.2 ? 0 : (Math.random() < 0.5 ? 1 : 2);
+            BC_BOT.at = (Number(d.qAt) || now) + 3000 + Math.floor(Math.random() * 6000);
+            return;
+        }
+        if (BC_BOT.n && BC_BOT.at && now >= BC_BOT.at) {
+            const n = BC_BOT.n; BC_BOT.at = 0;
+            liveTx(BC_REH, (x, t) => {
+                if (x.status !== "live" || x.scene !== "playing" || x.phase !== "buzz" || x.cur + "_" + x.qIndex !== d.cur + "_" + d.qIndex) return null;
+                const u = { phase: "answer", buzzer: n, answerer: n, passed: false, deadline: t + LIVE_ANSWER_MS, ansAt: t };
+                u["tried" + n] = true;
+                const ms = Math.max(150, t - (x.qAt || (x.deadline - LIVE_BUZZ_MS)));
+                if (!x["fb" + n] || ms < x["fb" + n]) u["fb" + n] = ms;
+                return u;
+            }).catch(() => {});
+        }
+    }
 }

@@ -1,0 +1,59 @@
+rules_version = '2';
+// قواعد Firestore حق الدوري (masro7league). تنتشر من league-rules.yml (mode=deploy) في مستودع Feekaro-Web-Studio.
+// قبل 19 أكتوبر 2026 كانت كلها "read, write: if true" (أي أحد يقدر يغيّر النتائج والحسابات).
+// الإيميل لازم يطابق ADMIN_EMAIL في js/app.js.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'moha1221aaa@gmail.com'; }
+
+    // جدول الدوري (المتسابقين والمواجهات والنتائج): الكل يقرا، والمنظم بس يكتب.
+    // نتيجة البث (bcApplyResults) تنكتب من جهاز المنظم؛ لو كان غايب تنتظر لين يفتح الموقع.
+    match /league/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // حساب المستخدم: الكل يقرا (الترتيب والصور)، وصاحبه أو المنظم بس يكتب
+    match /users/{uid} {
+      allow read: if true;
+      allow create, update: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // التوقعات: كل واحد يكتب توقعاته هو بس (المعرّف يبدأ بـ uid حقه و userId نفسه)
+    match /predictions/{pid} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && pid.matches(request.auth.uid + '_.+');
+      allow delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // التغطيات (الفيديو): المنظم بس يضيف ويحذف
+    match /videos/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // أجوبة البث الأصلية (21 أكتوبر 2026، SECURITY-PLAN الخطوة 1): الوثيقة العامة فيها السؤال وختم الجواب بس،
+    // والأجوبة هنا للمنظم (المذيع يجهّز جملة الجواب مسبقاً). التصحيح والكشف من functions/answer.js.
+    match /liveSecrets/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // الغرفة الصوتية والبث: للحين مفتوحة لأن saveRoomState يكتب الوثيقة كاملة من أي جهاز،
+    // والبث (الجرس والإجابات والطيار الآلي والتوقعات والتفاعلات) يكتب من أجهزة المتسابقين والمشاهدين.
+    // تقسيمها للخطوة الجاية في SECURITY-PLAN.md.
+    match /room/{doc=**} {
+      allow read, write: if true;
+    }
+
+    // مجموعات قديمة ما يستخدمها الكود الحالي (adminAuditLog و live و liveChat و livePresence و questionHistory و rooms):
+    // للمنظم بس (قراءة وكتابة). ما انحذف منها شي.
+    match /{col}/{doc=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

@@ -1,13 +1,39 @@
 /* الحساب: الصفحة، الإعدادات، الصورة، الدخول والتسجيل، ربط المتسابق بحساب */
+
+/* الإيميل (المرحلة 2، 26 أكتوبر 2026): كان في users/<uid> و predictions، وأي زائر يقدر يقرا إيميلات الكل من القاعدة.
+   الحين في contacts/<uid> (صاحبه والمنظم بس يقرون)، وصاحبه يكتبه أول ما يدخل */
+let contactsCache = null, contactsLoading = null, contactSaved = "";
+function saveMyContact() {
+    if (!firebaseDB || !currentUser || !currentUser.email || contactSaved === currentUser.uid) return;
+    contactSaved = currentUser.uid;
+    firebaseDB.collection("contacts").doc(currentUser.uid).set({ email: currentUser.email }, { merge: true }).catch(() => { contactSaved = ""; });
+}
+/* المنظم بس: إيميلات الكل (لربط المتسابقين وملفاتهم) */
+function ensureContacts(onReady) {
+    if (!isAdmin || !firebaseDB) return null;
+    if (contactsCache) return contactsCache;
+    if (!contactsLoading) contactsLoading = firebaseDB.collection("contacts").get().then(snap => {
+        const m = {}; snap.forEach(d => { m[d.id] = (d.data() || {}).email || ""; });
+        contactsCache = m;
+    }).catch(() => { contactsLoading = null; });
+    if (onReady) contactsLoading.then(() => { if (contactsCache) onReady(); });
+    return null;
+}
+function emailOf(uid) {
+    if (currentUser && uid === currentUser.uid) return currentUser.email || "";
+    return (contactsCache && contactsCache[uid]) || "";
+}
+
 function listenToUserProfileDoc(uid) {
 if(!firebaseDB) return;
 if(userProfileDocListener) userProfileDocListener();
+saveMyContact();
 
 userProfileDocListener = firebaseDB.collection("users").doc(uid).onSnapshot(doc => {
 if(doc.exists) {
 currentUserDocData = thumbUser(doc.data());
 } else {
-currentUserDocData = { name: currentUser.displayName || "مستخدم جديد", email: currentUser.email };
+currentUserDocData = { name: currentUser.displayName || "مستخدم جديد" };
 }
 renderFullAccountPage();
 });
@@ -197,7 +223,6 @@ firebaseAuth.createUserWithEmailAndPassword(email, pass)
 .then(res => {
 return firebaseDB.collection("users").doc(res.user.uid).set({
 name: name,
-email: email,
 createdAt: firebase.firestore.FieldValue.serverTimestamp()
 });
 })
@@ -238,15 +263,17 @@ if(!body) return;
 let usersList = Object.keys(cachedUsersData).map(uid => ({
 uid: uid,
 name: cachedUsersData[uid].name || cachedUsersData[uid].displayName || "مستخدم",
-email: cachedUsersData[uid].email || ""
+email: emailOf(uid)
 }));
+/* الإيميلات من contacts (المنظم بس): لو ما تحمّلت للحين نعيد الرسم أول ما توصل */
+if (!contactsCache) ensureContacts(() => { if (activeModalId === "linkPlayerModal") openLinkPlayerModal(playerName); });
 
 let optionsHTML = `<option value="">-- إزالة الربط / بدون ربط --</option>`;
 let currentLinkedUid = playerLinks[playerName] || "";
 
 usersList.forEach(u => {
 let selected = (u.uid === currentLinkedUid) ? "selected" : "";
-optionsHTML += `<option value="${u.uid}" ${selected}>${escapeHTML(u.name)} (${escapeHTML(u.email)})</option>`;
+optionsHTML += `<option value="${u.uid}" ${selected}>${escapeHTML(u.name)}${u.email ? ` (${escapeHTML(u.email)})` : ""}</option>`;
 });
 
 body.innerHTML = `

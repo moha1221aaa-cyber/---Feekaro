@@ -35,7 +35,9 @@ uid = playerLinks[playerName];
 }
 
 let displayName = playerName || (userData ? (userData.name || userData.displayName) : "متسابق");
-let userEmail = userData ? userData.email : "";
+/* الإيميل من contacts (صاحبه أو المنظم بس، account.js emailOf) */
+if (isAdmin && !contactsCache) ensureContacts(() => { if (activeModalId === "viewProfileModal") openUserProfile(uid, playerName); });
+let userEmail = uid ? emailOf(uid) : "";
 let av = getPlayerAvatar(displayName);
 let photoUrl = (userData && userData.photoURL) ? userData.photoURL : av.url;
 
@@ -119,7 +121,7 @@ body.innerHTML = `
 <div style="font-size:18px; font-weight:bold; color:white; display:flex; align-items:center; justify-content:center; gap:5px;">
 ${escapeHTML(displayName)} ${av.isVerified ? '<span class="verified-badge" title="حساب موثوق"><svg class="ic" aria-hidden="true"><use href="#i-verified"/></svg></span>' : ''}
 </div>
-${userData && userData.email && (isAdmin || (currentUser && currentUser.uid === uid)) ? `<div style="font-size:12px; color:#94a3b8; direction:ltr; margin-top:3px;">${escapeHTML(userData.email)}</div>` : ''}
+${userEmail && (isAdmin || (currentUser && currentUser.uid === uid)) ? `<div style="font-size:12px; color:#94a3b8; direction:ltr; margin-top:3px;">${escapeHTML(userEmail)}</div>` : ''}
 ${statsHTML}
 ${pStat ? playerFormHTML(displayName) : ''}
 ${predStatsHTML}

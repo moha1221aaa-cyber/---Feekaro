@@ -233,7 +233,8 @@ function toggleMyMic(index) {
     let willMute = !roomState.mics[index].muted;
     localAudioTrack.setMuted(willMute).catch(() => {});
     roomState.mics[index].muted = willMute;
-    saveRoomState();
+    const uid = currentUser.uid;
+    roomUserTx(d => { const m = roomMicsOf(d); if (!m[index] || m[index].uid !== uid) return null; m[index] = Object.assign({}, m[index], { muted: willMute }); return { mics: m }; }).catch(() => {});
     updateComposerState();
 }
 
@@ -242,7 +243,7 @@ function releaseMicSlot(index) {
     unpublishMyMic();
     roomState.mics[index] = null;
     myMicIndex = null;
-    saveRoomState();
+    roomReleaseMySeat(index);
 }
 
 function adminKickMic(index) {
@@ -250,5 +251,5 @@ function adminKickMic(index) {
     if (!roomState.mics[index]) return;
     if (!confirm("هل تريد إخراج هذا المستخدم من المايك؟")) return;
     roomState.mics[index] = null; // سيقوم جهاز المستخدم نفسه بإيقاف مايكه تلقائيًا عند وصول هذا التحديث
-    saveRoomState();
+    saveRoomState(["mics"]);
 }
