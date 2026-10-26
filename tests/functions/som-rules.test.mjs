@@ -92,14 +92,15 @@ check("الكل قبل ← كسب بدون مداقشة", S.phase === "result" &
 check("a: −700 عروض +1750 نص سومه", bal("a") === 10300 - 700 + 1750, bal("a"));
 check("b +200 و d +500 و c ما تغيّر", bal("b") === 9200 && bal("d") === 8200 && bal("c") === 14300);
 
-/* الجولة 3: c يبدأ. الوقت يخلص على c (ما سام) ← ينسحب، وعلى المنظم بس */
+/* الجولة 3: c يبدأ ويعلّق ← المنظم يتخطاه (ما سام ← ينسحب). ما فيه وقت: ما يتخطى أحد إلا بزر المنظم */
 now += 10000;
 act(H, { t: "round", round: 3, seats: ["a", "b", "c", "d"], deal: "v1.z" });
-check("timeout قبل الوقت يرفض", !!act(H, { t: "timeout" }));
-now += SOM.T_BID + 1;
-check("timeout من لاعب يرفض", !!act(P("a"), { t: "timeout" }));
-act(H, { t: "timeout" });
-check("c ما سام وخلص وقته ← انسحب، والدور لـ d", S.folded.c === true && S.turn === "d");
+check("ما فيه وقت في الحالة", !("deadline" in S));
+now += 10 * 60 * 1000;
+check("بعد 10 دقايق الدور للحين عند c", S.turn === "c");
+check("skip من لاعب يرفض", !!act(P("a"), { t: "skip" }));
+act(H, { t: "skip" });
+check("المنظم تخطى c (ما سام) ← انسحب، والدور لـ d", S.folded.c === true && S.turn === "d");
 act(P("d"), { t: "bid", amt: 1000 }); act(P("a"), { t: "fold" }); act(P("b"), { t: "fold" });
 check("انسحبوا كلهم قبل المفاوضة ← بدون فلوس", S.phase === "result" && S.res.kind === "none" && bal("d") === 8200);
 
@@ -110,9 +111,8 @@ check("الجولة 4 يبدأها d", S.turn === "d");
 act(P("d"), { t: "bid", amt: 1000 }); act(P("a"), { t: "bid", amt: 2000 }); act(P("b"), { t: "bid", amt: 2500 }); act(P("c"), { t: "fold" });
 act(P("d"), { t: "hold" }); act(P("a"), { t: "hold" });
 act(P("b"), { t: "offer", offers: {} });
-now += SOM.T_REPLY + 1;
-act(H, { t: "timeout" });
-check("ما ردوا ← انحسب قبول بصفر ← b كسب بدون مداقشة", S.res.kind === "clear" && bal("b") === 9200 + 1250, bal("b"));
+act(H, { t: "skip" });
+check("المنظم تخطى اللي ما ردوا ← قبول بصفر ← b كسب بدون مداقشة", S.res.kind === "clear" && bal("b") === 9200 + 1250, bal("b"));
 now += 10000;
 act(H, { t: "round", round: 5, seats: ["a", "b", "c", "d"], deal: "v1.v" });
 act(P("a"), { t: "bid", amt: 1000 }); act(P("b"), { t: "bid", amt: 1500 }); act(P("c"), { t: "fold" }); act(P("d"), { t: "fold" });

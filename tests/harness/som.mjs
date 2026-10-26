@@ -52,6 +52,9 @@ try {
         await until(() => pg.evaluate(() => typeof somCreate === "function" && !!currentUser && roomStateLoaded && roomState.isLive), 10000);
         await pg.evaluate(() => { try { localStorage.setItem("masro7RoomAccess", "123456"); } catch (e) {} openRoomScreen(); });
     }
+    /* نسجّل كل صوت يطلع (somSfx) عشان نتأكد إن الأصوات تشتغل مع كل حركة */
+    for (const pg of Object.values(devs)) await pg.evaluate(() => { window.__sfx = []; const o = somSfx; somSfx = function (id) { window.__sfx.push(id); return o.apply(this, arguments); }; });
+    const sfx = pg => pg.evaluate(() => window.__sfx.slice());
     /* المنظم يفتح الطاولة من قائمة الألعاب */
     await host.evaluate(() => openRoomGamesModal());
     await host.click("#roomGamesBody .game-row:nth-child(2) .game-row-btn");
@@ -61,26 +64,40 @@ try {
     await p1.click(".som-pill"); await p2.click(".som-pill");
     for (const pg of [host, p1, p2]) { await until(() => pg.evaluate(() => !!document.querySelector("#somScreen.open .som-b.gold")), 3000); await pg.click("#somScreen .som-b.gold"); await sleep(250); }
     check("3 لاعبين انضموا", !!await until(() => game().players.length === 3, 5000), game().players);
+    check("الأصوات الحقيقية تحمّلت (audio/)", !!await until(() => p1.evaluate(() => Object.keys(somBuf).length >= 8), 6000), await p1.evaluate(() => Object.keys(somBuf)));
+    /* زر الرجوع في الجوال يسكّر الطاولة بس */
+    await p1.evaluate(() => history.back());
+    check("الرجوع سكّر الطاولة والغرفة باقية", !!await until(() => p1.evaluate(() => !document.querySelector("#somScreen.open") && roomScreenOpen), 3000));
+    await p1.click(".som-pill");
     await sleep(300); await shot(p1, "1-lobby");
     await host.click("#somScreen .som-b.brand");
     check("الجولة 1 بدأت", !!await until(() => game().phase === "bid" && game().round === 1, 6000), game());
     const g1 = game();
-    check("الختم في الوثيقة، ما فيه أوراق مكشوفة", /^v1\./.test(g1.deal) && !g1.shown && !JSON.stringify(g1).includes('"hand"'));
-    /* كل جهاز يطلب أوراقه بس */
+    check("الختم في الوثيقة، ما فيه أوراق مكشوفة ولا وقت", /^v1\./.test(g1.deal) && !g1.shown && !JSON.stringify(g1).includes('"hand"') && !("deadline" in g1));
     for (const [who, pg] of Object.entries(devs)) check("أوراق " + who + " وصلت (4 بالشاشة)", !!await until(() => pg.evaluate(() => document.querySelectorAll(".som-hand .som-card:not(.back)").length === 4), 6000));
     const hands = { host: served.host.at(-1), p1: served.p1.at(-1), p2: served.p2.at(-1) };
     check("ما فيه ورقة مكررة بين الثلاثة", new Set([].concat(hands.host, hands.p1, hands.p2)).size === 12, hands);
     const shownRanks = async pg => pg.evaluate(() => [...document.querySelectorAll(".som-hand .som-card")].map(c => +c.className.match(/r(\d)/)[1]).sort().join());
     check("سعد يشوف أوراقه هو", await shownRanks(p1) === hands.p1.map(c => Math.floor(c / 4)).sort().join());
     check("فهد يشوف أوراقه هو", await shownRanks(p2) === hands.p2.map(c => Math.floor(c / 4)).sort().join());
+    check("صوت التوزيع طلع عند الكل", (await sfx(p1)).includes("whoosh") && (await sfx(p2)).includes("whoosh"));
+    check("صوت دورك طلع عند المنظم", (await sfx(host)).includes("start_q"));
+
+    /* ما فيه شي يتغيّر لحاله: 4 ث والدور للحين عند المنظم */
+    await sleep(4000);
+    check("بدون ضغط ما يتغيّر شي (4 ث)", game().phase === "bid" && game().turn === "u_host" && !game().bids.u_host);
+    /* رسالة شات جديدة ما تعيد رسم الطاولة (الأزرار ما تتحرك تحت إصبعك) */
+    await p2.evaluate(() => { document.querySelector("#somScreen .som-table").dataset.k = "1"; });
+    db.write({ op: "set", path: "room/main", data: { chat: [{ senderName: "x", text: "هلا", time: "" }] }, merge: true });
+    await sleep(800);
+    check("الشات ما يعيد رسم الطاولة", await p2.evaluate(() => document.querySelector("#somScreen .som-table").dataset.k === "1"));
 
     /* السوم: المنظم 600، سعد 700، فهد ينسحب، المنظم يثبّت ← سعد يفاوض */
-    check("دور المنظم أول", g1.turn === "u_host");
-    await until(() => host.evaluate(() => !!document.querySelector(".som-amt")), 3000);
     await shot(host, "2-bid-myturn");
     await host.click(".som-quick button:first-child");              /* +500 ← 600 */
     await host.click(".som-btns .som-b.gold");
     check("المنظم سام 600", !!await until(() => game().high === 600 && game().turn === "u_p1", 4000), game());
+    check("صوت السوم طلع عند فهد", !!await until(async () => (await sfx(p2)).includes("tick"), 2000));
     await until(() => p1.evaluate(() => !!document.querySelector(".som-btns .som-b.gold")), 3000);
     await p1.click(".som-btns .som-b.gold");                       /* أقل سوم = 700 */
     check("سعد سام 700", !!await until(() => game().high === 700 && game().leader === "u_p1", 4000), game());
@@ -100,7 +117,14 @@ try {
     await until(() => host.evaluate(() => !!document.querySelector(".som-offer")), 3000);
     await shot(host, "5-respond");
     await host.click(".som-btns .som-b.danger");
-    check("مداقشة ثم كشف تلقائي من جهاز المنظم", !!await until(() => game().phase === "result", 8000), game());
+    check("مداقشة", !!await until(() => game().phase === "showdown", 4000), game());
+    await sleep(2500);
+    check("الكشف ما يصير لحاله", game().phase === "showdown" && !game().shown);
+    check("صوت المداقشة", (await sfx(p2)).includes("riser"));
+    await shot(p1, "5b-showdown");
+    await until(() => host.evaluate(() => !!document.querySelector(".som-act .som-b.gold")), 3000);
+    await host.click(".som-act .som-b.gold");                      /* اكشف الأوراق */
+    check("المنظم كشف الأوراق", !!await until(() => game().phase === "result", 6000), game());
     const g2 = game();
     check("الكشف فيه أوراق اللي داقشوا بس", g2.shown && g2.shown.u_host && g2.shown.u_p1 && !g2.shown.u_p2);
     check("الأوراق المكشوفة هي نفسها اللي انوزعت", JSON.stringify(g2.shown.u_host) === JSON.stringify(hands.host) && JSON.stringify(g2.shown.u_p1) === JSON.stringify(hands.p1));
@@ -111,14 +135,21 @@ try {
     else if (verdict < 0) check("سعد كسب: +700 +600، والمنظم −600", bal("u_p1") === 11300 && bal("u_host") === 9400, g2.players);
     else check("تعادل: كل واحد سومه من البنك", bal("u_host") === 10600 && bal("u_p1") === 10700, g2.players);
     check("فهد ما تغيّر (انسحب)", bal("u_p2") === 10000);
-    await sleep(600);
+    await sleep(900);
+    const hs = await sfx(host), ps = await sfx(p1);
+    check("صوت الكشف والفوز/الخسارة", hs.includes("slam") && hs.includes("reveal") && (hs.includes("correct") || hs.includes("wrong")) && (ps.includes("correct") || ps.includes("wrong")), { hs, ps });
     await shot(p1, "6-result");
     await shot(p2, "6-result-small");
+    await sleep(3000);
+    check("الجولة الجاية ما تبدأ لحالها", game().phase === "result" && game().round === 1);
 
     /* الجولة الجاية بزر المنظم، ويبدأها سعد */
-    await host.click(".som-host button:first-child");
+    await host.click(".som-act .som-b.brand");
     check("الجولة 2 بأوراق جديدة ويبدأها سعد", !!await until(() => game().round === 2 && game().phase === "bid" && game().turn === "u_p1", 6000), game());
     check("أوراق جديدة لسعد", !!await until(() => p1.evaluate(k => somHand && somHand.key === k, game().gid + ":2"), 5000));
+    /* سعد علّق ← المنظم يتخطاه */
+    await host.click(".som-host button:first-child");
+    check("المنظم تخطى سعد (ما سام ← انسحب)", !!await until(() => game().folded.u_p1 === true && game().turn === "u_p2", 4000), game());
 
     /* الشاشة داخل الجوال: ما فيه شي يطلع برا العرض */
     for (const [who, pg] of Object.entries(devs)) {
@@ -135,6 +166,28 @@ try {
     await sleep(400); await shot(p1, "7-over");
     await host.evaluate(() => somDo({ t: "close" }));
     check("الطاولة تسكّرت والشاشة اختفت عند سعد", !!await until(() => p1.evaluate(() => !document.querySelector("#somScreen.open")), 3000));
+
+    /* 8 لاعبين: الأماكن حول الطاولة ما تركب على بعض ولا على وسط الطاولة، على 360×640 و 390×844 */
+    const eight = Object.assign({}, g2, { active: true, phase: "bid", round: 3, turn: "u_p2", high: 2500, leader: "u5", folded: { u3: true }, bids: { u5: 2500, u_p1: 1200 },
+        players: ["u_host", "u_p1", "u_p2", "u3", "u4", "u5", "u6", "u7"].map((u, i) => ({ uid: u, name: ["محمد", "سعد", "فهد", "عبدالرحمن الطويل", "ناصر", "خالد", "تركي", "بندر"][i], av: "", bal: 10000 - i * 700 })),
+        seats: ["u_host", "u_p1", "u_p2", "u3", "u4", "u5", "u6", "u7"], shown: null, res: null });
+    db.write({ op: "set", path: "room/main/games/som", data: eight });
+    for (const [who, pg] of [["p2", p2], ["host", host]]) {
+        await until(() => pg.evaluate(() => somActiveGame()), 3000);
+        await pg.evaluate(() => somOpen());
+        await sleep(500);
+        const r = await pg.evaluate(() => {
+            const box = e => e.getBoundingClientRect(), seats = [...document.querySelectorAll(".som-seat")].map(box), c = document.querySelector(".som-center .som-c-t");
+            const hit = (a, b) => a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2;
+            const bad = [];
+            seats.forEach((a, i) => { seats.forEach((b, j) => { if (j > i && hit(a, b)) bad.push(i + "×" + j); }); if (c && hit(a, box(c))) bad.push(i + "×center"); });
+            const t = box(document.querySelector(".som-table")), act = box(document.querySelector(".som-bottom"));
+            seats.forEach((a, i) => { if (a.top < t.top - 2 || a.bottom > act.top + 2 || a.left < -1 || a.right > innerWidth + 1) bad.push(i + " out"); });
+            return { n: seats.length, bad, h: Math.round(t.height) };
+        });
+        check("8 لاعبين مرتبين بدون تداخل (" + who + ")", r.n === 8 && r.bad.length === 0, r);
+        await shot(pg, "8-eight-" + who);
+    }
     const errs = Object.entries(devs).flatMap(([w, pg]) => pg.__logs.filter(l => /PAGEERROR/.test(l)).map(l => w + ": " + l));
     check("ما فيه أخطاء JS", errs.length === 0, errs);
 } catch (e) {
