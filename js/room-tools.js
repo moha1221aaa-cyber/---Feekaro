@@ -415,10 +415,10 @@ joinVoiceChannel("masro7_main_room", currentUser.uid).catch(() => {
     /* فشل تشغيل المايك: نحرر مقعد المضيف حتى لا يبقى محجوزاً بدون صوت */
     if (roomState.mics[HOST_SEAT] && roomState.mics[HOST_SEAT].uid === currentUser.uid) {
         roomState.mics[HOST_SEAT] = null;
-        saveRoomState();
+        saveRoomState(["mics"]);
     }
 });
-saveRoomState();
+saveRoomState(["mics"]);
 alert("تم بدء البث الصوتي المباشر بنجاح!");
 }
 
@@ -431,7 +431,7 @@ roomState.hostUid = "";
 roomState.mics = Array(MIC_SLOTS).fill(null);
 roomState.game.active = false;
 if (typeof somActiveGame === "function" && somActiveGame()) somDo({ t: "close" }, true);
-saveRoomState();
+saveRoomState(["mics"]);
 alert("تم إنهاء البث المباشر وإغلاق الغرفة.");
 }
 
@@ -444,22 +444,26 @@ if(roomState.mics.some(m => m && m.uid === currentUser.uid)) {
 let myName = currentUserDocData && currentUserDocData.name ? currentUserDocData.name : (currentUser.displayName || "مستخدم");
 let myPhoto = currentUserDocData && currentUserDocData.photoURL ? currentUserDocData.photoURL : "";
 
-roomState.mics[index] = {
-uid: currentUser.uid,
-name: myName,
-avatar: myPhoto,
-muted: false
-};
-saveRoomState();
+const mine = { uid: currentUser.uid, name: String(myName).slice(0, 60), avatar: myPhoto, muted: false };
+/* المقعد يتحجز من آخر نسخة في القاعدة: لو أحد سبقني له أو أنا على مقعد ثاني، ما ينحجز (roomUserTx) */
+let got = null;
+try {
+    got = await roomUserTx(d => {
+        const m = roomMicsOf(d);
+        if (!d.isLive || m[index] || m.some(x => x && x.uid === currentUser.uid)) return null;
+        m[index] = mine;
+        return { mics: m };
+    });
+} catch (e) { got = null; }
+if (!got) return roomToast("المقعد انحجز أو الغرفة تغيّرت، جرّب مقعد ثاني", "alert");
+roomState.mics[index] = mine;
+renderRoomUI();
 
 try {
     await joinVoiceChannel("masro7_main_room", currentUser.uid);
 } catch (e) {
     // فشل تشغيل المايك: نحرر المقعد حتى لا يبقى محجوزاً بدون صوت
-    if(roomState.mics[index] && roomState.mics[index].uid === currentUser.uid) {
-        roomState.mics[index] = null;
-        saveRoomState();
-    }
+    roomReleaseMySeat(index);
 }
 }
 
@@ -468,7 +472,7 @@ function clearAllMics() {
 if(!isAdmin) return;
 if(!confirm("هل تريد تفريغ كل مقاعد المايك؟")) return;
 roomState.mics = Array(MIC_SLOTS).fill(null);
-saveRoomState();
+saveRoomState(["mics"]);
 }
 
 // تحرير مقعد المايك عند إغلاق الصفحة (قدر الإمكان)
@@ -476,7 +480,7 @@ window.addEventListener("pagehide", () => {
 try {
     if(!currentUser || !roomState || !roomState.mics) return;
     let idx = roomState.mics.findIndex(m => m && m.uid === currentUser.uid);
-    if(idx !== -1) { roomState.mics[idx] = null; saveRoomState(); }
+    if(idx !== -1) { roomState.mics[idx] = null; roomReleaseMySeat(idx); }
 } catch (e) {}
 });
 
@@ -489,17 +493,15 @@ let text = input.value.trim();
 let myName = currentUserDocData && currentUserDocData.name ? currentUserDocData.name : (currentUser.displayName || "مستخدم");
 let timeNow = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
+const msg = { senderUid: currentUser.uid, senderName: String(myName).slice(0, 60), text: text.slice(0, 500), time: timeNow };
 if(!roomState.chat) roomState.chat = [];
-roomState.chat.push({
-senderUid: currentUser.uid,
-senderName: myName,
-text: text,
-time: timeNow
-});
-
+roomState.chat.push(msg);
 if(roomState.chat.length > 50) roomState.chat.shift();
+renderRoomUI();
 input.value = "";
-saveRoomState();
+/* رسالتي بس على آخر الشات (roomUserTx، والقواعد ترفض أي تغيير ثاني في رسائل غيري) */
+roomUserTx(d => ({ chat: (Array.isArray(d.chat) ? d.chat : []).concat([msg]).slice(-50) }))
+.catch(() => roomToast("ما وصلت رسالتك، جرّب مرة ثانية", "alert"));
 input.blur();
 composerTyping(false);
 }
@@ -518,7 +520,7 @@ saveRoomState();
 function deleteChatMessage(index) {
 if(!roomState.chat[index]) return;
 roomState.chat.splice(index, 1);
-saveRoomState();
+saveRoomState(["chat"]);
 }
 
 function openGameStartModal() {
@@ -526,8 +528,8 @@ let body = document.getElementById("roomPlayerPickerModalBody");
 if(!body) return;
 
 let qOptions = "";
-if(roomState.qbank && roomState.qbank.length > 0) {
-roomState.qbank.forEach((q, idx) => {
+if(roomBank && roomBank.length > 0) {
+roomBank.forEach((q, idx) => {
 qOptions += `<option value="${idx}">${escapeHTML(q.text)}</option>`;
 });
 } else {
@@ -561,7 +563,7 @@ let p2Input = document.getElementById("gameP2NameInput");
 
 if(!qSelect || qSelect.value === "") return alert("يرجى اختيار سؤال صالح من قاعدة الأسئلة");
 let qIdx = Number(qSelect.value);
-let qObj = roomState.qbank[qIdx];
+let qObj = roomBank[qIdx];
 if(!qObj) return alert("السؤال غير موجود");
 
 let p1Name = p1Input.value.trim() || "المتسابق 1";
@@ -574,8 +576,6 @@ roomState.game = {
 active: true,
 status: "running",
 qText: qObj.text,
-ans1: qObj.answer,
-ans2: qObj.answer,
 s1: 0,
 s2: 0,
 p1Name: p1Name,
@@ -658,14 +658,13 @@ let inputId = playerNum === 1 ? "gameInputP1" : "gameInputP2";
 let input = document.getElementById(inputId);
 if(!input || !input.value.trim()) return;
 
-let ansText = input.value.trim();
-if(playerNum === 1) {
-roomState.game.revealText1 = ansText;
-} else {
-roomState.game.revealText2 = ansText;
-}
-saveRoomState();
-alert("تم إرسال الإجابة بنجاح!");
+let ansText = input.value.trim().slice(0, 100);
+if(!currentUser) return alert("يرجى تسجيل الدخول");
+roomState.game["revealText" + playerNum] = ansText;
+/* حقل الجواب بس (roomUserTx في room.js) */
+roomUserTx(d => (d.game && d.game.active) ? { ["game.revealText" + playerNum]: ansText } : null)
+.then(u => alert(u ? "تم إرسال الإجابة بنجاح!" : "المسابقة انتهت"))
+.catch(() => alert("ما وصل جوابك، جرّب مرة ثانية"));
 }
 
 function judgeGameAnswer(playerNum, isCorrect) {
@@ -702,13 +701,13 @@ function renderQBankList() {
 let container = document.getElementById("qbankListBox");
 if(!container) return;
 
-if(!roomState.qbank || roomState.qbank.length === 0) {
+if(!roomBank || roomBank.length === 0) {
 container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px; font-size:13px;">لا توجد أسئلة مضافة في القاعدة حالياً</div>`;
 return;
 }
 
 let html = "";
-roomState.qbank.forEach((q, idx) => {
+roomBank.forEach((q, idx) => {
 html += `
 <div class="qbank-item">
 <div class="qbank-item-text">
@@ -734,12 +733,11 @@ let answer = answerInput.value.trim();
 
 if(!text || !answer) return alert("يرجى كتابة نص السؤال والإجابة الصحيحة");
 
-if(!roomState.qbank) roomState.qbank = [];
-roomState.qbank.push({ text: text, answer: answer });
+roomBank.push({ text: text, answer: answer });
 
 textInput.value = "";
 answerInput.value = "";
-saveRoomState();
+saveRoomBank();
 renderQBankList();
 alert("تمت إضافة السؤال إلى القاعدة بنجاح!");
 }
@@ -774,13 +772,12 @@ const reader = new FileReader();
 reader.onload = () => {
     const rows = parseQBankCsv(reader.result);
     if (!rows.length) return alert("ما لقيت أسئلة في الملف. كل سطر لازم يكون: السؤال، الإجابة");
-    if (!roomState.qbank) roomState.qbank = [];
-    const have = new Set(roomState.qbank.map(q => q && q.text));
+    const have = new Set(roomBank.map(q => q && q.text));
     const fresh = rows.filter(r => !have.has(r.text) && have.add(r.text)).slice(0, 200);
     if (!fresh.length) return alert("كل الأسئلة اللي في الملف موجودة في البنك من قبل");
     if (!confirm(`بنضيف ${fresh.length} سؤال للبنك. أول سؤال:\n${fresh[0].text}\nالإجابة: ${fresh[0].answer}`)) return;
-    roomState.qbank.push(...fresh);
-    saveRoomState();
+    roomBank.push(...fresh);
+    saveRoomBank();
     renderQBankList();
     alert(`انضاف ${fresh.length} سؤال` + (rows.length - fresh.length > 0 ? ` (وتجاهلت ${rows.length - fresh.length} مكرر أو زايد عن 200)` : ""));
 };
@@ -789,8 +786,8 @@ reader.readAsText(file, "utf-8");
 }
 
 function deleteQuestionFromBank(index) {
-if(!roomState.qbank[index]) return;
-roomState.qbank.splice(index, 1);
-saveRoomState();
+if(!roomBank[index]) return;
+roomBank.splice(index, 1);
+saveRoomBank();
 renderQBankList();
 }

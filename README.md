@@ -105,6 +105,8 @@ node tests/harness/tie.mjs                            # التعادل ينته�
 node tests/harness/trialall.mjs                       # التجربة: كل الجولات في بث واحد، والمايك يفتح بعد شارة البداية
 node tests/harness/trial.mjs                          # المسابقة التجريبية: الأصلي ينحفظ ويرجع كامل، وتوقعات التجربة تنحذف، ونتيجة بثها ما تدخل الجدول الحقيقي
 node tests/harness/questions.mjs                      # أسئلة جديدة لكل بث: الذكاء الاصطناعي أول، وما ينعاد سؤال انسأل، والسجل في liveDiag/_qhistory
+node tests/harness/phase2.mjs                         # المرحلة 2 (26 أكتوبر): المايك والشات وجواب اللعبة يكتبون حقلهم بس، بنك الغرفة في liveSecrets، الإيميل في contacts، والسوم فيه pids
+# قواعد Firestore بمحاكي Firebase (يحتاج Java): cd tests/rules && npm i && npx firebase emulators:exec --only firestore --project masro7league "node rules.test.mjs"
 node tests/harness/stability.mjs                      # 26 أكتوبر: المايك ينتشر مرة ويتكتم بس، التوقعات برا وثيقة البث، بدون كتابات "أنا موجود" زايدة، صوت السؤال الجاي يتجهز وقت الكشف، رسم الصفحات يتأجل وقت البث
 node tests/harness/flow.mjs /tmp/out                  # 23 أكتوبر: الكلمات مع صوت المذيع، السؤال يختفي مع الجرس، المقدم يحكم ويبدأ كل سؤال، شارة البداية، ولا انتقال تلقائي، وضع التبريد للجوال
 node tests/harness/som.mjs /tmp/out                   # لعبة السوم: 3 أجهزة + functions/som.js الحقيقي، كل واحد يشوف أوراقه بس، السوم والمفاوضة والمداقشة والحساب، ما شي يتغير لحاله، الأصوات، زر الرجوع، و 8 لاعبين بدون تداخل

@@ -7,6 +7,146 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.email == 'moha1221aaa@gmail.com'; }
+    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ===== الغرفة =====
+    function seatOld(i) { return i < resource.data.get('mics', []).size() ? resource.data.mics[i] : null; }
+    // المقعد: ما تغيّر، أو كان فاضي والغرفة مباشرة وحجزته لنفسي، أو كان حقي وتركته أو كتمته
+    function seatOk(i) {
+      return request.resource.data.mics[i] == seatOld(i)
+        || (seatOld(i) == null && request.resource.data.mics[i].uid == request.auth.uid && resource.data.get('isLive', false) == true
+            && request.resource.data.mics[i].get('name', '') is string && request.resource.data.mics[i].get('name', '').size() <= 60)
+        || (seatOld(i) != null && seatOld(i).uid == request.auth.uid
+            && (request.resource.data.mics[i] == null || request.resource.data.mics[i].uid == request.auth.uid));
+    }
+    function mine(i) { return request.resource.data.mics[i] != null && request.resource.data.mics[i].uid == request.auth.uid ? 1 : 0; }
+    function mySeats() {
+      return mine(0) + mine(1) + mine(2) + mine(3) + mine(4) + mine(5) + mine(6) + mine(7) + mine(8) + mine(9) + mine(10) + mine(11) + mine(12) + mine(13) + mine(14);
+    }
+    // مقعد المضيف (2) للمنظم، ومقعد واحد لكل واحد
+    function micsOk() {
+      return !('mics' in changedKeys()) || (request.resource.data.mics.size() == 15 && mySeats() <= 1
+        && (request.resource.data.mics[2] == seatOld(2) || request.resource.data.mics[2] == null)
+        && seatOk(0) && seatOk(1) && seatOk(2) && seatOk(3) && seatOk(4) && seatOk(5) && seatOk(6) && seatOk(7)
+        && seatOk(8) && seatOk(9) && seatOk(10) && seatOk(11) && seatOk(12) && seatOk(13) && seatOk(14));
+    }
+    // الشات: الجديد = آخر الرسائل القديمة كما هي + رسالة وحدة مني على الآخر (لين 50)
+    function chatOk() {
+      let n = request.resource.data.chat.size();
+      let old = resource.data.get('chat', []);
+      return !('chat' in changedKeys()) || (n == (old.size() < 50 ? old.size() + 1 : 50)
+        && request.resource.data.chat[n - 1].senderUid == request.auth.uid
+        && request.resource.data.chat[n - 1].text is string && request.resource.data.chat[n - 1].text.size() <= 500
+        && request.resource.data.chat[n - 1].get('senderName', '') is string && request.resource.data.chat[n - 1].get('senderName', '').size() <= 60
+        && (n == 1 && old.size() == 0 || request.resource.data.chat[0:n - 1] == old[old.size() - (n - 1):old.size()]));
+    }
+    // لعبة الغرفة: جواب المتسابق بس، والمسابقة شغالة
+    function gameOk() {
+      return !('game' in changedKeys()) || (resource.data.game.get('active', false) == true
+        && request.resource.data.game.diff(resource.data.game).affectedKeys().hasOnly(['revealText1', 'revealText2'])
+        && request.resource.data.game.get('revealText1', '') is string && request.resource.data.game.get('revealText1', '').size() <= 100
+        && request.resource.data.game.get('revealText2', '') is string && request.resource.data.game.get('revealText2', '').size() <= 100);
+    }
+    function roomUserUpdate() { return changedKeys().hasOnly(['mics', 'chat', 'game']) && micsOk() && chatOk() && gameOk(); }
+    function presenceOwner(pid) {
+      return (signedIn() && pid == request.auth.uid) || (!signedIn() && pid.matches('guest_[A-Za-z0-9]{6,64}'));
+    }
+
+    // ===== وثيقة البث (js/broadcast/engine.js: liveSetReady و liveBuzz و liveNextStep) =====
+    function nowMs() { return request.time.toMillis(); }
+    function liveCur() { return resource.data.order[resource.data.cur]; }
+    function hasCur() { return resource.data.get('cur', -1) is int && resource.data.cur >= 0 && resource.data.cur < resource.data.get('order', []).size(); }
+    // رقمي في المواجهة الحالية (1 أو 2) أو 0
+    function myNum() {
+      return !hasCur() ? 0 : (liveCur().get('uid1', '') == request.auth.uid ? 1 : (liveCur().get('uid2', '') == request.auth.uid ? 2 : 0));
+    }
+    function liveStamp() {
+      return request.resource.data.get('v', 0) == resource.data.get('v', 0) + 1 && request.resource.data.updatedAt == request.time;
+    }
+    function N() { return request.resource.data; }
+    function near(v, ms) { return v is number && v >= nowMs() - ms && v <= nowMs() + ms; }
+    function within(v, lo, hi) { return v is number && v >= nowMs() + lo && v <= nowMs() + hi; }
+    // lastAnswer من غير المنظم: انتهى الوقت بس (بدون نص ولا "صح")
+    function lastOk() {
+      return N().get('lastAnswer', null) == null
+        || (N().lastAnswer.keys().hasOnly(['by', 'text', 'correct', 'timeout']) && N().lastAnswer.get('text', '') == '' && N().lastAnswer.get('correct', false) == false);
+    }
+    function D() { return resource.data; }
+    // جاهز: للمتسابق نفسه، ولو الاثنين جاهزين تبدأ فقرة الترحيب
+    function liveReady(n) {
+      return D().scene == 'intro' && changedKeys().hasOnly(['ready' + string(n), 'scene', 'sceneAt', 'v', 'updatedAt'])
+        && N()['ready' + string(n)] == true
+        && (N().scene == D().scene || (N().scene == 'talk' && N().ready1 == true && N().ready2 == true && near(N().sceneAt, 5000)));
+    }
+    // الجرس: للمتسابق نفسه، والسؤال مفتوح، ووقته ما خلص
+    function liveBuzz(n) {
+      return D().scene == 'playing' && D().phase == 'buzz' && nowMs() <= D().deadline + 3000
+        && changedKeys().hasOnly(['phase', 'buzzer', 'answerer', 'passed', 'deadline', 'ansAt', 'tried' + string(n), 'fb' + string(n), 'v', 'updatedAt'])
+        && N().phase == 'answer' && N().buzzer == n && N().answerer == n && N().passed == false
+        && N()['tried' + string(n)] == true && within(N().deadline, 5000, 10000) && near(N().ansAt, 5000)
+        && (!(('fb' + string(n)) in changedKeys()) || (N()['fb' + string(n)] is number && N()['fb' + string(n)] >= 150 && N()['fb' + string(n)] <= 60000));
+    }
+    // العد خلص: أول سؤال (أي أحد، بس بعد وقته)
+    function liveFirstQ() {
+      return D().scene == 'countdown' && nowMs() >= D().deadline
+        && changedKeys().hasOnly(['scene', 'qIndex', 'phase', 'buzzer', 'answerer', 'tried1', 'tried2', 'passed', 'lastAnswer', 'outcome', 'qAt', 'deadline', 'v', 'updatedAt'])
+        && N().scene == 'playing' && N().qIndex == 0 && N().phase == 'buzz' && N().outcome == 0
+        && N().buzzer == 0 && N().answerer == 0 && N().tried1 == false && N().tried2 == false && N().passed == false
+        && N().lastAnswer == null && near(N().qAt, 5000) && within(N().deadline, 12000, 20000);
+    }
+    // السجل: نفس القديم، والخانة الحالية بس تصير 0 (بدون فائز) لو كانت فاضية (-1)
+    function logEntryOk(i) {
+      return i >= N().log.size() || N().log[i] == D().log[i] || (i == D().qIndex && D().log[i] == -1 && N().log[i] == 0);
+    }
+    function logOk() {
+      return !('log' in changedKeys()) || (D().get('log', []).size() > 0 && N().log.size() == D().log.size() && logEntryOk(0) && logEntryOk(1) && logEntryOk(2) && logEntryOk(3)
+        && logEntryOk(4) && logEntryOk(5) && logEntryOk(6) && logEntryOk(7) && logEntryOk(8) && logEntryOk(9));
+    }
+    function bhOk(k, a, b) { return N().get(k, 0) == D().get(k, 0) || (N().get(k, 0) == D().get(a, 0) - D().get(b, 0) && N().get(k, 0) > D().get(k, 0)); }
+    // انتهى الوقت بدون جواب صح: الكشف بدون نقاط
+    function liveTimeoutReveal() {
+      return D().scene == 'playing' && nowMs() >= D().deadline
+        && (D().phase == 'buzz' || (D().phase == 'answer' && D().get('tried' + string(3 - D().answerer), false) == true))
+        && changedKeys().hasOnly(['phase', 'outcome', 'log', 'deadline', 'pend', 'lastAnswer', 'bh1', 'bh2', 'v', 'updatedAt'])
+        && N().phase == 'reveal' && N().outcome == 0 && N().get('pend', null) == null && logOk() && lastOk()
+        && bhOk('bh1', 's2', 's1') && bhOk('bh2', 's1', 's2') && within(N().deadline, 3000, 15000);
+    }
+    // انتهى وقت الجواب: السؤال ينتقل للثاني
+    function livePass() {
+      return D().scene == 'playing' && D().phase == 'answer' && nowMs() >= D().deadline
+        && (D().answerer == 1 || D().answerer == 2) && D().get('tried' + string(3 - D().answerer), false) == false
+        && changedKeys().hasOnly(['phase', 'answerer', 'passed', 'lastAnswer', 'deadline', 'ansAt', 'pend', 'tried1', 'tried2', 'v', 'updatedAt'])
+        && N().phase == 'answer' && N().passed == true && N().answerer == 3 - D().answerer
+        && N()['tried' + string(N().answerer)] == true && lastOk() && N().get('pend', null) == null
+        && within(N().deadline, 5000, 10000) && near(N().ansAt, 5000);
+    }
+    function liveUserUpdate() {
+      return D().get('status', '') == 'live' && liveStamp() && (
+        (myNum() != 0 && (liveReady(myNum()) || liveBuzz(myNum())))
+        || liveFirstQ() || liveTimeoutReveal() || livePass());
+    }
+
+    // ===== السوم: اللاعب يكتب وهو في الطاولة (pids)، أو يدخل الردهة، أو يطلع منها =====
+    // اللي يحدده المنظم ما يتغير (الجولة والمقاعد ومين يبدأ والأوراق المكشوفة)، وكل لاعب في players هو نفسه في pids بنفس الترتيب
+    function somFixed(k) { return request.resource.data.get(k, null) == resource.data.get(k, null); }
+    function somSeat(i) {
+      let ps = request.resource.data.get('players', []);
+      return i >= ps.size() || (ps[i].uid == request.resource.data.pids[i]
+        && (ps[i].uid != request.auth.uid || (ps[i].get('name', '') is string && ps[i].get('name', '').size() <= 40)));
+    }
+    function somPlayerUpdate() {
+      let oldP = resource.data.get('pids', []);
+      let newP = request.resource.data.get('pids', []);
+      return resource.data.get('active', false) == true && request.resource.data.get('active', false) == true
+        && request.resource.data.get('deal', '') == resource.data.get('deal', '')
+        && request.resource.data.get('gid', '') == resource.data.get('gid', '')
+        && request.resource.data.get('hostUid', '') == resource.data.get('hostUid', '')
+        && somFixed('hostName') && somFixed('round') && somFixed('seats') && somFixed('starter') && somFixed('maxRounds') && somFixed('shown')
+        && request.resource.data.get('players', []).size() == newP.size() && newP.size() <= 8
+        && somSeat(0) && somSeat(1) && somSeat(2) && somSeat(3) && somSeat(4) && somSeat(5) && somSeat(6) && somSeat(7)
+        && ((request.auth.uid in oldP && (newP == oldP || (resource.data.get('phase', '') == 'lobby' && newP == oldP.removeAll([request.auth.uid]))))
+          || (resource.data.get('phase', '') == 'lobby' && !(request.auth.uid in oldP) && newP == oldP.concat([request.auth.uid])));
+    }
 
     // جدول الدوري (المتسابقين والمواجهات والنتائج): الكل يقرا، والمنظم بس يكتب.
     // نتيجة البث (bcApplyResults) تنكتب من جهاز المنظم؛ لو كان غايب تنتظر لين يفتح الموقع.
@@ -18,17 +158,34 @@ service cloud.firestore {
     // حساب المستخدم: الكل يقرا (الترتيب والصور)، وصاحبه أو المنظم بس يكتب
     match /users/{uid} {
       allow read: if true;
-      allow create, update: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      // المرحلة 2: الإيميل ما ينكتب هنا (الكل يقرا users)، مكانه contacts/<uid>
+      allow create: if ((signedIn() && request.auth.uid == uid) || isAdmin()) && !('email' in request.resource.data);
+      allow update: if ((signedIn() && request.auth.uid == uid) || isAdmin()) && !('email' in changedKeys() && 'email' in request.resource.data);
       allow delete: if isAdmin();
     }
 
-    // التوقعات: كل واحد يكتب توقعاته هو بس (المعرّف يبدأ بـ uid حقه و userId نفسه)
+    // التوقعات: كل واحد يكتب توقعاته هو بس (المعرّف يبدأ بـ uid حقه و userId نفسه).
+    // المرحلة 2 (26 أكتوبر 2026): الإيميل ما ينكتب فيها (userEmail كان يكشف إيميلات الكل)
     match /predictions/{pid} {
       allow read: if true;
-      allow create, update: if signedIn()
+      allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
-        && pid.matches(request.auth.uid + '_.+');
+        && pid.matches(request.auth.uid + '_.+')
+        && !('userEmail' in request.resource.data);
+      allow update: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && pid.matches(request.auth.uid + '_.+')
+        && !('userEmail' in changedKeys());
       allow delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // الإيميل (المرحلة 2): صاحبه والمنظم بس يقرونه، وصاحبه يكتب إيميل حسابه نفسه بس
+    match /contacts/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email'])
+        && request.resource.data.email == request.auth.token.email;
+      allow delete: if isAdmin();
     }
 
     // التغطيات (الفيديو): المنظم بس يضيف ويحذف
@@ -37,17 +194,79 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // أجوبة البث الأصلية (21 أكتوبر 2026، SECURITY-PLAN الخطوة 1): الوثيقة العامة فيها السؤال وختم الجواب بس،
-    // والأجوبة هنا للمنظم (المذيع يجهّز جملة الجواب مسبقاً). التصحيح والكشف من functions/answer.js.
+    // أجوبة البث الأصلية وبنك أسئلة الغرفة (_roombank) والأسئلة: للمنظم بس
     match /liveSecrets/{id} {
       allow read, write: if isAdmin();
     }
 
-    // الغرفة الصوتية والبث: للحين مفتوحة لأن saveRoomState يكتب الوثيقة كاملة من أي جهاز،
-    // والبث (الجرس والإجابات والطيار الآلي والتوقعات والتفاعلات) يكتب من أجهزة المتسابقين والمشاهدين.
-    // تقسيمها للخطوة الجاية في SECURITY-PLAN.md.
-    match /room/{doc=**} {
-      allow read, write: if true;
+    // ===== الغرفة والبث (المرحلة 2، 26 أكتوبر 2026) =====
+    // كانت room/** كلها مفتوحة للكتابة لأي أحد: أي واحد يقدر يغيّر نتيجة البث، أو يطرد المايكات، أو يمسح الشات.
+    // الحين المنظم يكتب كل شي، وغيره بس اللي يخصه (والاختبار في tests/rules بمحاكي Firebase).
+
+    // الغرفة الصوتية: المنظم كل شي. غيره (مسجّل): مقعده بس، ورسالة جديدة منه على آخر الشات، وجواب لعبة الغرفة
+    match /room/main {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && roomUserUpdate());
+    }
+
+    // الحضور: كل واحد وثيقته (الضيف وثيقة guest_ بدون تسجيل)، وما أحد يسوي نفسه منظم
+    match /room/main/presence/{pid} {
+      allow read: if true;
+      allow create, update: if presenceOwner(pid)
+        && request.resource.data.keys().hasOnly(['name', 'photoURL', 'isAdmin', 'lastSeen'])
+        && (request.resource.data.get('isAdmin', false) == false || isAdmin())
+        && request.resource.data.get('name', '') is string && request.resource.data.get('name', '').size() <= 80
+        && request.resource.data.get('photoURL', '') is string && request.resource.data.get('photoURL', '').size() <= 500;
+      allow delete: if presenceOwner(pid) || isAdmin();
+    }
+
+    // وثيقة البث: المنظم كل شي. غيره: جاهز وجرس للمتسابق نفسه، وانتهاء الوقت بس لما يجي وقته (النقاط والنتائج للمنظم بس)
+    match /room/main/liveMatches/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && resource.data.get('type', '') == 'round' && liveUserUpdate());
+    }
+    // صناديق الأسئلة المختومة: المنظم يكتبها
+    match /room/main/liveBoxes/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // التشخيص: كل واحد مكانه بس (bcDiag.<uid>)، وسجل الأسئلة (_qhistory) للمنظم
+    match /room/main/liveDiag/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+      allow create: if signedIn() && id != '_qhistory'
+        && request.resource.data.keys().hasOnly(['bcDiag', 'at'])
+        && request.resource.data.bcDiag.keys().hasOnly([request.auth.uid])
+        && request.resource.data.bcDiag[request.auth.uid].size() <= 10;
+      allow update: if signedIn() && id != '_qhistory'
+        && changedKeys().hasOnly(['bcDiag', 'at'])
+        && request.resource.data.bcDiag.diff(resource.data.get('bcDiag', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.bcDiag[request.auth.uid].size() <= 10;
+    }
+    // توقعات المشاهدين وقت البث: كل واحد وثيقته (livePred/<id>/u/<uid>)
+    match /room/main/livePred/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /room/main/livePred/{id}/u/{uid} {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['p', 'name'])
+        && request.resource.data.get('p', {}) is map && request.resource.data.get('p', {}).size() <= 100
+        && request.resource.data.get('name', '') is string && request.resource.data.get('name', '').size() <= 80;
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+    // لعبة السوم: المنظم كل شي، واللاعبين (pids) بس، والأوراق المختومة (deal) واللعبة نفسها ما يغيّرها لاعب
+    match /room/main/games/som {
+      allow read: if true;
+      allow write: if isAdmin() || (signedIn() && somPlayerUpdate());
+    }
+    // أي شي ثاني تحت الغرفة: المنظم
+    match /room/main/{rest=**} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // مجموعات قديمة ما يستخدمها الكود الحالي (adminAuditLog و live و liveChat و livePresence و questionHistory و rooms):

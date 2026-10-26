@@ -301,7 +301,7 @@ function pickLiveQuestions(exclude) {
     const ex = new Set((exclude || []).map(bcQKey));
     const hist = new Map(bcQHist.map((t, i) => [bcQKey(t), i]));
     const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-    const bank = (roomState.qbank || []).filter(q => q && q.text && q.answer);
+    const bank = (roomBank || []).filter(q => q && q.text && q.answer);
     let picked = [];
     const fill = (pool, order) => {
         if (picked.length >= LIVE_Q_COUNT) return;
@@ -657,7 +657,7 @@ function bcAskStart(r, count, unlinked) {
 <div class="bc-ask-card">
 <div class="bc-ask-t">${ic("megaphone")} بث الجولة ${escapeHTML(String(r))}</div>
 <div class="bc-ask-s">فيها ${count} مواجهات بتنلعب ورا بعض في بث واحد.</div>
-${(() => { const asked = new Set(bcQHist.map(bcQKey)), have = BC_HARD.concat(roomState.qbank || []).filter(q => q && q.text && !asked.has(bcQKey(q.text))).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} الأسئلة الجاهزة اللي ما انسألت ${have} بس، والجولة تحتاج ${need}. الباقي يولّده الذكاء الاصطناعي، ولو ما رد بتتكرر أسئلة قديمة.</div>` : ""; })()}
+${(() => { const asked = new Set(bcQHist.map(bcQKey)), have = BC_HARD.concat(roomBank || []).filter(q => q && q.text && !asked.has(bcQKey(q.text))).length, need = count * LIVE_Q_COUNT; return have < need ? `<div class="bc-ask-w">${ic("alert")} الأسئلة الجاهزة اللي ما انسألت ${have} بس، والجولة تحتاج ${need}. الباقي يولّده الذكاء الاصطناعي، ولو ما رد بتتكرر أسئلة قديمة.</div>` : ""; })()}
 ${unlinked.length ? `<div class="bc-ask-x">
 <div class="t">${ic("alert")} ${unlinked.length} متسابق مو مربوط بحساب</div>
 <div class="s">ما ينفتح له مايك (محد يسمعه)، وما يقدر يضغط "جاهز" ولا الجرس. اربطه قبل البث: المتسابق يسجّل في الموقع، وبعدها تضغط "ربط" وتختار حسابه.</div>

@@ -14,8 +14,7 @@ hostAvatar: "",
 mics: Array(MIC_SLOTS).fill(null),
 pinnedMsg: null,
 chat: [],
-game: { active: false, status: "idle", qText: "", ans1: "", ans2: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null },
-qbank: []
+game: { active: false, status: "idle", qText: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null }
 };
 
 let roomListener = null;
@@ -32,13 +31,13 @@ if (roomStateLoaded && !wasLive && roomState.isLive && !(currentUser && roomStat
 roomState = {
 isLive: false, hostName: "", hostUid: "", hostAvatar: "",
 mics: Array(MIC_SLOTS).fill(null), pinnedMsg: null, chat: [],
-game: { active: false, status: "idle", qText: "", ans1: "", ans2: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null },
-qbank: []
+game: { active: false, status: "idle", qText: "", s1: 0, s2: 0, p1Name: "", p2Name: "", p1Avatar: "", p2Avatar: "", timer: 30, reveal1: null, reveal2: null }
 };
 }
 
 roomStateLoaded = true;
 normalizeRoomMics();
+if (isAdmin) loadRoomBank();
 syncMyMicWithState();
 
 /* أي شخص يفتح الغرفة وهي مباشرة ينضم تلقائيًا كمستمع في أجورا (بدون طلب
@@ -54,12 +53,68 @@ renderRoomUI();
 });
 }
 
-function saveRoomState() {
-if(!firebaseDB) return;
-/* الـ ID ما يُحفظ من هنا (يتغير فقط من زر المسؤول) عشان نسخة قديمة ما ترجعه */
+/* الوثيقة كاملة: للمنظم بس (المرحلة 2، 26 أكتوبر 2026: قواعد Firestore ترفض غيره).
+   المايك والشات وجواب اللعبة من أي أحد تمر على roomUserTx (حقله بس، من آخر نسخة في القاعدة) */
+function saveRoomState(include) {
+if(!firebaseDB || !isAdmin) return;
+/* الـ ID ما يُحفظ من هنا (يتغير فقط من زر المسؤول) عشان نسخة قديمة ما ترجعه، وبنك الأسئلة صار في liveSecrets/_roombank.
+   المقاعد والشات ما تنكتب إلا لو الحركة نفسها غيّرتها (include)، عشان نسخة المنظم ما تمسح مقعد أو رسالة كتبها غيره قبلها بلحظة */
 let roomData = Object.assign({}, roomState);
 delete roomData.accessId;
+delete roomData.qbank;
+if (!(include || []).includes("mics")) delete roomData.mics;
+if (!(include || []).includes("chat")) delete roomData.chat;
 firebaseDB.collection("room").doc("main").set(roomData, { merge: true }).catch(err => console.log(err));
+}
+
+/* تعديل حقل واحد في الغرفة من آخر نسخة في القاعدة (transaction): mut(الوثيقة) يرجّع التعديل أو null.
+   كان كل جهاز يكتب الغرفة كاملة من نسخته، فأي أحد يقدر يطرد المايكات أو يمسح الشات، وأي نسخة قديمة تمسح اللي قبلها */
+function roomUserTx(mut) {
+    if (!firebaseDB) return Promise.resolve(null);
+    const ref = firebaseDB.collection("room").doc("main");
+    return firebaseDB.runTransaction(async tx => {
+        const s = await tx.get(ref);
+        const u = mut(s.exists ? s.data() : {});
+        if (u) tx.update(ref, u);
+        return u;
+    });
+}
+/* أترك مقعدي (لو للحين حقي في القاعدة) */
+function roomReleaseMySeat(index) {
+    if (!currentUser) return Promise.resolve(null);
+    const uid = currentUser.uid;
+    return roomUserTx(d => { const m = roomMicsOf(d); if (!m[index] || m[index].uid !== uid) return null; m[index] = null; return { mics: m }; }).catch(() => null);
+}
+function roomMicsOf(d) {
+    const old = Array.isArray(d && d.mics) ? d.mics : [];
+    return Array.from({ length: MIC_SLOTS }, (_, i) => old[i] || null);
+}
+
+/* بنك أسئلة الغرفة (فيه الأجوبة): كان في room/main وأي أحد يقراه، الحين في liveSecrets/_roombank (المنظم بس) */
+let roomBank = [];
+let roomBankSub = null;
+function roomBankRef() { return firebaseDB.collection("liveSecrets").doc("_roombank"); }
+function loadRoomBank() {
+    if (!firebaseDB || !isAdmin || roomBankSub) return;
+    roomBankSub = roomBankRef().onSnapshot(s => {
+        const items = s.exists && Array.isArray(s.data().items) ? s.data().items : [];
+        /* النقل من الطريقة القديمة: البنك في room/main ينتقل مرة وحدة وينشال من هناك */
+        const legacy = Array.isArray(roomState.qbank) ? roomState.qbank.filter(q => q && q.text) : [];
+        if (legacy.length) {
+            const have = new Set(items.map(q => q && q.text));
+            const merged = items.concat(legacy.filter(q => !have.has(q.text)));
+            roomBankRef().set({ items: merged, at: Date.now() })
+                .then(() => firebaseDB.collection("room").doc("main").update({ qbank: firebase.firestore.FieldValue.delete() }))
+                .catch(err => console.log("roombank:", err));
+            delete roomState.qbank;
+            roomBank = merged;
+        } else roomBank = items;
+        if (typeof renderQBankList === "function" && document.getElementById("roomQBankModal")) { try { renderQBankList(); } catch (e) {} }
+    }, err => console.log("roombank:", err));
+}
+function saveRoomBank() {
+    if (!firebaseDB || !isAdmin) return;
+    roomBankRef().set({ items: roomBank, at: Date.now() }).catch(err => console.log(err));
 }
 
 let presenceListener = null;
@@ -84,7 +139,7 @@ function sendPresenceHeartbeat() {
         : (currentUser ? (currentUser.displayName || (currentUser.email || "مستخدم").split("@")[0]) : "ضيف");
     let photoURL = (currentUserDocData && currentUserDocData.photoURL) ? currentUserDocData.photoURL : "";
     firebaseDB.collection("room").doc("main").collection("presence").doc(myPresenceId()).set({
-        name: name, photoURL: photoURL, isAdmin: !!isAdmin,
+        name: String(name || "").slice(0, 60), photoURL: String(photoURL || "").slice(0, 500), isAdmin: !!isAdmin,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(() => {});
 }

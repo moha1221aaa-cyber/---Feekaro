@@ -294,16 +294,22 @@ function bcDirector(d) {
 }
 
 /* ===== توقّع الفائز (للمشاهدين، قبل بداية كل مواجهة) ===== */
-/* 26 أكتوبر 2026: التوقعات في وثيقة لحالها (room/main/livePred/<id>)، لأن كل توقّع من أي مشاهد كان يكتب في وثيقة البث
-   فتنرسل كاملة لكل الجوالات وتتعارض مع الجرس. الوثائق القديمة: d.pred */
+/* 26 أكتوبر 2026: التوقعات برا وثيقة البث (كل توقّع كان يكتب فيها فتنرسل كاملة لكل الجوالات وتتعارض مع الجرس)،
+   وكل مشاهد له وثيقته: room/main/livePred/<id>/u/<uid> فيها { p: { c<المواجهة>: 1 أو 2 }, name } (المرحلة 2: صاحبها بس يكتب).
+   الوثائق القديمة: d.pred */
 let bcPredDoc = null, bcPredSub = null, bcPredSubId = "";
 function bcPredListen(id) {
     if (bcPredSubId === (id || "")) return;
     if (bcPredSub) { bcPredSub(); bcPredSub = null; }
     bcPredSubId = id || ""; bcPredDoc = null;
     if (!id || !firebaseDB) return;
-    bcPredSub = livePredRef(id).onSnapshot(s => {
-        bcPredDoc = s.exists ? s.data() : null;
+    bcPredSub = livePredRef(id).collection("u").onSnapshot(snap => {
+        const all = {};
+        snap.forEach(doc => {
+            const x = doc.data() || {}, p = x.p || {};
+            Object.keys(p).forEach(c => { if (p[c] === 1 || p[c] === 2) (all[c] = all[c] || {})[doc.id] = { n: p[c], name: x.name || "مشاهد" }; });
+        });
+        bcPredDoc = all;
         if (openLiveId === id) { liveLastSig = ""; renderLiveScreen(); }
     }, () => {});
 }
@@ -320,7 +326,7 @@ function bcPredict(n) {
     const d = liveMatchesCache[openLiveId];
     if (!bcCanPredict(d)) return;
     const name = (currentUserDocData && currentUserDocData.name) || currentUser.displayName || "مشاهد";
-    livePredRef(openLiveId).set({ ["c" + d.cur]: { [currentUser.uid]: { n: n, name: name } } }, { merge: true })
+    livePredRef(openLiveId).collection("u").doc(currentUser.uid).set({ p: { ["c" + d.cur]: n }, name: String(name).slice(0, 60) }, { merge: true })
         .then(() => roomToast("انحفظ توقعك", "check"))
         .catch(err => roomToast(err && err.code === "permission-denied" ? "ما قدرنا نحفظ توقعك (صلاحيات قاعدة البيانات)" : "تعذّر حفظ توقعك", "alert"));
 }

@@ -298,7 +298,8 @@ async function somDo(a, quiet) {
             const snap = await tx.get(ref);
             const r = somReduce(snap.exists ? snap.data() : null, a, { uid: currentUser.uid, now: somNow(), host: !!isAdmin });
             /* Firestore يرفض undefined، فالحالة تنكتب نظيفة */
-            if (!r.err) tx.set(ref, JSON.parse(JSON.stringify(r.s)));
+            /* pids: أرقام اللاعبين، عشان قواعد Firestore تسمح بالكتابة للاعبين بس (المرحلة 2) */
+            if (!r.err) { const st = JSON.parse(JSON.stringify(r.s)); st.pids = (st.players || []).map(p => p.uid); tx.set(ref, st); }
             return r;
         });
         if (out && out.err && !quiet) roomToast(out.err, "alert");

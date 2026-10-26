@@ -1,6 +1,6 @@
 /* ثبات البث (26 أكتوبر 2026، بعد "الموقع يعلق والجرس ما يضغط والمذيع يتأخر وصوت المتسابق يختفي"):
    1) المايك ينفتح وينتشر مرة وحدة ويتكتم ويتفتح بس (المتسابق من صفحة مواجهته لين نتيجتها، والمنظم طول البث)
-   2) توقعات المشاهدين في livePred/<id>، مو في وثيقة البث
+   2) توقعات المشاهدين في livePred/<id>/u/<uid> (كل واحد وثيقته)، مو في وثيقة البث
    3) المنظم ما يكتب "أنا موجود" لحاله وهو كتب شي قريب، والكشف من جهازه فيه الجواب بنفس الكتابة
    4) صوت السؤال الجاي (بصيغته اللي بتنقرا) يتجهز وقت كشف السؤال اللي قبله، والمنظم ما يبدأ السؤال قبل صوته
    5) رسم صفحات الموقع ورا البث يتأجل لين تنقفل شاشة البث
@@ -63,8 +63,8 @@ try {
         await until(() => fan.$(".st-predbtns button"), 10000);
         const v0 = db.get(P).ver;
         await fan.evaluate(() => bcPredict(1));
-        const pd = await until(() => db.data("room/main/livePred/round_2"), 5000);
-        check("prediction saved in livePred/<id>", pd && pd.c0 && pd.c0.u_fan && pd.c0.u_fan.n === 1, pd);
+        const pd = await until(() => db.data("room/main/livePred/round_2/u/u_fan"), 5000);
+        check("prediction saved in livePred/<id>/u/<uid> (own doc)", pd && pd.p && pd.p.c0 === 1 && pd.name, pd);
         check("broadcast doc untouched by the prediction", db.get(P).ver === v0 && !liveDoc(db).pred);
         const shown = await until(() => fan.evaluate(() => (document.querySelector(".st-predlbl") || {}).textContent || "").then(t => /1 توقّع/.test(t) ? t : ""), 5000);
         check("prediction counted on screen", !!shown, shown);

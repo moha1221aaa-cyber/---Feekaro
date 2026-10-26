@@ -30,10 +30,10 @@ try {
     await until(() => host.$(".lv-stage"), 15000); await sleep(1000);
     const r = await host.evaluate(async () => {
         /* بنك تجريبي 12 سؤال (الاحتياطي صار سؤال واحد بعد مراجعة محمد 24 أكتوبر) */
-        roomState.qbank = Array.from({ length: 12 }, (_, i) => ({ text: "سؤال البنك رقم " + (i + 1) + "؟", answer: "ج" + (i + 1) }));
-        bcQHist = ["ما عاصمة اليابان؟"].concat(roomState.qbank.slice(0, -7).map(q => q.text), LIVE_FALLBACK_QUESTIONS.map(q => q.text));
+        roomBank = Array.from({ length: 12 }, (_, i) => ({ text: "سؤال البنك رقم " + (i + 1) + "؟", answer: "ج" + (i + 1) }));
+        bcQHist = ["ما عاصمة اليابان؟"].concat(roomBank.slice(0, -7).map(q => q.text), LIVE_FALLBACK_QUESTIONS.map(q => q.text));
         bcFreshPool = [];
-        const left = roomState.qbank.slice(-7).map(q => q.text);
+        const left = roomBank.slice(-7).map(q => q.text);
         const p1 = pickLiveQuestions([]);
         const fresh = await bcFreshQuestions(10);
         bcFreshPool = fresh;
@@ -50,11 +50,11 @@ try {
     const saved = (db.data("room/main/liveDiag/_qhistory") || {}).texts || [];
     check("history saved in liveDiag/_qhistory", r.p2.every(t => saved.includes(t)) && saved.length === r.hist, saved.length);
     const all = await host.evaluate(() => {
-        bcQHist = roomState.qbank.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); bcFreshPool = [];
+        bcQHist = roomBank.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); bcFreshPool = [];
         return pickLiveQuestions([]).map(q => q.text);
     });
     check("everything asked before: still 5 questions", all.length === 5, all);
-    const oldest = await host.evaluate(() => { const first5 = roomState.qbank.slice(0, 5).map(q => q.text); return pickLiveQuestions([]).every(q => first5.includes(q.text)); });
+    const oldest = await host.evaluate(() => { const first5 = roomBank.slice(0, 5).map(q => q.text); return pickLiveQuestions([]).every(q => first5.includes(q.text)); });
     check("…and they are exactly the 5 oldest", oldest);
     /* الـ500 الصعبة: تنحمّل، ما فيها تكرار ولا شي انسأل قبل، وتجي قبل أسئلة الذكاء الاصطناعي */
     const hard = await host.evaluate(async () => {
@@ -71,7 +71,7 @@ try {
     check("hard questions come first", hard.first);
     check("asked hard questions are not repeated (2 left → those 2 then others)", hard.last2.every(t => hard.p2.includes(t)), hard.p2);
     /* كل شي انسأل والبنك فاضي والاحتياطي سؤال واحد: لازم 5 أسئلة برضو (من الأقدم في الصعبة) */
-    const short = await host.evaluate(() => { roomState.qbank = []; bcFreshPool = []; bcQHist = BC_HARD.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); return pickLiveQuestions([]).length; });
+    const short = await host.evaluate(() => { roomBank = []; bcFreshPool = []; bcQHist = BC_HARD.concat(LIVE_FALLBACK_QUESTIONS).map(q => q.text); return pickLiveQuestions([]).length; });
     check("never fewer than 5 questions per match", short === 5, short);
     /* عشوائية: كل بث ياخذ أسئلة مختلفة، مو بترتيب الملف */
     const rnd = await host.evaluate(() => {

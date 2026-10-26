@@ -43,7 +43,6 @@ let docId = `${currentUser.uid}_${matchId}`;
 
 firebaseDB.collection("predictions").doc(docId).set({
 userId: currentUser.uid,
-userEmail: currentUser.email || "",
 matchId: matchId,
 s1: Number(s1Val),
 s2: Number(s2Val),
