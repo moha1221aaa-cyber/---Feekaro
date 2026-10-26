@@ -94,7 +94,7 @@ ${lockHTML}
 <div class="rcd-stats">
 <span>${ic("users")} الحاضرون: ${presentCount()}</span>
 <span>${ic("mic")} على المايك: ${seated.length} / ${MIC_SLOTS}</span>
-${roomState.game && roomState.game.active ? `<span>${ic("gamepad")} لعبة جارية</span>` : ""}
+${roomGameActive() ? `<span>${ic("gamepad")} لعبة جارية</span>` : ""}
 </div>
 <div class="rcd-cta">${cta}</div>
 </div>`;
@@ -182,6 +182,7 @@ function openRoomScreen(skipPush) {
     if (typeof screenAwake === "function") screenAwake("room", true);
     document.body.classList.add("room-open");
     joinRoomPresence();
+    if (typeof somWatch === "function") somWatch(true);
     if (roomState.isLive && !agoraJoined) ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
     enableRoomAudio();
     renderRoomUI();
@@ -209,6 +210,7 @@ function closeRoomScreen(fromPop) {
     if (input) input.blur();
     composerTyping(false);
     leaveRoomPresence();
+    if (typeof somWatch === "function") somWatch(false);
     renderRoomCard();
     if (typeof screenAwake === "function") screenAwake("room", false);
 }

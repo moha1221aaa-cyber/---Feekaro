@@ -263,7 +263,7 @@ function updateComposerState() {
     if (fxBtn) fxBtn.style.display = canUseFx() ? "flex" : "none";
 
     const games = document.getElementById("rcGamesBtn");
-    if (games) games.className = "rc-btn" + (roomState.game && roomState.game.active ? " on" : "");
+    if (games) games.className = "rc-btn" + (roomGameActive() ? " on" : "");
 
     const sp = document.getElementById("rcSpeakerBtn");
     if (sp) {
@@ -365,13 +365,15 @@ function adminToolsAction(action) {
 
 /* قائمة الألعاب: لإضافة لعبة جديدة مستقبلاً أضف عنصراً هنا بنفس الشكل { id, icon, name, desc, start } */
 const ROOM_GAMES = [
-    { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين متسابقين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } }
+    { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين متسابقين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } },
+    { id: "som", icon: ic("dice"), name: "السوم", desc: "أوراق وسوم ومفاوضة: كل واحد معه 10,000، وصاحب أعلى سوم يفاوض، واللي يرفض يداقش (2 لين 8 لاعبين)", start: function () { somCreate(); } }
 ];
+function roomGameActive() { return !!(roomState.game && roomState.game.active) || (typeof somActiveGame === "function" && somActiveGame()); }
 
 function openRoomGamesModal() {
     const body = document.getElementById("roomGamesBody");
     if (!body) return;
-    const active = !!(roomState.game && roomState.game.active);
+    const active = roomGameActive();
     const manage = canManageRoom() && roomState.isLive;
     let html = "";
     if (active) html += `<div class="game-note live"><svg class="ic" aria-hidden="true"><use href="#i-dot"/></svg> توجد لعبة جارية الآن</div>`;
@@ -428,6 +430,7 @@ roomState.hostName = "";
 roomState.hostUid = "";
 roomState.mics = Array(MIC_SLOTS).fill(null);
 roomState.game.active = false;
+if (typeof somActiveGame === "function" && somActiveGame()) somDo({ t: "close" }, true);
 saveRoomState();
 alert("تم إنهاء البث المباشر وإغلاق الغرفة.");
 }
