@@ -3,7 +3,7 @@
 
 import { verifyFirebaseToken, bearer } from "../lib/firebase-auth.js";
 
-const CHANNELS = ["masro7_main_room", "masro7_live_round"];
+const CHANNELS = ["masro7_main_room", "masro7_live_round", "masro7_live_rehearsal"];   /* rehearsal: البث الخاص (بروفة المنظم لحاله) */
 const DEFAULT_APP_ID = "6affdf8140bb4004b2ec1ba75d202bbc";
 const TTL_SECONDS = 60 * 60 * 24;
 const HEX32 = /^[0-9a-fA-F]{32}$/;

@@ -248,6 +248,9 @@ await no("league: player writes the table", ctx.p1.doc("league/current").set({ m
 await ok("league: everyone reads", ctx.guest.doc("league/current").get());
 await no("liveSecrets: player reads", ctx.p1.doc("liveSecrets/round_2").get());
 await no("liveSecrets: player reads the room question bank", ctx.p1.doc("liveSecrets/_roombank").get());
+await no("private broadcast (liveSecrets/rehearsal): player reads", ctx.p1.doc("liveSecrets/rehearsal").get());
+await no("private broadcast: player writes", ctx.p1.doc("liveSecrets/rehearsal").set({ status: "live" }));
+await ok("private broadcast: admin writes", ctx.admin.doc("liveSecrets/rehearsal").set({ type: "round", status: "live", rehearsal: 1 }));
 await ok("liveSecrets: admin writes the room question bank", ctx.admin.doc("liveSecrets/_roombank").set({ items: [{ text: "س", answer: "ج" }] }));
 await ok("room: everyone reads", ctx.guest.doc(ROOM).get());
 

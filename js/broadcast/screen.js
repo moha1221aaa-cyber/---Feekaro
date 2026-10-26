@@ -152,6 +152,7 @@ function liveTick() {
     showTick(d);
     if (typeof bcSetLocalQuiet === "function") bcSetLocalQuiet();
     bcPerfTick(d);
+    if (typeof bcBotTick === "function") bcBotTick(d);
     liveAdvanceIfDue();
 }
 

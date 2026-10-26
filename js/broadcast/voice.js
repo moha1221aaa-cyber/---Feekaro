@@ -7,6 +7,9 @@ let bcTrack = null, bcPubPromise = null, bcSelfMuted = false;
 let bcMicFailAt = 0, bcMicErr = "", bcAudioErr = "";
 let bcSyncBusy = false, bcSyncAgain = false;
 let bcMyUid = null;
+/* القناة: البث الخاص (بروفة المنظم) له قناة لحاله، فمحد يسمعه ولا يطلع في عدد المستمعين */
+let bcJoinedCh = "";
+function bcChannel() { return typeof bcIsReh === "function" && bcIsReh(openLiveId) ? "masro7_live_rehearsal" : BC_CHANNEL; }
 /* وقت جوابي بالصوت (VA.rec): أصوات البث كلها عندي تسكت، عشان إلغاء الصدى ما يقطّع كلامي (voice-answer.js).
    الحالة تنحسب من وجود التسجيل نفسه، و liveTick يعيدها كل 200ms، فما تعلق ساكتة أبد */
 let bcQuiet = false;
@@ -54,7 +57,7 @@ async function bcJoin() {
             if (mediaType === "audio" && user.audioTrack) user.audioTrack.stop();
         });
         const renew = async () => {
-            try { await bcClient.renewToken(await fetchAgoraToken(BC_CHANNEL)); } catch (e) { console.error("بث: فشل تجديد Token", e); }
+            try { await bcClient.renewToken(await fetchAgoraToken(bcJoinedCh || bcChannel())); } catch (e) { console.error("بث: فشل تجديد Token", e); }
         };
         bcClient.on("token-privilege-will-expire", renew);
         /* انقطع الاتصال نهائياً (تغيّر النت من واي فاي لبيانات، أو التوكن خلص): كان bcJoined يبقى true فالصوت يسكت لين يحدّث الصفحة.
@@ -82,16 +85,18 @@ async function bcJoin() {
     if (bcJoined) return;
     if (!bcJoinPromise) {
         bcJoinPromise = (async () => {
-            const token = await fetchAgoraToken(BC_CHANNEL);
+            const ch = bcChannel();
+            const token = await fetchAgoraToken(ch);
             const wanted = currentUser ? bcNumUid(currentUser.uid) : null;
             try {
-                bcMyUid = await bcClient.join(AGORA_APP_ID, BC_CHANNEL, token, wanted);
+                bcMyUid = await bcClient.join(AGORA_APP_ID, ch, token, wanted);
             } catch (e) {
                 /* نفس الحساب فاتح البث من جهازين: ندخل برقم عشوائي */
-                if (wanted && String(e && (e.code || e.message)).indexOf("UID_CONFLICT") !== -1) bcMyUid = await bcClient.join(AGORA_APP_ID, BC_CHANNEL, token, null);
+                if (wanted && String(e && (e.code || e.message)).indexOf("UID_CONFLICT") !== -1) bcMyUid = await bcClient.join(AGORA_APP_ID, ch, token, null);
                 else throw e;
             }
             bcJoined = true;
+            bcJoinedCh = ch;
             bcAudioErr = "";
         })().catch(e => { bcAudioErr = "تعذّر الاتصال بصوت البث: " + (e.message || e.code || e); throw e; })
             .finally(() => { bcJoinPromise = null; });
@@ -103,7 +108,7 @@ async function bcPublish() {
     if (bcTrack) return;
     if (!bcPubPromise) {
         bcPubPromise = (async () => {
-            await agoraUpgradeToken(bcClient, BC_CHANNEL);
+            await agoraUpgradeToken(bcClient, bcJoinedCh || bcChannel());
             /* speech_standard: مخصص للكلام وأثبت على النت الضعيف من الافتراضي (مخصص للموسيقى) */
             const track = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true, encoderConfig: "speech_standard" });
             /* ينتشر مكتوم لو مو وقت الكلام (bcApplyMute يفتحه بلحظة بدون أي اتصال) */
@@ -128,7 +133,7 @@ async function bcUnpublish() {
 async function bcLeave() {
     await bcUnpublish();
     if (bcClient && bcJoined) { try { await bcClient.leave(); } catch (e) {} }
-    bcJoined = false; bcRepub = false;
+    bcJoined = false; bcRepub = false; bcJoinedCh = "";
     bcMyUid = null;
 }
 
@@ -171,11 +176,12 @@ function bcSyncAudio() {
             const listen = !!(d && d.status === "live");
             try {
                 if (!listen) { if (bcJoined || bcTrack) await bcLeave(); continue; }
+                if (bcJoined && bcJoinedCh && bcJoinedCh !== bcChannel()) await bcLeave();   /* انتقل بين البث الخاص والبث العام */
                 await bcJoin();
                 if (bcRepub && bcTrack) {
                     bcRepub = false;
                     try { await bcClient.unpublish([bcTrack]); } catch (e) {}   /* لو أجورا للحين يحسبه منشور من الجلسة اللي انقطعت */
-                    try { await agoraUpgradeToken(bcClient, BC_CHANNEL); await bcClient.publish([bcTrack]); bcNetDiag("republished"); }
+                    try { await agoraUpgradeToken(bcClient, bcJoinedCh || bcChannel()); await bcClient.publish([bcTrack]); bcNetDiag("republished"); }
                     catch (e) { bcRepub = true; bcNetDiag("republish-failed"); bcRejoinLater(); }   /* المايك يظل مفتوح (التسجيل ما ينقطع) ونحاول بعدين */
                 }
                 const role = bcMicRole(d), want = bcShouldPublish(d);
