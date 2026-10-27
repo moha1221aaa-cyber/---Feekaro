@@ -103,11 +103,16 @@ service cloud.firestore {
         && logEntryOk(4) && logEntryOk(5) && logEntryOk(6) && logEntryOk(7) && logEntryOk(8) && logEntryOk(9));
     }
     function bhOk(k, a, b) { return N().get(k, 0) == D().get(k, 0) || (N().get(k, 0) == D().get(a, 0) - D().get(b, 0) && N().get(k, 0) > D().get(k, 0)); }
+    // علامة "انتهى وقت المتسابق" (to1/to2) في هالسؤال: بس للي كان عليه الدور، وقيمتها <المواجهة>_<السؤال>
+    function toKey() { return 'to' + string(D().get('answerer', 0)); }
+    function toOk() {
+      return !(toKey() in changedKeys()) || (D().phase == 'answer' && N()[toKey()] == string(D().get('cur', 0)) + '_' + string(D().get('qIndex', 0)));
+    }
     // انتهى الوقت بدون جواب صح: الكشف بدون نقاط
     function liveTimeoutReveal() {
       return D().scene == 'playing' && nowMs() >= D().deadline
         && (D().phase == 'buzz' || (D().phase == 'answer' && D().get('tried' + string(3 - D().answerer), false) == true))
-        && changedKeys().hasOnly(['phase', 'outcome', 'log', 'deadline', 'pend', 'lastAnswer', 'bh1', 'bh2', 'v', 'updatedAt'])
+        && changedKeys().hasOnly(['phase', 'outcome', 'log', 'deadline', 'pend', 'lastAnswer', 'bh1', 'bh2', toKey(), 'v', 'updatedAt']) && toOk()
         && N().phase == 'reveal' && N().outcome == 0 && N().get('pend', null) == null && logOk() && lastOk()
         && bhOk('bh1', 's2', 's1') && bhOk('bh2', 's1', 's2') && within(N().deadline, 3000, 15000);
     }
@@ -115,7 +120,7 @@ service cloud.firestore {
     function livePass() {
       return D().scene == 'playing' && D().phase == 'answer' && nowMs() >= D().deadline
         && (D().answerer == 1 || D().answerer == 2) && D().get('tried' + string(3 - D().answerer), false) == false
-        && changedKeys().hasOnly(['phase', 'answerer', 'passed', 'lastAnswer', 'deadline', 'ansAt', 'pend', 'tried1', 'tried2', 'v', 'updatedAt'])
+        && changedKeys().hasOnly(['phase', 'answerer', 'passed', 'lastAnswer', 'deadline', 'ansAt', 'pend', 'tried1', 'tried2', toKey(), 'v', 'updatedAt']) && toOk()
         && N().phase == 'answer' && N().passed == true && N().answerer == 3 - D().answerer
         && N()['tried' + string(N().answerer)] == true && lastOk() && N().get('pend', null) == null
         && within(N().deadline, 5000, 10000) && near(N().ansAt, 5000);

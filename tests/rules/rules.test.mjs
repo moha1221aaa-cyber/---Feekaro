@@ -93,6 +93,13 @@ const pass = extra => stamp(Object.assign({ phase: "answer", answerer: 2, passed
 await ok("fan: answer time over → passes to p2", L(ctx.fan).update(pass()));
 await no("fan: pass marked correct", L(ctx.fan).update(pass({ lastAnswer: { by: 1, correct: true } })));
 await no("fan: pass back to the same player", L(ctx.fan).update(pass({ answerer: 1, tried1: true, tried2: DEL() })));
+/* 27 أكتوبر 2026: علامة انتهاء الوقت (to1/to2) عشان المقدم يثبّت الجواب بعدها (bcHostLateOk) */
+const ansOver = () => seed(LIVE, live({ phase: "answer", buzzer: 1, answerer: 1, tried1: true, deadline: now() - 500 }));
+await ansOver(); await no("fan: timeout mark for the other player", L(ctx.fan).update(pass({ to2: "0_1" })));
+await ansOver(); await no("fan: timeout mark for another question", L(ctx.fan).update(pass({ to1: "9_9" })));
+await ansOver(); await ok("fan: pass with the timeout mark (to1) for this question", L(ctx.fan).update(pass({ to1: "0_1" })));
+await seed(LIVE, live({ phase: "answer", buzzer: 1, answerer: 2, tried1: true, tried2: true, passed: true, deadline: now() - 500, to1: "0_1" }));
+await ok("fan: p2 time over too → reveal with to2", L(ctx.fan).update(reveal(0, { lastAnswer: { by: 2, text: "", correct: false, timeout: true }, to2: "0_1" })));
 await seed(LIVE, live({ phase: "answer", buzzer: 1, answerer: 1, tried1: true, tried2: true, passed: true, deadline: now() - 500 }));
 await ok("fan: both tried, time over → reveal", L(ctx.fan).update(reveal(0, { lastAnswer: { by: 2, text: "", correct: false, timeout: true } })));
 await seed(LIVE, live({ scene: "countdown", phase: "wait", qIndex: 0, deadline: now() - 300 }));

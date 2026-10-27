@@ -866,4 +866,8 @@ body.live-open #mainHeader *,body.live-open .section *,body.room-open #mainHeade
 .bc-verdict button.ok{background:linear-gradient(90deg,#15803d,#22c55e);box-shadow:0 8px 20px rgba(34,197,94,.3);}
 .bc-verdict button.no{background:linear-gradient(90deg,#b91c1c,#ef4444);box-shadow:0 8px 20px rgba(239,68,68,.3);}
 .bc-verdict button:disabled{opacity:.5;}
+.bc-late{display:flex;flex-direction:column;gap:6px;width:100%;margin-top:8px;padding:8px;border-radius:14px;background:rgba(250,204,21,.1);border:1px dashed rgba(250,204,21,.5);}
+.bc-late small{color:#fde68a;font-size:12px;text-align:center;}
+.bc-late button{margin:0;padding:10px 8px;border-radius:12px;font-size:15px;font-weight:bold;display:flex;align-items:center;justify-content:center;gap:6px;border:0;color:#1f2937;background:linear-gradient(90deg,#facc15,#fde047);min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.bc-late button:disabled{opacity:.5;}
 @media (prefers-reduced-motion:reduce){.bc-sayit svg{animation:none;}}

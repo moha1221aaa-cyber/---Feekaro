@@ -673,6 +673,7 @@ ${lastHTML}
             html += `<div class="bc-judge">
 <div class="bc-judge-a"><small>الإجابة الصحيحة (تشوفها أنت بس)</small><b>${escapeHTML(ans[0] || "…")}</b>${ans.length > 1 ? `<span>${escapeHTML(ans.slice(1).join("، "))}</span>` : ""}</div>
 <div class="bc-verdict"><button class="ok" onclick="bcHostVerdict(true)">${ic("check-circle")} صح</button><button class="no" onclick="bcHostVerdict(false)">${ic("x-circle")} غلط</button></div>
+${bcLateHTML(d)}
 </div>`;
         }
     } else if (d.phase === "reveal") {
@@ -694,7 +695,7 @@ ${(() => {
     /* السؤال الجاي بضغطة المقدم (23 أكتوبر 2026، قرار محمد) */
     const lastQ = d.qIndex + 1 >= (d.questions || []).length;
     return isAdmin
-        ? `<div class="bc-admin"><button class="bc-go bc-nextq" onclick="bcHostNextQ()">${ic(lastQ ? "trophy" : "zap")} ${lastQ ? "نتيجة المواجهة" : "السؤال التالي"}</button></div>`
+        ? `${bcLateHTML(d)}<div class="bc-admin"><button class="bc-go bc-nextq" onclick="bcHostNextQ()">${ic(lastQ ? "trophy" : "zap")} ${lastQ ? "نتيجة المواجهة" : "السؤال التالي"}</button></div>`
         : `<div class="lv-muted">${lastQ ? "بانتظار المقدم يعلن النتيجة" : "بانتظار المقدم يبدأ السؤال التالي"}</div>`;
 })()}`;
     }
@@ -742,4 +743,13 @@ ${va ? `<ul>${va}</ul>` : ""}</div>`;
     if (!el) { el = document.createElement("div"); el.id = "bcDiag"; el.className = "bc-diag"; document.getElementById("liveScreen").appendChild(el); }
     const html = `<div class="bd-h">${ic("chart")} التشخيص <button onclick="bcToggleDiag()" aria-label="إغلاق">${ic("x")}</button></div>${rows || `<div class="bd-e">ما فيه متسابقين مربوطين في هالمواجهة</div>`}`;
     if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+}
+
+/* للمنظم: تثبيت جواب متسابق انتهى وقته قبل ما يلحق يضغط "صح" (bcHostLateOk في engine.js) */
+function bcLateHTML(d) {
+    if (!isAdmin) return "";
+    const list = bcLateList(d);
+    if (!list.length) return "";
+    return `<div class="bc-late"><small>جاوب صح قبل ينتهي وقته وما لحقت؟</small>${list.map(n =>
+        `<button onclick="bcHostLateOk(${n})">${ic("check-circle")} ثبّت جواب ${escapeHTML(livePlayerName(d, n))} صح</button>`).join("")}</div>`;
 }
