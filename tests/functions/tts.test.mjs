@@ -47,5 +47,15 @@ check("w=1 and nobody generates: the player generates after the wait", w3.status
     const el = await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=" + encodeURIComponent("جملة جديدة والرصيد رجع"), { headers: { Origin: "https://masro7-league.pages.dev", Authorization: "Bearer " + host } }), env2);
     check("ElevenLabs working → ElevenLabs first (Gemini is only the fallback)", el.headers.get("X-TTS-Engine") === "el" && gemN === 1);
 }
+/* Gemini يعلّق (صار في العينات 120 ث): بعد 10 ث يكمّل للي بعده، والمذيع ما يتأخر أكثر */
+{
+    auth.routes.unshift({ match: u => u.startsWith("https://generativelanguage.googleapis.com/") && env3.hang, handle: (u, init) => new Promise((res, rej) => { init.signal && init.signal.addEventListener("abort", () => { const e = new Error("aborted"); e.name = "AbortError"; rej(e); }); }) });
+    var env3 = { GEMINI_API_KEY: "g", AZURE_TTS_KEY: "a", AZURE_TTS_REGION: "x", hang: true };
+    auth.routes.push({ match: u => u.includes(".tts.speech.microsoft.com/"), handle: async () => new Response(new Uint8Array([9, 9]), { headers: { "Content-Type": "audio/mpeg" } }) });
+    const t0 = Date.now();
+    const r = await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=" + encodeURIComponent("جملة وقوقل معلّق"), { headers: { Origin: "https://masro7-league.pages.dev", Authorization: "Bearer " + host } }), env3);
+    const ms = Date.now() - t0;
+    check("Gemini hangs → gives up after 10 s and the next engine answers", r.status === 200 && r.headers.get("X-TTS-Engine") === "az" && ms >= 9500 && ms < 12500, [r.status, r.headers.get("X-TTS-Engine"), ms]);
+}
 check("other origin refused", (await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=x", { headers: { Origin: "https://evil.example" } }), env)).status === 403);
 auth.restore(); done();

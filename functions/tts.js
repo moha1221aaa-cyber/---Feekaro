@@ -17,6 +17,8 @@ const ELEVEN_MODEL = "eleven_multilingual_v2";
 const DEFAULT_AZURE_VOICE = "ar-SA-HamedNeural";
 const DEFAULT_GEMINI_VOICE = "Alnilam";
 const GEMINI_MODEL = "gemini-3.8-flash-tts";
+/* عينات 27 أكتوبر: الطلب ياخذ ~5 ث، ومرة علّق 120 ث بدون رد. فلو ما رد خلال 10 ث نكمّل للمحرك اللي بعده بدل ما المذيع يتأخر */
+const GEMINI_TIMEOUT_MS = 10000;
 const GEMINI_STYLE = "an energetic Arabic TV quiz show host, clear and confident, natural Gulf delivery";
 
 const err = (status, msg) => new Response(JSON.stringify({ error: msg }), {
@@ -54,8 +56,11 @@ function findAudio(o) {
 }
 async function gemini(env, text) {
   const voice = (env.GEMINI_TTS_VOICE || DEFAULT_GEMINI_VOICE).trim();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), GEMINI_TIMEOUT_MS);
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
+    signal: ctl.signal,
     headers: { "x-goog-api-key": env.GEMINI_API_KEY.trim(), "Content-Type": "application/json" },
     body: JSON.stringify({
       model: GEMINI_MODEL,
@@ -63,9 +68,13 @@ async function gemini(env, text) {
       response_format: { type: "audio", mime_type: "audio/wav" },
       generation_config: { speech_config: [{ voice }] }
     })
-  });
-  if (!r.ok) throw new Error("Gemini: " + r.status + " " + (await r.text().catch(() => "")).slice(0, 200));
-  const b64 = findAudio(await r.json());
+  }).catch(e => { throw new Error("Gemini: " + (e && e.name === "AbortError" ? "timeout " + GEMINI_TIMEOUT_MS + "ms" : (e && e.message) || e)); });
+  let d;
+  try {
+    if (!r.ok) throw new Error("Gemini: " + r.status + " " + (await r.text().catch(() => "")).slice(0, 200));
+    d = await r.json();
+  } finally { clearTimeout(timer); }
+  const b64 = findAudio(d);
   if (!b64) throw new Error("Gemini: no audio");
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
