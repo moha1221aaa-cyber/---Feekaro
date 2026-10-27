@@ -593,8 +593,20 @@ function liveNextStep(d, now) {
     if (d.phase === "buzz") return liveRevealUpd(d, 0, now, null);
     /* 23 أكتوبر 2026 (قرار محمد): الجواب بالمايك والمقدم يحكم (bcHostVerdict) خلال 7 ث، ولو ما حكم انتهى وقته وينتقل للثاني.
        والسؤال الجاي يبدأ بضغطة المقدم (bcHostNextQ) */
-    if (d.phase === "answer" && d.answerer) return livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
+    if (d.phase === "answer" && d.answerer) {
+        /* to1/to2: علامة إن وقت هالمتسابق انتهى في هالسؤال (cur_qIndex)، فالمقدم يقدر يثبّت جوابه بعدها (bcHostLateOk) */
+        const u = livePassUpd(d, d.answerer, now, { by: d.answerer, text: "", correct: false, timeout: true });
+        u["to" + d.answerer] = bcQKeyOf(d);
+        return u;
+    }
     return null;
+}
+function bcQKeyOf(d) { return (d.cur || 0) + "_" + (d.qIndex || 0); }
+/* المتسابقين اللي انتهى وقتهم في السؤال الحالي، والمقدم يقدر يثبّت جوابهم: وقت دور الثاني، أو بعد الكشف لو محد جاوب صح */
+function bcLateList(d) {
+    if (!d || d.status !== "live" || d.scene !== "playing") return [];
+    if (!(d.phase === "answer" || (d.phase === "reveal" && !d.outcome))) return [];
+    return [1, 2].filter(n => d["to" + n] === bcQKeyOf(d) && !(d.phase === "answer" && d.answerer === n));
 }
 /* بعد الكشف: السؤال الجاي، أو نهاية المواجهة بعد آخر سؤال (بضغطة المقدم) */
 function liveRevealNext(d, now) {
@@ -738,6 +750,17 @@ function bcHostVerdict(ok) {
         if (x.status !== "live" || x.scene !== "playing" || x.phase !== "answer" || x.qIndex !== d0.qIndex || x.answerer !== d0.answerer) return null;
         const last = { by: x.answerer, text: "", correct: !!ok, judged: 1 };
         return ok ? liveRevealUpd(x, x.answerer, now, last) : livePassUpd(x, x.answerer, now, last);
+    }).then(u => { if (!u) bcRedrawAll(); }).catch(err => { roomToast("تعذّر: " + err.message, "alert"); bcRedrawAll(); });
+}
+/* طلب محمد (27 أكتوبر 2026): المتسابق جاوب صح قبل ينتهي وقته بس المقدم ما لحق يضغط "صح" فانتقل السؤال للثاني (أو انكشف).
+   المقدم يثبّت جوابه: نقطة له والكشف، حتى لو الثاني يجاوب الحين أو الكشف طلع "محد جاوب صح" */
+function bcHostLateOk(n) {
+    const id = openLiveId, d0 = liveMatchesCache[id];
+    if (!id || !d0 || !isAdmin || !bcLateList(d0).includes(n)) return;
+    document.querySelectorAll(".bc-late button, .bc-verdict button").forEach(b => { b.disabled = true; });
+    liveTx(id, (x, now) => {
+        if (x.qIndex !== d0.qIndex || x.cur !== d0.cur || !bcLateList(x).includes(n)) return null;
+        return liveRevealUpd(x, n, now, { by: n, text: "", correct: true, judged: 1, late: 1 });
     }).then(u => { if (!u) bcRedrawAll(); }).catch(err => { roomToast("تعذّر: " + err.message, "alert"); bcRedrawAll(); });
 }
 function bcHostNextQ() {

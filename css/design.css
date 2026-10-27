@@ -625,3 +625,14 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, .tab:focus
 .trial-banner .ic{ width: 26px; height: 26px; color: var(--gold); flex: none; }
 .trial-banner b{ display: block; color: var(--gold); font-size: 15px; }
 .trial-banner span{ display: block; font-size: 13px; color: var(--text-2); }
+/* متسابقين التجربة (إضافة وحذف) */
+.trial-players{ text-align: right; display: flex; flex-direction: column; gap: 10px; }
+.trial-players-s{ font-size: 13px; color: var(--text-2); margin: 0; }
+.trial-players-add{ display: flex; gap: 8px; }
+.trial-players-add input{ flex: 1; min-width: 0; margin: 0; }
+.trial-players-add button{ margin: 0; flex: none; }
+.trial-players-list{ display: flex; flex-direction: column; gap: 6px; }
+.trial-player{ display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: var(--r-md, 12px); background: var(--surface); border: 1px solid var(--line); }
+.trial-player span{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trial-player small{ color: var(--text-2); font-size: 11px; }
+.trial-player .trial-del{ margin: 0; flex: none; padding: 6px 10px; font-size: 13px; background: rgba(239,68,68,.16); color: #fca5a5; border: 1px solid rgba(239,68,68,.4); }

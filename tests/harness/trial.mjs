@@ -29,6 +29,35 @@ try {
     check("table shows trial names", await until(() => host.evaluate(() => players.length === 6 && players.some(p => p.name === "ياي")), 5000));
     check("trial broadcast id is separate (one broadcast for all rounds)", await host.evaluate(() => bcId(1) === "round_trialall" && bcId(3) === "round_trialall"));
     check("one start button only (first round), for all rounds", await until(() => host.evaluate(() => { const b = [...document.querySelectorAll(".live-start-btn")]; return b.length >= 1 && b.every(x => /كل الجولات/.test(x.textContent)); }), 5000), await host.evaluate(() => [...document.querySelectorAll(".live-start-btn")].map(x => x.textContent)));
+    /* إضافة وحذف متسابق وقت التجربة (27 أكتوبر 2026) */
+    check("trial players button visible", await host.evaluate(() => document.getElementById("trialPlayersBtn").offsetParent !== null));
+    await host.click("#trialPlayersBtn");
+    await host.fill("#trialAddName", "فيصل");
+    await host.click(".trial-players-add button");
+    const c7 = await until(() => { const c = db.data("league/current"); return c.playersList.length === 7 ? c : null; }, 8000);
+    const rr = c => { const pairs = new Set(c.matches.map(m => m.p1 + ">" + m.p2)); return c.playersList.every(a => c.playersList.every(b => a === b || pairs.has(a + ">" + b))) && pairs.size === c.matches.length; };
+    check("add with no results → full new draw (42, every pair home and away)", c7 && c7.matches.length === 42 && rr(c7) && c7.trial.n === 7, c7 && c7.matches.length);
+    /* نتيجة لمواجهة ثم إضافة: النتيجة تبقى، والجديد مواجهاته بدون ما يلعب مرتين بنفس الجولة */
+    const ms = c7.matches.map((m, i) => i === 0 ? Object.assign({}, m, { s1: "3", s2: "1" }) : m);
+    const keep = ms[0];
+    db.write({ op: "update", path: "league/current", data: { matches: ms } });
+    await until(() => host.evaluate(() => matches.some(m => m.s1 === "3")), 5000);
+    await host.fill("#trialAddName", "نورة");
+    await host.click(".trial-players-add button");
+    const c8 = await until(() => { const c = db.data("league/current"); return c.playersList.length === 8 ? c : null; }, 8000);
+    const noClash = c => { const seen = new Set(); return c.matches.every(m => [m.p1, m.p2].every(p => { const k = m.round + "|" + p; if (seen.has(k)) return false; seen.add(k); return true; })); };
+    check("add with results → result kept, all pairs, nobody twice in a round", c8 && c8.matches.length === 56 && rr(c8) && noClash(c8) && c8.matches.some(m => m.p1 === keep.p1 && m.p2 === keep.p2 && m.round === keep.round && m.s1 === "3"), c8 && c8.matches.length);
+    /* حذف اللي له نتيجة */
+    host.removeAllListeners("dialog");
+    host.on("dialog", d => { dialogs.push(d.message()); d.type() === "prompt" ? d.accept(NAMES) : d.accept(); });
+    await until(() => host.evaluate(() => players.length === 8), 5000);
+    await host.evaluate(n => trialRemovePlayer(n), keep.p1);
+    const c7b = await until(() => { const c = db.data("league/current"); return c.playersList.length === 7 ? c : null; }, 8000);
+    const rounds = c7b ? [...new Set(c7b.matches.map(m => m.round))].sort((a, b) => a - b) : [];
+    check("remove → his matches gone (and the result), rounds without gaps", c7b && !c7b.playersList.includes(keep.p1) && c7b.matches.every(m => m.p1 !== keep.p1 && m.p2 !== keep.p1) && c7b.matches.length === 42 && rounds.every((r, i) => r === i + 1) && !c7b.matches.some(m => m.s1 === "3"), c7b && { n: c7b.matches.length, rounds });
+    check("remove confirm mentions the played match", dialogs.some(x => /حذف/.test(x) && /1 مواجهة انلعبت/.test(x)), dialogs.slice(-2));
+    check("modal lists 7 players", await until(() => host.evaluate(() => document.querySelectorAll(".trial-player").length === 7), 5000));
+    await host.evaluate(() => goBackModal());
     /* توقع وقت التجربة + ربط حساب لاسم موجود في الأصلي */
     db.write({ op: "set", path: "predictions/u_p2_r1_احمد_مشاري", data: { userId: "u_p2", matchId: "r1_احمد_مشاري", s1: 1, s2: 0, updatedAt: { __fv: "ts" } } });
     db.write({ op: "update", path: "league/current", data: { "playerLinks": { "سعود": "u_new" } } });

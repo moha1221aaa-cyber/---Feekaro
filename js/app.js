@@ -444,6 +444,9 @@ const banner = document.getElementById("trialBanner");
 if(banner) {
 banner.innerHTML = leagueTrial ? `<div class="trial-banner"><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg><div><b>مسابقة تجريبية</b><span>هذا جدول التجربة بس، والدوري الأصلي محفوظ ويرجع بعدها</span></div></div>` : "";
 }
+const pb = document.getElementById("trialPlayersBtn");
+if(pb) pb.style.display = leagueTrial ? "" : "none";
+if(leagueTrial && activeModalId === "trialPlayersModal") openTrialPlayers();
 const btn = document.getElementById("trialBtn");
 if(btn) btn.innerHTML = leagueTrial
 ? `<svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg> إنهاء التجربة وإرجاع الدوري`
@@ -515,6 +518,94 @@ tx.update(R.saved, { restoredAt: firebase.firestore.FieldValue.serverTimestamp()
 .then(n => alert("رجع الدوري الأصلي." + (n ? `\nوانحذف ${n} توقع من التجربة.` : "")))
 .catch(err => alert("ما رجع الدوري: " + (err && err.code ? authErrAr(err) : err.message)));
 }
+/* ===== متسابقين التجربة (27 أكتوبر 2026، طلب محمد): إضافة وحذف وقت التجربة بدون ما تنمسح نتايجها =====
+   ما فيه نتايج للحين ← قرعة جديدة كاملة بالأسماء الجديدة. فيه نتايج ← تبقى كلها، والجديد مواجهاته (ذهاب وإياب) تدخل
+   أول جولة هو والخصم فاضيين فيها (العدد الفردي فيه راحة لكل واحد)، والباقي جولات جديدة بعدها.
+   الحذف: مواجهاته كلها (حتى اللي انلعبت) تنشال وربط حسابه، وأرقام الجولات تنضغط بدون فراغات */
+function trialPlayed(m) { return m.s1 !== "" && m.s2 !== "" && m.s1 != null && m.s2 != null; }
+function trialAddMatches(list, names, name) {
+const all = names.concat([name]);
+if(!list.some(trialPlayed)) {
+const keepPlayers = players, keepMatches = matches;
+players = all.map(n => ({ name:n, w:0, d:0, l:0, gf:0, ga:0, pts:0 }));
+generateMatches();
+const out = serializeMatches();
+players = keepPlayers; matches = keepMatches;
+return out;
+}
+const out = list.map(m => Object.assign({}, m));
+const busy = r => new Set(out.filter(m => m.round === r).flatMap(m => [m.p1, m.p2]));
+let maxR = out.reduce((a, m) => Math.max(a, Number(m.round) || 0), 0);
+const place = (p1, p2) => {
+let r = 1;
+for(; r <= maxR; r++) { const b = busy(r); if(!b.has(p1) && !b.has(p2)) break; }
+if(r > maxR) maxR = r;
+out.push({ p1:p1, p2:p2, s1:"", s2:"", round:r });
+};
+names.forEach((n, i) => i % 2 ? place(name, n) : place(n, name));
+names.forEach((n, i) => i % 2 ? place(n, name) : place(name, n));
+return out;
+}
+function trialRemoveMatches(list, name) {
+const out = list.filter(m => m.p1 !== name && m.p2 !== name).map(m => Object.assign({}, m));
+const rounds = [...new Set(out.map(m => Number(m.round) || 0))].sort((a, b) => a - b);
+out.forEach(m => { m.round = rounds.indexOf(Number(m.round) || 0) + 1; });
+return out;
+}
+function openTrialPlayers() {
+const body = document.getElementById("trialPlayersModalBody");
+if(!body || !leagueTrial) return;
+const typed = (document.getElementById("trialAddName") || {}).value || "";
+const played = n => matches.filter(m => (m.p1.name === n || m.p2.name === n) && trialPlayed(m)).length;
+body.innerHTML = `
+<div class="trial-players">
+<p class="trial-players-s">التعديل على جدول التجربة بس، والدوري الأصلي ما يتغير. النتايج اللي انلعبت تبقى.</p>
+<div class="trial-players-add"><input id="trialAddName" type="text" maxlength="40" placeholder="اسم المتسابق الجديد" onkeydown="if(event.key==='Enter')trialAddPlayer()"><button onclick="trialAddPlayer()"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> إضافة</button></div>
+<div class="trial-players-list">${players.map(p => `<div class="trial-player"><span>${escapeHTML(p.name)}${played(p.name) ? ` <small>${played(p.name)} مواجهة انلعبت</small>` : ""}</span><button class="trial-del" onclick="trialRemovePlayer(${jsArg(p.name)})" aria-label="حذف ${escapeHTML(p.name)}"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> حذف</button></div>`).join("")}</div>
+</div>`;
+const inp = document.getElementById("trialAddName");
+if(inp && typed) inp.value = typed;
+if(activeModalId !== "trialPlayersModal") openModal("trialPlayersModal");
+}
+/* التعديل transaction على league/current (لازم التجربة شغالة)، فما يكتب فوق تعديل ثاني أو بعد ما رجع الدوري الأصلي */
+function trialEditPlayers(fn) {
+if(!isAdmin || !firebaseReady || !firebaseDB || !leagueTrial) return Promise.resolve(null);
+const R = trialRefs();
+return firebaseDB.runTransaction(async tx => {
+const cur = await tx.get(R.cur);
+const d = cur.exists ? cur.data() : {};
+if(!d.trial) throw new Error("التجربة مو شغالة.");
+const u = fn(d.playersList || [], d.matches || [], Object.assign({}, d.playerLinks || {}));
+tx.update(R.cur, {
+playersList: u.names, matches: u.matches, playerLinks: u.links,
+"trial.n": u.names.length,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+return u;
+}).catch(err => { alert("ما انحفظ التعديل: " + (err && err.code ? authErrAr(err) : err.message)); return null; });
+}
+function trialAddPlayer() {
+const inp = document.getElementById("trialAddName");
+const name = ((inp && inp.value) || "").trim().replace(/\s+/g, " ").slice(0, 40);
+if(!name) return;
+if(players.some(p => p.name === name)) return alert("المتسابق موجود بنفس الاسم");
+trialEditPlayers((names, list, links) => {
+if(names.includes(name)) throw new Error("المتسابق موجود بنفس الاسم");
+return { names: names.concat([name]), matches: trialAddMatches(list, names, name), links: links };
+}).then(u => { if(u && inp) inp.value = ""; if(u && typeof roomToast === "function") roomToast(`انضاف ${name} للتجربة (${u.matches.length} مواجهة)`, "check-circle"); });
+}
+function trialRemovePlayer(name) {
+const n = matches.filter(m => (m.p1.name === name || m.p2.name === name) && trialPlayed(m)).length;
+if(players.length <= 2) return alert("التجربة تحتاج متسابقين اثنين على الأقل");
+if(!confirm(`حذف ${name} من التجربة؟` + (n ? `\nبتنشال ${n} مواجهة انلعبت له ونتايجها تطلع من الترتيب.` : ""))) return;
+trialEditPlayers((names, list, links) => {
+if(!names.includes(name)) throw new Error("المتسابق مو موجود");
+if(names.length <= 2) throw new Error("التجربة تحتاج متسابقين اثنين على الأقل");
+delete links[name];
+return { names: names.filter(x => x !== name), matches: trialRemoveMatches(list, name), links: links };
+}).then(u => { if(u && typeof roomToast === "function") roomToast(`انحذف ${name} من التجربة`, "check-circle"); });
+}
+
 /* توقعات التجربة (اللي انحفظت بعد بدايتها) تنحذف، عشان ما تنحسب على مواجهات الدوري الأصلي اللي بنفس الأسماء */
 function removeTrialPredictions(startedAt) {
 const t0 = startedAt && startedAt.toMillis ? startedAt.toMillis() : 0;
