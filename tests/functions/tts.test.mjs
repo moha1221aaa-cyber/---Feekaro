@@ -29,5 +29,23 @@ const [h2, w2] = await Promise.all([get("السؤال الثاني", host), new 
 check("logged-in player (w=1) waits for the host's copy", h2.status === 200 && w2.status === 200 && gens === g0 + 1, gens - g0);
 const w3 = await gw("جملة المنظم غايب عنها");
 check("w=1 and nobody generates: the player generates after the wait", w3.status === 200 && gens === g0 + 2);
+/* 27 أكتوبر 2026: Gemini (Alnilam) بعد ElevenLabs. رصيد ElevenLabs خلص ← Gemini يولّد، وصوته WAV ينحفظ في الكاش لحاله */
+{
+    const wav = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);   /* "RIFF..." */
+    let gemBody = null, gemN = 0;
+    auth.routes.unshift({ match: u => u.startsWith("https://api.elevenlabs.io/") && env2.elDown, handle: async () => new Response(JSON.stringify({ detail: { message: "quota_exceeded" } }), { status: 401 }) });
+    auth.routes.push({ match: u => u.startsWith("https://generativelanguage.googleapis.com/v1beta/interactions"), handle: async (u, init) => { gemN++; gemBody = JSON.parse(init.body); return new Response(JSON.stringify({ steps: [{ type: "model_output", content: [{ type: "audio", data: Buffer.from(wav).toString("base64") }] }] })); } });
+    var env2 = { ELEVEN_KEY: "k", GEMINI_API_KEY: "g", elDown: true };
+    const r = await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=" + encodeURIComponent("جملة بعد ما خلص الرصيد"), { headers: { Origin: "https://masro7-league.pages.dev", Authorization: "Bearer " + host } }), env2);
+    const buf = new Uint8Array(await r.arrayBuffer());
+    check("ElevenLabs out of credit → Gemini answers (WAV)", r.status === 200 && r.headers.get("X-TTS-Engine") === "gm" && /wav/.test(r.headers.get("Content-Type")) && buf[0] === 82, [r.status, r.headers.get("X-TTS-Engine"), r.headers.get("Content-Type")]);
+    check("Gemini request: model, voice Alnilam, the text, quiz-host style", gemBody && gemBody.model === "gemini-3.8-flash-tts" && gemBody.generation_config.speech_config[0].voice === "Alnilam"
+        && gemBody.input[0].content[0].text === "جملة بعد ما خلص الرصيد" && /quiz show host/.test(gemBody.input[0].content[0].annotations[0].style), gemBody);
+    const again = await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=" + encodeURIComponent("جملة بعد ما خلص الرصيد"), { headers: { Origin: "https://masro7-league.pages.dev" } }), env2);
+    check("same line again (guest): from the cache, Gemini not asked twice", again.status === 200 && gemN === 1, gemN);
+    env2.elDown = false;
+    const el = await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=" + encodeURIComponent("جملة جديدة والرصيد رجع"), { headers: { Origin: "https://masro7-league.pages.dev", Authorization: "Bearer " + host } }), env2);
+    check("ElevenLabs working → ElevenLabs first (Gemini is only the fallback)", el.headers.get("X-TTS-Engine") === "el" && gemN === 1);
+}
 check("other origin refused", (await runFn(onRequestGet, new Request("https://masro7-league.pages.dev/tts?t=x", { headers: { Origin: "https://evil.example" } }), env)).status === 403);
 auth.restore(); done();

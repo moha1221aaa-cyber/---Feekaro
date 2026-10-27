@@ -1,5 +1,8 @@
 /* صوت المذيع: يحوّل نص السؤال لصوت بشري
    - الأساسي: ElevenLabs (سر ELEVEN_KEY)، صوت محمد المنصاري السعودي (يتغير بـ ELEVEN_VOICE). لو الرصيد خلص يجرب اللي بعده
+   - بعده: Gemini TTS (سر GEMINI_API_KEY، مجاني من Google AI Studio)، صوت Alnilam (اختاره محمد 27 أكتوبر 2026 من عينات
+     gemini-tts-samples.yml، يتغير بـ GEMINI_TTS_VOICE) بأسلوب مقدم برنامج مسابقات. يرجع WAV 24kHz. الباقة المجانية طلباتها قليلة
+     باليوم، بس كل جملة تنحفظ في الكاش
    - بعده: Azure Speech (سر AZURE_TTS_KEY و AZURE_TTS_REGION في Cloudflare Pages)، صوت حامد السعودي ar-SA-HamedNeural
      (يتغير بـ AZURE_TTS_VOICE). الباقة المجانية F0 فيها 500 ألف حرف بالشهر
    - بعده: Google Text-to-Speech لو انضاف سر TTS_KEY
@@ -12,6 +15,9 @@ const MAX_CHARS = 300;
 const DEFAULT_ELEVEN_VOICE = "2bnoa3wtrtcUW41TrSJM"; /* Mohammed Almansari (لهجة سعودية): اختاره محمد مذيع للدوري، 20 أكتوبر 2026 */
 const ELEVEN_MODEL = "eleven_multilingual_v2";
 const DEFAULT_AZURE_VOICE = "ar-SA-HamedNeural";
+const DEFAULT_GEMINI_VOICE = "Alnilam";
+const GEMINI_MODEL = "gemini-3.8-flash-tts";
+const GEMINI_STYLE = "an energetic Arabic TV quiz show host, clear and confident, natural Gulf delivery";
 
 const err = (status, msg) => new Response(JSON.stringify({ error: msg }), {
   status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
@@ -34,6 +40,34 @@ async function eleven(env, text) {
     throw new Error("ElevenLabs: " + m);
   }
   return new Uint8Array(await r.arrayBuffer());
+}
+
+/* Gemini (Interactions API): الرد فيه الصوت base64 (WAV) داخل steps[].content[] بنوع audio. ندوّر عليه بأي مكان في الرد */
+function findAudio(o) {
+  if (Array.isArray(o)) { for (const v of o) { const r = findAudio(v); if (r) return r; } return null; }
+  if (!o || typeof o !== "object") return null;
+  if (o.type === "audio" && typeof o.data === "string") return o.data;
+  const inl = o.inlineData || o.inline_data;
+  if (inl && typeof inl.data === "string") return inl.data;
+  for (const k in o) { const r = findAudio(o[k]); if (r) return r; }
+  return null;
+}
+async function gemini(env, text) {
+  const voice = (env.GEMINI_TTS_VOICE || DEFAULT_GEMINI_VOICE).trim();
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: { "x-goog-api-key": env.GEMINI_API_KEY.trim(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: GEMINI_MODEL,
+      input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: GEMINI_STYLE }] }] }],
+      response_format: { type: "audio", mime_type: "audio/wav" },
+      generation_config: { speech_config: [{ voice }] }
+    })
+  });
+  if (!r.ok) throw new Error("Gemini: " + r.status + " " + (await r.text().catch(() => "")).slice(0, 200));
+  const b64 = findAudio(await r.json());
+  if (!b64) throw new Error("Gemini: no audio");
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
 const xmlEsc = (t) => t.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
@@ -82,6 +116,7 @@ export async function onRequestGet(context) {
   /* المحركات المتوفرة بالترتيب. كل محرك له مفتاح كاش لحاله، فلو تغيّر المحرك ما يطلع الصوت القديم */
   const engines = [];
   if (env.ELEVEN_KEY) engines.push({ key: "el:" + (env.ELEVEN_VOICE || DEFAULT_ELEVEN_VOICE), run: () => eleven(env, text) });
+  if (env.GEMINI_API_KEY) engines.push({ key: "gm:" + (env.GEMINI_TTS_VOICE || DEFAULT_GEMINI_VOICE), type: "audio/wav", run: () => gemini(env, text) });
   if (env.AZURE_TTS_KEY && env.AZURE_TTS_REGION) engines.push({ key: "az:" + (env.AZURE_TTS_VOICE || DEFAULT_AZURE_VOICE), run: () => azure(env, text) });
   if (env.TTS_KEY) engines.push({ key: "g:" + (env.TTS_VOICE || ""), run: () => google(env, text, url.origin) });
   if (!engines.length) return err(503, "TTS not configured");
@@ -114,7 +149,7 @@ export async function onRequestGet(context) {
     try {
       const audio = await e.run();
       const res = new Response(audio, {
-        headers: { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=2592000", "X-TTS-Engine": e.key.split(":")[0] }
+        headers: { "Content-Type": e.type || "audio/mpeg", "Cache-Control": "public, max-age=2592000", "X-TTS-Engine": e.key.split(":")[0] }
       });
       context.waitUntil(cache.put(keyFor(e), res.clone()));
       return res;
