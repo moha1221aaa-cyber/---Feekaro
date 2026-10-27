@@ -11,7 +11,7 @@ check("fake token refused (401)", (await get("a.b.c")).status === 401);
 check("player refused (403)", (await get(await auth.token("u_p1", "p1@t"))).status === 403);
 const r = await get(await auth.token("u_admin", "moha1221aaa@gmail.com"));
 const j = await r.json();
-check("organizer gets all the hard questions with answers", r.status === 200 && Array.isArray(j) && j.length === HARD.length && j.length >= 100 && j.every(q => q.text && q.answer), j.length);
+check("organizer gets all the hard questions with answers", r.status === 200 && Array.isArray(j) && j.length === HARD.length && j.length >= 50 && j.every(q => q.text && q.answer), j.length);
 check("not cached", /no-store/.test(r.headers.get("Cache-Control") || ""));
 check("old public file is gone", !fs.existsSync(new URL("../../js/broadcast/qbank-hard.json", import.meta.url)));
 auth.restore();

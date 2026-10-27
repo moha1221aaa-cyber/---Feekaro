@@ -67,7 +67,7 @@ try {
         const p2 = pickLiveQuestions([]).map(q => q.text);
         return { n: all.length, uniq: new Set(keys).size, inFb: keys.filter(k => fb.has(k)).length, first: p.every(q => keys.includes(bcQKey(q.text))), p2, last2: all.slice(all.length - 2).map(q => q.text) };
     });
-    check("hard questions loaded (184 after Mohammed's review), all unique, none from the fallback list", hard.n === 184 && hard.uniq === 184 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
+    check("hard questions loaded (93: 184 after the review, minus the 91 asked on 26 Oct), all unique, none from the fallback list", hard.n === 93 && hard.uniq === 93 && hard.inFb === 0, { n: hard.n, uniq: hard.uniq, inFb: hard.inFb });
     check("hard questions come first", hard.first);
     check("asked hard questions are not repeated (2 left → those 2 then others)", hard.last2.every(t => hard.p2.includes(t)), hard.p2);
     /* كل شي انسأل والبنك فاضي والاحتياطي سؤال واحد: لازم 5 أسئلة برضو (من الأقدم في الصعبة) */
