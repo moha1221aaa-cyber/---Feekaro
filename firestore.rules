@@ -153,6 +153,41 @@ service cloud.firestore {
           || (resource.data.get('phase', '') == 'lobby' && !(request.auth.uid in oldP) && newP == oldP.concat([request.auth.uid])));
     }
 
+    // ===== برا السالفة (27 أكتوبر 2026): اللاعب يدخل الردهة أو يطلع منها، حقه بس في pids و players =====
+    // المرحلة والجولة والنقاط والخطة المختومة (plan) للمنظم بس، فلاعب ما يقدر يغيّر نقاطه ولا يبدأ جولة
+    function baraEntryOk() {
+      let e = request.resource.data.players[request.auth.uid];
+      return e is map && e.keys().hasOnly(['name', 'av', 'score']) && e.get('score', -1) == 0
+        && e.get('name', '') is string && e.get('name', '').size() > 0 && e.get('name', '').size() <= 40
+        && e.get('av', '') is string && e.get('av', '').size() <= 500;
+    }
+    function baraPlayerUpdate() {
+      let me = request.auth.uid;
+      let oldP = resource.data.get('pids', []);
+      let newP = request.resource.data.get('pids', []);
+      let newM = request.resource.data.get('players', {});
+      return resource.data.get('active', false) == true && resource.data.get('phase', '') == 'lobby'
+        && changedKeys().hasOnly(['pids', 'players'])
+        && newM.diff(resource.data.get('players', {})).affectedKeys().hasOnly([me])
+        && newP.size() <= 10 && newM.size() == newP.size()
+        && ((!(me in oldP) && newP == oldP.concat([me]) && baraEntryOk())
+          || (me in oldP && newP == oldP.removeAll([me]) && !(me in newM)));
+    }
+    // الصوت السري: لاعب من الطاولة، وقت التصويت، على لاعب ثاني من الطاولة (مو نفسه)، بنفس اللعبة والجولة.
+    // وقت التخمين: إيصال التخمين (g) بس، والصوت ما يتغيّر
+    function baraVoteOk(uid) {
+      let s = get(/databases/$(database)/documents/room/main/games/bara).data;
+      let n = request.resource.data;
+      let sameRound = resource != null && resource.data.get('gid', '') == s.get('gid', '') && resource.data.get('round', -1) == s.get('round', 0);
+      return n.keys().hasOnly(['gid', 'round', 'target', 'g'])
+        && s.get('active', false) == true && uid in s.get('pids', [])
+        && n.get('gid', '') == s.get('gid', '') && n.get('round', -1) == s.get('round', 0)
+        && ((s.get('phase', '') == 'vote' && n.get('target', '') is string && n.get('target', '') in s.get('pids', [])
+              && n.get('target', '') != uid && !('g' in n))
+          || (s.get('phase', '') == 'guess' && n.get('g', '') is string && n.get('g', '').size() > 0 && n.get('g', '').size() <= 4000
+              && n.get('target', null) == (sameRound ? resource.data.get('target', null) : null)));
+    }
+
     // جدول الدوري (المتسابقين والمواجهات والنتائج): الكل يقرا، والمنظم بس يكتب.
     // نتيجة البث (bcApplyResults) تنكتب من جهاز المنظم؛ لو كان غايب تنتظر لين يفتح الموقع.
     match /league/{doc} {
@@ -267,6 +302,17 @@ service cloud.firestore {
     match /room/main/games/som {
       allow read: if true;
       allow write: if isAdmin() || (signedIn() && somPlayerUpdate());
+    }
+    // برا السالفة: المنظم كل شي، وغيره يدخل الردهة أو يطلع منها بس. الكلمة ومين برا السالفة مختومين في plan (functions/bara.js)
+    match /room/main/games/bara {
+      allow read: if true;
+      allow write: if isAdmin() || (signedIn() && baraPlayerUpdate());
+    }
+    // أصوات برا السالفة: سرية لين الكشف، يقراها صاحبها والمنظم بس (برا room عشان room/main كلها مقروءة للكل)
+    match /baraVotes/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid && baraVoteOk(uid);
+      allow delete: if isAdmin();
     }
     // أي شي ثاني تحت الغرفة: المنظم
     match /room/main/{rest=**} {

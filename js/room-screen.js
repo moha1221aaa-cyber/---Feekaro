@@ -183,6 +183,7 @@ function openRoomScreen(skipPush) {
     document.body.classList.add("room-open");
     joinRoomPresence();
     if (typeof somWatch === "function") somWatch(true);
+    if (typeof baraWatch === "function") baraWatch(true);
     if (roomState.isLive && !agoraJoined) ensureAgoraJoined().catch(err => { agoraLastFail = Date.now(); console.error("تعذر الانضمام كمستمع لقناة أجورا:", err); });
     enableRoomAudio();
     renderRoomUI();
@@ -211,6 +212,7 @@ function closeRoomScreen(fromPop) {
     composerTyping(false);
     leaveRoomPresence();
     if (typeof somWatch === "function") somWatch(false);
+    if (typeof baraWatch === "function") baraWatch(false);
     renderRoomCard();
     if (typeof screenAwake === "function") screenAwake("room", false);
 }

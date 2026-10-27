@@ -261,6 +261,70 @@ await ok("private broadcast: admin writes", ctx.admin.doc("liveSecrets/rehearsal
 await ok("liveSecrets: admin writes the room question bank", ctx.admin.doc("liveSecrets/_roombank").set({ items: [{ text: "س", answer: "ج" }] }));
 await ok("room: everyone reads", ctx.guest.doc(ROOM).get());
 
+/* ===== برا السالفة (27 أكتوبر 2026): الردهة لكل لاعب حقه بس، والأصوات سرية ===== */
+const BARA = "room/main/games/bara";
+const p3 = env.authenticatedContext("u_p3", { email: "p3@t.local" }).firestore();
+const bp = (name, score) => ({ name, av: "", score: score || 0 });
+const bara = extra => Object.assign({ active: true, gid: "babc1234", phase: "lobby", hostUid: "u_admin", hostName: "محمد", pids: ["u_p1", "u_p2"],
+    players: { u_p1: bp("سعد"), u_p2: bp("فهد") }, rounds: 5, round: 0, cat: "", catName: "", plan: "", asks: [], turn: 0, laps: 0, voted: [], res: null, log: [], v: 3, at: 1 }, extra || {});
+const withP = (b, uid, entry) => Object.assign({}, b, { pids: b.pids.concat([uid]), players: Object.assign({}, b.players, { [uid]: entry }) });
+await seed(BARA, bara());
+await ok("bara: fan joins the lobby", ctx.fan.doc(BARA).set(withP(bara(), "u_fan", bp("مشاهد"))));
+await seed(BARA, bara());
+await no("bara: fan joins with points", ctx.fan.doc(BARA).set(withP(bara(), "u_fan", bp("مشاهد", 500))));
+await no("bara: fan joins as someone else", ctx.fan.doc(BARA).set(withP(bara(), "u_p3", bp("مشاهد"))));
+await no("bara: fan joins and changes another player", ctx.fan.doc(BARA).set(Object.assign(withP(bara(), "u_fan", bp("مشاهد")), { players: { u_p1: bp("سعد", 900), u_p2: bp("فهد"), u_fan: bp("مشاهد") } })));
+await no("bara: fan joins and starts the game", ctx.fan.doc(BARA).set(Object.assign(withP(bara(), "u_fan", bp("مشاهد")), { phase: "ask" })));
+await no("bara: fan joins with extra fields", ctx.fan.doc(BARA).set(withP(bara(), "u_fan", Object.assign(bp("مشاهد"), { out: true }))));
+await no("bara: guest joins", ctx.guest.doc(BARA).set(withP(bara(), "u_fan", bp("مشاهد"))));
+await ok("bara: player leaves the lobby", ctx.p2.doc(BARA).set(bara({ pids: ["u_p1"], players: { u_p1: bp("سعد") } })));
+await seed(BARA, bara());
+await no("bara: player removes someone else", ctx.p1.doc(BARA).set(bara({ pids: ["u_p1"], players: { u_p1: bp("سعد") } })));
+const ten = {}; const tenIds = Array.from({ length: 10 }, (_, i) => "u_t" + i); tenIds.forEach(u => { ten[u] = bp(u); });
+await seed(BARA, bara({ pids: tenIds, players: ten }));
+await no("bara: 11th player", ctx.fan.doc(BARA).set(withP(bara({ pids: tenIds, players: ten }), "u_fan", bp("مشاهد"))));
+const game = extra => bara(Object.assign({ phase: "ask", round: 2, plan: "v1.plan", cat: "food", catName: "أكلات", pids: ["u_p1", "u_p2", "u_fan"],
+    players: { u_p1: bp("سعد", 100), u_p2: bp("فهد"), u_fan: bp("مشاهد") }, asks: [{ a: "u_p1", b: "u_p2" }, { a: "u_p2", b: "u_fan" }, { a: "u_fan", b: "u_p1" }], laps: 1 }, extra || {}));
+await seed(BARA, game());
+await no("bara: fan joins mid-game", p3.doc(BARA).set(withP(game(), "u_p3", bp("ثالث"))));
+await no("bara: player raises his score", ctx.p1.doc(BARA).set(game({ players: { u_p1: bp("سعد", 999), u_p2: bp("فهد"), u_fan: bp("مشاهد") } })));
+await no("bara: player swaps the sealed plan", ctx.p1.doc(BARA).set(game({ plan: "v1.other" })));
+await no("bara: player starts the vote", ctx.p1.doc(BARA).set(game({ phase: "vote" })));
+await no("bara: player moves the turn", ctx.p1.doc(BARA).update({ turn: 1 }));
+await no("bara: player closes the table", ctx.p1.doc(BARA).update({ active: false }));
+await ok("bara: admin moves the turn", ctx.admin.doc(BARA).update({ turn: 1, v: 4 }));
+await ok("bara: everyone reads the table", ctx.guest.doc(BARA).get());
+
+/* الأصوات */
+const V = uid => "baraVotes/" + uid;
+await seed(BARA, game({ phase: "vote" }));
+const vote = (target, extra) => Object.assign({ gid: "babc1234", round: 2, target }, extra || {});
+await ok("bara vote: player votes for another player", ctx.p1.doc(V("u_p1")).set(vote("u_p2")));
+await ok("bara vote: player changes his vote", ctx.p1.doc(V("u_p1")).set(vote("u_fan")));
+await no("bara vote: for himself", ctx.p1.doc(V("u_p1")).set(vote("u_p1")));
+await no("bara vote: for someone not at the table", ctx.p1.doc(V("u_p1")).set(vote("u_p3")));
+await no("bara vote: in someone else's name", ctx.p1.doc(V("u_p2")).set(vote("u_fan")));
+await no("bara vote: not at the table", p3.doc(V("u_p3")).set(vote("u_p1")));
+await no("bara vote: wrong round", ctx.p1.doc(V("u_p1")).set(vote("u_p2", { round: 1 })));
+await no("bara vote: other game", ctx.p1.doc(V("u_p1")).set(vote("u_p2", { gid: "bzzz9999" })));
+await no("bara vote: with a guess receipt", ctx.p1.doc(V("u_p1")).set(vote("u_p2", { g: "v1.x" })));
+await no("bara vote: extra field", ctx.p1.doc(V("u_p1")).set(vote("u_p2", { out: "u_p2" })));
+await ok("bara vote: owner reads his vote", ctx.p1.doc(V("u_p1")).get());
+await no("bara vote: another player reads it (secret)", ctx.p2.doc(V("u_p1")).get());
+await no("bara vote: guest reads it", ctx.guest.doc(V("u_p1")).get());
+await no("bara vote: player lists all votes", ctx.p2.collection("baraVotes").get());
+await ok("bara vote: admin lists all votes", ctx.admin.collection("baraVotes").where("gid", "==", "babc1234").get());
+await seed(BARA, game({ phase: "ask" }));
+await no("bara vote: before the vote starts", ctx.p2.doc(V("u_p2")).set(vote("u_p1")));
+await seed(BARA, game({ phase: "guess" }));
+await no("bara vote: changed after the reveal", ctx.p1.doc(V("u_p1")).set(vote("u_p2")));
+await ok("bara guess: receipt keeps his vote", ctx.p1.doc(V("u_p1")).set(vote("u_fan", { g: "v1.receipt" })));
+await no("bara guess: receipt drops his vote", ctx.p1.doc(V("u_p1")).set(vote(null, { g: "v1.receipt" })));
+await ok("bara guess: receipt from someone who didn't vote", ctx.fan.doc(V("u_fan")).set(vote(null, { g: "v1.receipt" })));
+await no("bara guess: empty receipt", ctx.p2.doc(V("u_p2")).set(vote(null, { g: "" })));
+await no("bara guess: in someone else's name", ctx.p2.doc(V("u_fan")).set(vote(null, { g: "v1.r" })));
+await no("bara vote: player deletes his vote", ctx.p1.doc(V("u_p1")).delete());
+
 await env.cleanup();
 if (failed) { console.log(failed + " failed"); process.exit(1); }
 console.log("all passed");

@@ -96,6 +96,7 @@ window.addEventListener('popstate', function(e) {
     const st = e.state || {};
     /* طاولة السوم فوق الغرفة: الرجوع يسكّرها بس ويخلي الغرفة مفتوحة */
     if (typeof somIsOpen !== "undefined" && somIsOpen && !st.somOpen) { somClose(true); return; }
+    if (typeof baraIsOpen !== "undefined" && baraIsOpen && !st.baraOpen) { baraClose(true); return; }
     if (!st.liveOpen && typeof closeLiveScreen === "function") closeLiveScreen(true);
     if (!st.roomOpen && !st.liveOpen && typeof closeRoomScreen === "function") closeRoomScreen(true);
 });
