@@ -12,6 +12,7 @@ css/
   main.css              الشكل العام: الصفحات، الجداول، البطاقات، النوافذ، الأيقونات
   room.css              الغرفة الصوتية
   som.css               طاولة لعبة السوم
+  bara.css              طاولة برا السالفة (وتستخدم أزرار السوم وشريطه العلوي)
   design.css            نظام التصميم: الألوان والخطوط كمتغيرات (--brand، --gold، --surface...) وشكل كل المكونات فوق main.css و room.css
   broadcast.css         بث الجولة: الاستوديو، المشاهد، الجرافيكس، الانتقالات
 js/
@@ -30,6 +31,7 @@ js/
   room-tools.js         أدوات الغرفة: المؤثرات، الألعاب، بنك الأسئلة
   room-screen.js        بطاقة الغرفة وشاشتها الكاملة
   som.js                لعبة السوم في الغرفة: القوانين (somReduce، دالة صافية) والطاولة فوق الغرفة. الحالة في room/main/games/som
+  bara.js               برا السالفة في الغرفة: القوانين (baraReduce) والطاولة فوق الغرفة. الحالة في room/main/games/bara، والأصوات السرية في baraVotes/<uid>
   broadcast/
     engine.js           محرك البث: الحالة، وقت السيرفر، تحكم المنظم، الطيار الآلي
     presenter.js        مذيع البث
@@ -40,9 +42,9 @@ js/
     screen.js           شاشة البث: الرسم والمشاهد والانتقالات
   menu.js               القائمة الجانبية (☰): التنقل والميزات وصفحات ما الجديد وطريقة اللعب والخصوصية وعن الدوري
   ai.js                 الذكاء الاصطناعي: توليد الأسئلة، التصحيح الذكي، جمل المقدم (aiLines)، مساعد الدوري
-functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs ثم Azure)، time، ai (Workers AI مجاني: أسئلة، حكم نصي، جمل المقدم، المساعد)، qbank (الأسئلة الصعبة للمنظم بس، من lib/qbank-hard.js)،
+functions/              دوال Cloudflare Pages: agora-token، tts (ElevenLabs ثم Azure)، time، ai (Workers AI مجاني: أسئلة، حكم نصي، جمل المقدم، المساعد)، qbank (الأسئلة الصعبة للمنظم بس، من lib/qbank-hard.js)، bara (برا السالفة: الكلمة واللي برا مختومين، والدور والتخمين)،
                         answer (أجوبة البث المختومة: الختم والكشف وفتح الصناديق، للمنظم بس، والتصحيح انشال)، som (أوراق لعبة السوم: التوزيع المختوم والكشف)
-lib/                    مشترك بين الدوال: firebase-auth (التوكن)، grading (التصحيح)، seal (ختم الأجوبة)، firestore-public (قراءة وثيقة البث)
+lib/                    مشترك بين الدوال: firebase-auth (التوكن)، grading (التصحيح)، seal (ختم الأجوبة)، firestore-public (قراءة وثيقة البث)، bara-words (كلمات برا السالفة، ما تنتشر للعامة)
 video/                  فيديو افتتاح البث والفاصل (Remotion)، والملفات في media/ (الريندر: .github/workflows/league-video.yml)
 tests/                  harness/ (البث في 3 أجهزة بقاعدة ومايك وهميين) و functions/ (الدوال بتوكن تجريبي)
 wrangler.toml           إعدادات Pages: ربط Workers AI باسم AI (بدون مفتاح)
@@ -111,6 +113,7 @@ node tests/harness/phase2.mjs                         # المرحلة 2 (26 أ�
 # قواعد Firestore بمحاكي Firebase (يحتاج Java): cd tests/rules && npm i && npx firebase emulators:exec --only firestore --project masro7league "node rules.test.mjs"
 node tests/harness/stability.mjs                      # 26 أكتوبر: المايك ينتشر مرة ويتكتم بس، التوقعات برا وثيقة البث، بدون كتابات "أنا موجود" زايدة، صوت السؤال الجاي يتجهز وقت الكشف، رسم الصفحات يتأجل وقت البث
 node tests/harness/flow.mjs /tmp/out                  # 23 أكتوبر: الكلمات مع صوت المذيع، السؤال يختفي مع الجرس، المقدم يحكم ويبدأ كل سؤال، شارة البداية، ولا انتقال تلقائي، وضع التبريد للجوال
+node tests/harness/bara.mjs /tmp/out                  # برا السالفة: 4 أجهزة + functions/bara.js الحقيقي، كل واحد يشوف دوره بس، جولة كاملة لين النقاط، ما شي يتغير لحاله، الأصوات، الرجوع، و 10 لاعبين بدون تداخل
 node tests/harness/som.mjs /tmp/out                   # لعبة السوم: 3 أجهزة + functions/som.js الحقيقي، كل واحد يشوف أوراقه بس، السوم والمفاوضة والمداقشة والحساب، ما شي يتغير لحاله، الأصوات، زر الرجوع، و 8 لاعبين بدون تداخل
 for t in tests/functions/*.test.mjs; do node $t; done # الدوال (ومنها som-rules: قوانين السوم وقوة اليد والحساب)  (ومنها stt-multi و whisper2: السمع بأكثر من محاولة، والأرقام بالكلام)
 ```

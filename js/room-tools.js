@@ -366,9 +366,12 @@ function adminToolsAction(action) {
 /* قائمة الألعاب: لإضافة لعبة جديدة مستقبلاً أضف عنصراً هنا بنفس الشكل { id, icon, name, desc, start } */
 const ROOM_GAMES = [
     { id: "quiz", icon: ic("gamepad"), name: "مسابقة الأسئلة", desc: "تحدٍّ بين متسابقين بسؤال من قاعدة الأسئلة", start: function () { openGameStartModal(); } },
-    { id: "som", icon: ic("dice"), name: "السوم", desc: "أوراق وسوم ومفاوضة: كل واحد معه 10,000، وصاحب أعلى سوم يفاوض، واللي يرفض يداقش (2 لين 8 لاعبين)", start: function () { somCreate(); } }
+    { id: "som", icon: ic("dice"), name: "السوم", desc: "أوراق وسوم ومفاوضة: كل واحد معه 10,000، وصاحب أعلى سوم يفاوض، واللي يرفض يداقش (2 لين 8 لاعبين)", start: function () { somCreate(); } },
+    { id: "bara", icon: ic("users"), name: "برا السالفة", desc: "واحد ما يعرف السالفة: اسألوا بعض بالمايك وصوّتوا مين برا السالفة (3 لين 10 لاعبين)", start: function () { baraCreate(); } }
 ];
-function roomGameActive() { return !!(roomState.game && roomState.game.active) || (typeof somActiveGame === "function" && somActiveGame()); }
+function roomGameActive() {
+    return !!(roomState.game && roomState.game.active) || (typeof somActiveGame === "function" && somActiveGame()) || (typeof baraActiveGame === "function" && baraActiveGame());
+}
 
 function openRoomGamesModal() {
     const body = document.getElementById("roomGamesBody");
@@ -431,6 +434,7 @@ roomState.hostUid = "";
 roomState.mics = Array(MIC_SLOTS).fill(null);
 roomState.game.active = false;
 if (typeof somActiveGame === "function" && somActiveGame()) somDo({ t: "close" }, true);
+if (typeof baraActiveGame === "function" && baraActiveGame()) baraDo({ t: "close" }, true);
 saveRoomState(["mics"]);
 alert("تم إنهاء البث المباشر وإغلاق الغرفة.");
 }

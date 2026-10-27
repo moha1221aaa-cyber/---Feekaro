@@ -259,6 +259,7 @@ if(roomState.game && roomState.game.active) {
 html += renderGameWidgetHTML();
 }
 if (typeof somRoomPill === "function") html += somRoomPill();
+if (typeof baraRoomPill === "function") html += baraRoomPill();
 
 html += `
 <div class="mic-stage">
@@ -349,6 +350,7 @@ html += `
 container.innerHTML = html;
 updateComposerState();
 if (typeof somRender === "function") somRender();
+if (typeof baraRender === "function") baraRender();
 
 let chatBox = document.getElementById("roomChatMessagesBox");
 if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;

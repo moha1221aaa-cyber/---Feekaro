@@ -2,7 +2,7 @@
    - الموقع نفسه (index.html و js/ و css/) من سيرفر محلي
    - Firebase بديل (fake-firebase.js) وكل الأجهزة تشترك بقاعدة وحدة هنا (مع تأخير شبكة وهمي)
    - أجورا بديل (fake-agora.js) والمايك من Chromium الوهمي (--use-file-for-fake-audio-capture)
-   - /ai و /time و /tts و /agora-token و /answer و /som ردود محلية (stubs) يحددها كل اختبار */
+   - /ai و /time و /tts و /agora-token و /answer و /som و /bara ردود محلية (stubs) يحددها كل اختبار */
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -174,7 +174,7 @@ export async function device(browser, db, who, opts) {
         return r.abort();
     });
     const api = opts.api || {};
-    await ctx.route(/\/(time|tts|agora-token|ai|answer|som|qbank)(\?|$)/, async r => {
+    await ctx.route(/\/(time|tts|agora-token|ai|answer|som|bara|qbank)(\?|$)/, async r => {
         const u = new URL(r.request().url());
         const name = u.pathname.slice(1);
         if (name === "time") return r.fulfill({ contentType: "application/json", body: JSON.stringify({ t: Date.now() }) });
